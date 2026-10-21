@@ -112,3 +112,28 @@ test('a workflow is counted and leaves when its notification arrives', async ($,
   await $.session.append({ message: { type: 'user', content: [{ type: 'text', text }] } })
   expect(await (await mountBand($)).findAll({ text: /Running in background/ })).toHaveLength(0)
 })
+
+test('a command sent to the background with Ctrl+B is followed too', async ($, on) => {
+  on('tool.call', async () => ({ result: { backgroundTaskId: 'b9', backgroundedByUser: true, stdout: '', stderr: '', interrupted: false } }) as never)
+  await askAndMount($, on)
+  await $.tool.call({ tool: 'Bash', command: 'sleep 600' } as never)
+  expect(await (await mountBand($)).findAll({ text: /Running in background: 1 command/ })).not.toHaveLength(0)
+})
+
+test('a background shell started by another tool is followed too', async ($, on) => {
+  on('tool.call', async () => ({ result: { backgroundTaskId: 'p1' } }) as never)
+  await askAndMount($, on)
+  await $.tool.call({ tool: 'PowerShell', command: 'Start-Sleep 600' } as never)
+  expect(await (await mountBand($)).findAll({ text: /Running in background: 1 command/ })).not.toHaveLength(0)
+})
+
+test('the engine\'s own list at Stop corrects anything the band missed', async ($, on) => {
+  on('tool.call', async () => ({ result: { backgroundTaskId: 'gone' } }) as never)
+  on('classic.Stop', async () => ({}) as never)
+  await askAndMount($, on)
+  await $.tool.call({ tool: 'Bash', command: 'x', run_in_background: true } as never)
+  await $.classic.Stop({ stop_hook_active: false, background_tasks: [{ id: 'real', type: 'monitor', status: 'running', description: 'd' }], session_crons: [] } as never)
+  const band = await mountBand($)
+  expect(await band.findAll({ text: /1 monitor/ })).not.toHaveLength(0)
+  expect(await band.findAll({ text: /command/ })).toHaveLength(0)
+})

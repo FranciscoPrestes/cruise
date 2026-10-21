@@ -74,7 +74,7 @@ If you already have a skill of your own called `handoff` or `pickup`, the names 
 
 - All text is in English. Another language means editing the mod's code.
 - A reply that by itself crosses a threshold is flagged the moment it completes, before any tool it asks for runs. It cannot be flagged earlier, because its size is only known once it exists.
-- Background work started outside the session's own tools (for example by another program) is not followed.
+- Background work is followed from the moment a tool reports it (including commands sent to the background with Ctrl+B or by a timeout). At the end of every turn the band is reset to Claude Code's own list, so anything it missed in between is corrected there.
 
 ## Develop and test
 

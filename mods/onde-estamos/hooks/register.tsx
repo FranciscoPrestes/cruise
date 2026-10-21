@@ -80,7 +80,9 @@ export const register: Register = (on, options) => {
   })
 
   // Background work is tracked as it starts and ends, so the count does not wait for a turn to finish.
-  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+  // Any tool can start a background shell (Bash with run_in_background, a command sent to the background
+  // with Ctrl+B or by its timeout, another shell tool): they all report it as `backgroundTaskId`.
+  on('tool.call', async ($, e, next) => {
     const out = await next(e)
     await track($, 'shell', field(out.result, 'backgroundTaskId'))
     return out
