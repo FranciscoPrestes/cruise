@@ -22,7 +22,7 @@ Running in background: 2 agents, 1 command
 - A new request clears the previous plan.
 - Task lists from **subagents** are ignored: the step shown is always the main conversation's.
 - The "x min ago" label refreshes by itself once a minute.
-- Subagents, background commands, monitors and schedules are followed live: they appear when they start and leave when they end or are stopped. Anything else (workflows, for example) refreshes when a turn or subagent ends.
+- Subagents, background commands, monitors, workflows and schedules are followed live: they appear when they start and leave when they end or are stopped.
 - The band is informational only: if something inside it fails, the prompt and tools carry on normally.
 - The band hides while Claude Code shows its satisfaction survey.
 

@@ -102,3 +102,13 @@ test('a task that ends on its own leaves the band when its notification arrives'
   await $.session.append({ message: { type: 'user', content: [{ type: 'text', text }] } })
   expect(await (await mountBand($)).findAll({ text: /Running in background/ })).toHaveLength(0)
 })
+
+test('a workflow is counted and leaves when its notification arrives', async ($, on) => {
+  on('tool.call', async () => ({ result: { status: 'async_launched', taskId: 'w1' } }) as never)
+  await askAndMount($, on)
+  await $.tool.call({ tool: 'Workflow', name: 'review' } as never)
+  expect(await (await mountBand($)).findAll({ text: /1 workflow/ })).not.toHaveLength(0)
+  const text = '<task-notification>\n<task-id>w1</task-id>\n<status>completed</status>\n</task-notification>'
+  await $.session.append({ message: { type: 'user', content: [{ type: 'text', text }] } })
+  expect(await (await mountBand($)).findAll({ text: /Running in background/ })).toHaveLength(0)
+})

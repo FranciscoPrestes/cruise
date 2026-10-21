@@ -63,3 +63,16 @@ test('custom thresholds from settings are honored', { options: { warnAt: 50, urg
   await $.turn.complete({ reason: 'answer', answer: 'ok', durationMs: 1, isAborted: false, turnId: 't4' })
   expect(toasts).toHaveLength(1)
 })
+
+test('before a model request it already warns, even with no tool call in the step', async ($, on) => {
+  const toasts: string[] = []
+  on('session.usage', async () => usage(85))
+  on('ui.status', async () => ({ value: undefined }) as never)
+  on('ui.toast', async (_$, e) => { toasts.push(e.text); return { value: undefined } as never })
+  // The kit has no engine beneath turn.step to send the request, so the stream ends in an error;
+  // what matters is that the warning was already shown by then, i.e. before the request.
+  try {
+    for await (const chunk of $.turn.step({ turnId: 't5', index: 3, model: 'm', messageCount: 40 } as never)) void chunk
+  } catch {}
+  expect(toasts).toHaveLength(1)
+})

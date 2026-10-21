@@ -12,7 +12,7 @@ Warns before the session context fills up and answer quality drops ("context rot
 
 Each band warns **once**. If the context drops below 50% (after a compaction, for example), warnings apply again.
 
-The check runs after every tool call and when a turn ends, so a long autonomous run is warned mid-turn.
+The check runs before every model request, after every tool call and when a turn ends, so a long autonomous run is warned mid-turn, even a long stretch of steps with no tool call.
 
 ## Settings
 
@@ -40,7 +40,7 @@ The mod installs the skills the warning depends on:
 
 ## Limits
 
-- A single very long step with no tool call can still pass a threshold before it is noticed.
+- It cannot see inside one model response: a reply that by itself jumps past a threshold is warned right after it, before the next request.
 - Text is in English.
 
 ## Layout

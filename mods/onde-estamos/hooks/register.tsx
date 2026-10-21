@@ -92,6 +92,12 @@ export const register: Register = (on, options) => {
     return out
   })
 
+  on('tool.call', { tool: 'Workflow' }, async ($, e, next) => {
+    const out = await next(e)
+    await track($, 'workflow', field(out.result, 'taskId'))
+    return out
+  })
+
   on('tool.call', { tool: 'CronCreate' }, async ($, e, next) => {
     const out = await next(e)
     await track($, 'schedule', field(out.result, 'id'))

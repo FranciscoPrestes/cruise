@@ -73,8 +73,8 @@ If you already have a skill of your own called `handoff` or `pickup`, the names 
 ## Known limitations
 
 - All text is in English. Another language means editing the mod's code.
-- The context check runs after each tool call and when a turn ends. A single very long step with no tool call can still pass a threshold before it is noticed.
-- `onde-estamos` follows subagents, background commands, monitors and schedules as they start and end. Workflows and tasks started outside the session's tools only refresh when a turn or subagent ends.
+- The context check cannot see inside a single model response: a reply that by itself jumps past a threshold is warned right after it, before the next request.
+- Background work started outside the session's own tools (for example by another program) is not followed.
 
 ## Develop and test
 
