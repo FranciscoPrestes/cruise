@@ -1,9 +1,17 @@
 {
   "name": "onde-estamos",
-  "version": "0.2.0",
-  "description": "Faixa acima do prompt: pedido atual, etapa do plano e o que roda em segundo plano",
-  "types": "./types/index.d.ts",
+  "version": "0.3.0",
+  "description": "A band above the prompt: current request, plan step and what runs in the background",
   "author": {
     "name": "Francisco Prestes"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "minAskChars": {
+      "type": "number",
+      "title": "Minimum request length",
+      "description": "Messages shorter than this many characters (such as \"go ahead\") do not replace the request shown in the band.",
+      "default": 25
+    }
   }
 }

@@ -1,40 +1,51 @@
 # aviso-contexto
 
-Avisa antes que o contexto da sessão encha e a qualidade das respostas caia (o "context rot"), e leva você ao `/handoff`.
+Warns before the session context fills up and answer quality drops ("context rot"), and leads you to `/handoff`.
 
-## O que acontece
+## What happens
 
-| Contexto usado | Aviso |
+| Context used | Warning |
 | --- | --- |
-| 75% | Aviso na tela: "Quando fechar esta etapa, digite /handoff" |
-| 90% | Aviso na tela **e** notificação do sistema: "Digite /handoff agora, antes da compactação" |
-| Qualquer valor acima de 75% | Na linha de status: `Contexto 82% · digite /handoff` |
+| 75% | On-screen notice: "When you finish this step, type /handoff" |
+| 90% | On-screen notice **and** a system notification: "Type /handoff now, before compaction" |
+| Anything above 75% | Status line: `Context 82% · type /handoff` |
 
-Cada faixa avisa **uma vez**. Se o contexto cair abaixo de 50% (por exemplo, depois de uma compactação), os avisos voltam a valer.
+Each band warns **once**. If the context drops below 50% (after a compaction, for example), warnings apply again.
 
-## Skills incluídas
+The check runs after every tool call and when a turn ends, so a long autonomous run is warned mid-turn.
 
-O mod instala as skills de que o aviso depende:
+## Settings
 
-- **`/handoff`**: grava o estado do trabalho em `~/.local/state/handoffs/<pasta>/<data>.md`, com objetivo, o que foi feito, fatos descobertos, descartes, próximos passos e decisões pendentes. Se a ferramenta `memory_handoff_begin` do ai-memory estiver conectada, grava lá também; sem ela, só o arquivo.
-- **`/pickup`**: numa sessão nova na mesma pasta, lê o último handoff, confere pasta e branch, resume em até 5 linhas e executa o primeiro próximo passo.
+In `/config`:
 
-## Instalar
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `warnAt` | 75 | Context % of the first warning |
+| `urgentAt` | 90 | Context % of the urgent warning (never below `warnAt`) |
+| `resetBelow` | 50 | Warnings start over below this % (never above `warnAt`) |
+
+## Bundled skills
+
+The mod installs the skills the warning depends on:
+
+- **`/handoff`**: saves the state of the work to `~/.local/state/handoffs/<folder>/<date>.md`, with goal, what is done, facts discovered, discarded paths, next steps and pending decisions. If the ai-memory tool `memory_handoff_begin` is connected it also saves there; without it, only the file.
+- **`/pickup`**: in a new session in the same folder, reads the latest handoff, checks folder and branch, summarizes it in at most 5 lines and executes the first next step.
+
+## Install
 
 ```text
 /plugin marketplace add https://git.example.invalid/group/claude-code-mods.git
 /plugin install aviso-contexto@hub-de-ia-mods
 ```
 
-## Limites
+## Limits
 
-- Os limites (75%, 90%, 50%) ficam em `hooks/levels.ts`. Para mudar, edite o arquivo e aumente a `version`.
-- A conferência acontece quando um turno termina, não durante.
-- Textos em português.
+- A single very long step with no tool call can still pass a threshold before it is noticed.
+- Text is in English.
 
-## Estrutura
+## Layout
 
-- `hooks/register.ts`: confere o contexto ao fim de cada turno e mostra os avisos.
-- `hooks/levels.ts`: regra pura de qual aviso dar.
-- `skills/handoff`, `skills/pickup`: as skills.
-- `types/index.d.ts`: formato dos dados guardados na sessão.
+- `hooks/register.ts`: checks the context and shows the warnings.
+- `hooks/levels.ts`: pure rule for which warning to give, and the settings.
+- `skills/handoff`, `skills/pickup`: the skills.
+- `types/index.d.ts`: shape of the data kept in the session.

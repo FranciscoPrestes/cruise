@@ -2,35 +2,42 @@ import { expect, test } from 'claude-code/testing'
 
 import { age, backgroundSummary, isRealAsk, oneLine, planFromTodos, planSummary } from './helpers'
 
-test('respostas curtas e comandos não viram pedido', () => {
-  expect(isRealAsk('pode seguir')).toBe(false)
+test('short replies and commands do not become the request', () => {
+  expect(isRealAsk('go ahead')).toBe(false)
   expect(isRealAsk('/model opus')).toBe(false)
-  expect(isRealAsk('<task-notification> qualquer coisa bem longa aqui dentro do aviso')).toBe(false)
-  expect(isRealAsk('integra o ledger ao app de planejamento usando a conexão do AXIS')).toBe(true)
+  expect(isRealAsk('<task-notification> anything long enough to pass the length check')).toBe(false)
+  expect(isRealAsk('integrate billing into the planning app')).toBe(true)
 })
 
-test('etapa atual e total do plano', () => {
+test('the minimum length is adjustable', () => {
+  expect(isRealAsk('fix the login bug', 10)).toBe(true)
+  expect(isRealAsk('fix the login bug', 40)).toBe(false)
+})
+
+test('current step and plan total', () => {
   const plan = planFromTodos([
-    { content: 'Ler código', activeForm: 'Lendo código', status: 'completed' },
-    { content: 'Escrever mod', activeForm: 'Escrevendo mod', status: 'in_progress' },
-    { content: 'Testar', activeForm: 'Testando', status: 'pending' },
+    { content: 'Read code', activeForm: 'Reading code', status: 'completed' },
+    { content: 'Write mod', activeForm: 'Writing mod', status: 'in_progress' },
+    { content: 'Test', activeForm: 'Testing', status: 'pending' },
   ])
-  expect(planSummary(plan)).toBe('Etapa 2 de 3: Escrevendo mod')
+  expect(planSummary(plan)).toBe('Step 2 of 3: Writing mod')
   expect(planSummary({})).toBe(null)
 })
 
-test('plano concluído', () => {
+test('finished plan', () => {
   const plan = planFromTodos([{ content: 'A', activeForm: 'A', status: 'completed' }])
-  expect(planSummary(plan)).toBe('Plano concluído: 1 de 1')
+  expect(planSummary(plan)).toBe('Plan complete: 1 of 1')
 })
 
-test('segundo plano em português, agrupado', () => {
-  expect(backgroundSummary(['subagent', 'subagent', 'shell'])).toBe('2 agentes, 1 comando')
+test('background work is grouped and pluralized', () => {
+  expect(backgroundSummary(['subagent', 'subagent', 'shell'])).toBe('2 agents, 1 command')
+  expect(backgroundSummary(['schedule'])).toBe('1 schedule')
   expect(backgroundSummary([])).toBe(null)
 })
 
-test('tempo e corte de linha', () => {
-  expect(age(30_000)).toBe('agora')
-  expect(age(12 * 60_000)).toBe('há 12 min')
+test('age and line cut', () => {
+  expect(age(30_000)).toBe('now')
+  expect(age(12 * 60_000)).toBe('12 min ago')
+  expect(age(72 * 60_000)).toBe('1 h 12 min ago')
   expect(oneLine('abc  def', 5)).toBe('abc …')
 })

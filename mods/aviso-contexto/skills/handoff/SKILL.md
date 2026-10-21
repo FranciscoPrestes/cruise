@@ -1,57 +1,57 @@
 ---
 name: handoff
-description: Prepara o handoff da sessão (Claude Code, Codex, Cursor, Gemini, OpenCode...) antes do context rot - grava o estado do trabalho para a próxima sessão retomar com /pickup. Use quando o contexto estiver cheio, quando pedirem "prepara o handoff", "prepara a passagem" ou "prompt para continuar em outra sessão".
+description: Prepares the session handoff (Claude Code, Codex, Cursor, Gemini, OpenCode...) before context rot - saves the state of the work so the next session can resume with /pickup. Use when the context is getting full, or when asked to "prepare the handoff", "write the handoff" or "give me a prompt to continue in another session".
 ---
 
 # Handoff
 
-Só prepara e grava. Para retomar, a próxima sessão usa `/pickup`.
+Only prepares and saves. To resume, the next session uses `/pickup`.
 
-## Como fazer
+## How to do it
 
-Não continue a tarefa. Só registre o estado.
+Do not continue the task. Only record its state.
 
-1. Monte a passagem neste formato, com fatos concretos (IDs, caminhos, valores, comandos), nada genérico:
+1. Write the handoff in this format, with concrete facts (IDs, paths, values, commands), nothing generic:
 
 ```markdown
 ---
-agente: <claude-code | codex | cursor | gemini | opencode | ...>
-pasta: <diretório de trabalho absoluto>
-branch: <branch atual, se for repositório git>
-data: <AAAA-MM-DDTHH:MM, horário local>
+agent: <claude-code | codex | cursor | gemini | opencode | ...>
+folder: <absolute working directory>
+branch: <current branch, if it is a git repository>
+date: <YYYY-MM-DDTHH:MM, local time>
 ---
 
-## <título curto da tarefa>
+## <short task title>
 
-### Objetivo
-Uma frase: o que estamos tentando entregar.
+### Goal
+One sentence: what we are trying to deliver.
 
-### Resumo para quem chega
-Duas ou três frases para um agente sem contexto se orientar na hora.
+### Summary for whoever arrives
+Two or three sentences so an agent with no context can get oriented at once.
 
-### Intenção do próximo passo
-Por que o próximo passo é esse: a hipótese em teste, o que se espera ver.
+### Intent of the next step
+Why the next step is the one it is: the hypothesis being tested, what we expect to see.
 
-### Feito
-- O que já está pronto e verificado.
+### Done
+- What is already finished and verified.
 
-### Fatos descobertos
-- IDs, valores, estados, caminhos encontrados nesta sessão.
+### Facts discovered
+- IDs, values, states, paths found in this session.
 
-### Descartado
-- Caminhos tentados e abandonados, e por quê.
+### Discarded
+- Paths tried and abandoned, and why.
 
-### Próximos passos (desta tarefa)
-1. O primeiro passo a executar.
+### Next steps (this task)
+1. The first step to execute.
 2. ...
 
-### Decisões pendentes
-- O que só o usuário pode decidir, com as opções.
+### Pending decisions
+- What only the user can decide, with the options.
 
-### Outras pendências
-- Assuntos de fora desta tarefa. A próxima sessão NÃO deve pular para eles.
+### Other open items
+- Subjects outside this task. The next session must NOT jump to them.
 ```
 
-2. Grave o arquivo em `~/.local/state/handoffs/<slug-da-pasta>/<AAAA-MM-DD-HHMM>.md`, onde o slug é o caminho da pasta de trabalho com `/` trocado por `-`. Crie a pasta se não existir.
-3. Se a ferramenta `memory_handoff_begin` do ai-memory estiver disponível, registre também a passagem lá, com o mesmo conteúdo.
-4. Responda com: o caminho do arquivo, se foi para o ai-memory (sim ou não) e a instrução: limpe a sessão (ou abra uma nova na mesma pasta) e digite `/pickup`.
+2. Save the file to `~/.local/state/handoffs/<folder-slug>/<YYYY-MM-DD-HHMM>.md`, where the slug is the working directory path with `/` replaced by `-`. Create the folder if it does not exist.
+3. If the ai-memory tool `memory_handoff_begin` is available, also register the handoff there, with the same content.
+4. Reply with: the file path, whether it also went to ai-memory (yes or no), and the instruction: clear the session (or open a new one in the same folder) and type `/pickup`.

@@ -1,40 +1,42 @@
 # onde-estamos
 
-Faixa fixa acima do prompt do Claude Code. Em sessões longas, responde de relance: o que pedi, em que etapa estamos e o que ainda está rodando.
+A fixed band above the Claude Code prompt. In long sessions it answers at a glance: what I asked, which step we are on and what is still running.
 
 ```text
-Pedido (há 12 min): integra o módulo de cobrança ao app de planejamento usando a conexão existente
-Etapa 3 de 5: Escrevendo os testes de integração
-Em segundo plano: 2 agentes, 1 comando
+Request (12 min ago): integrate billing into the planning app using the existing connection
+Step 3 of 5: Writing the integration tests
+Running in background: 2 agents, 1 command
 ```
 
-## O que cada linha mostra
+## What each line shows
 
-| Linha | Origem | Quando some |
+| Line | Source | When it disappears |
 | --- | --- | --- |
-| `Pedido (há X): ...` | Seu último pedido real | Enquanto não houver pedido na sessão |
-| `Etapa N de M: ...` | Lista de tarefas do Claude (`TodoWrite`, `TaskCreate`, `TaskUpdate`) | Quando não há plano. Ao terminar, mostra `Plano concluído` |
-| `Em segundo plano: ...` | Agentes, comandos, monitores, workflows e agendamentos ativos | Quando nada roda |
+| `Request (x ago): ...` | Your latest real request | Until there is a request in the session |
+| `Step N of M: ...` | Claude's task list (`TodoWrite`, `TaskCreate`, `TaskUpdate`) | When there is no plan. When finished it shows `Plan complete` |
+| `Running in background: ...` | Running subagents, plus commands, monitors, workflows and schedules | When nothing is running |
 
-## Regras que você deve saber
+## Rules worth knowing
 
-- Só conta como **pedido** texto com 40 caracteres ou mais, que não comece com `/` nem `<`. Respostas curtas como "pode seguir" não trocam o pedido.
-- Um novo pedido zera o plano anterior.
-- A lista de tarefas de **subagentes** é ignorada; a etapa mostrada é sempre a da conversa principal.
-- A faixa é só informativa: se algo falhar dentro dela, o prompt e as ferramentas seguem normalmente.
-- A faixa some quando o Claude Code mostra a pesquisa de satisfação.
+- Only text of `minAskChars` characters or more (default 25), not starting with `/` or `<`, counts as a **request**. Short replies such as "go ahead" do not replace it. Change the minimum in `/config`.
+- A new request clears the previous plan.
+- Task lists from **subagents** are ignored: the step shown is always the main conversation's.
+- The "x min ago" label refreshes by itself once a minute.
+- Subagents are read live. Commands, monitors, workflows and schedules refresh when a turn or subagent ends.
+- The band is informational only: if something inside it fails, the prompt and tools carry on normally.
+- The band hides while Claude Code shows its satisfaction survey.
 
-## Instalar
+## Install
 
 ```text
 /plugin marketplace add https://git.example.invalid/group/claude-code-mods.git
 /plugin install onde-estamos@hub-de-ia-mods
 ```
 
-Não depende de skills nem de outros plugins.
+Depends on no skills and no other plugins.
 
-## Estrutura
+## Layout
 
-- `hooks/register.tsx`: liga a faixa aos eventos do Claude Code.
-- `hooks/helpers.ts`: funções puras (texto de uma linha, idade, resumo do plano).
-- `types/index.d.ts`: formato dos dados guardados na sessão.
+- `hooks/register.tsx`: wires the band to Claude Code events.
+- `hooks/helpers.ts`: pure functions (one-line text, age, plan summary).
+- `types/index.d.ts`: shape of the data kept in the session.

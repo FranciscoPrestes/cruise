@@ -1,28 +1,45 @@
 import { atom, read, update } from 'claude-code'
-import type { Register } from 'claude-code'
+import type { EngineInterface, Register } from 'claude-code'
 
 import type { Level } from '../types'
-import { nextWarning, URGENT_AT } from './levels'
+import { nextWarning, thresholds } from './levels'
+import type { Thresholds } from './levels'
 
 const warned = atom({ plugin: 'aviso-contexto', key: 'warned' } as const, 0 as Level)
 
-export const register: Register = on => {
+// A warning is advice: a failure here must never block a turn or a tool.
+const quietly = (work: Promise<unknown>) => work.catch(() => undefined)
+
+async function check($: EngineInterface, limits: Thresholds): Promise<void> {
+  const { context } = await $.session.usage()
+  const percent = context.percent
+  if (percent === undefined) return
+
+  const step = nextWarning(percent, await read($, warned), limits)
+  await update($, warned, () => step.warned)
+  $.ui.status(step.warned ? `Context ${percent}% · type /handoff` : undefined)
+
+  if (step.show === limits.urgentAt) {
+    $.ui.toast(`Context at ${percent}%. Type /handoff now, before compaction.`)
+    void $.ui.notify(`Context at ${percent}%: time for a handoff`, { title: 'Claude Code' })
+  } else if (step.show) {
+    $.ui.toast(`Context at ${percent}%. When you finish this step, type /handoff.`)
+  }
+}
+
+export const register: Register = (on, options) => {
+  const limits = thresholds(options)
+
+  // Also checked after each tool call, so a long autonomous run is warned mid-turn, not only when it ends.
+  on('tool.call', async ($, e, next) => {
+    const result = await next(e)
+    await quietly(check($, limits))
+    return result
+  })
+
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
-    const { context } = await $.session.usage()
-    const percent = context.percent
-    if (percent === undefined) return result
-
-    const step = nextWarning(percent, await read($, warned))
-    await update($, warned, () => step.warned)
-    $.ui.status(step.warned ? `Contexto ${percent}% · digite /handoff` : undefined)
-
-    if (step.show === URGENT_AT) {
-      $.ui.toast(`Contexto em ${percent}%. Digite /handoff agora, antes da compactação.`)
-      void $.ui.notify(`Contexto em ${percent}%: hora do handoff`, { title: 'Claude Code' })
-    } else if (step.show) {
-      $.ui.toast(`Contexto em ${percent}%. Quando fechar esta etapa, digite /handoff.`)
-    }
+    await quietly(check($, limits))
     return result
   })
 }

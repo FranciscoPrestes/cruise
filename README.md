@@ -1,21 +1,21 @@
-# Mods do Claude Code — the company
+# Claude Code mods — the company
 
-Dois mods para quem usa o Claude Code todo dia e quer sempre saber **o que está sendo feito** e **quando a sessão está ficando cheia demais**.
+Two mods for people who use Claude Code all day and want to always know **what is being done** and **when the session is getting too full**.
 
-| Mod | Para que serve | Precisa de mais alguma coisa? |
+| Mod | What it is for | Needs anything else? |
 | --- | --- | --- |
-| [`onde-estamos`](mods/onde-estamos/README.md) | Faixa fixa acima do prompt com o pedido atual, a etapa do plano e o que roda em segundo plano | Não |
-| [`aviso-contexto`](mods/aviso-contexto/README.md) | Avisa quando o contexto passa de 75% e 90% e leva você ao handoff | Já traz as skills `/handoff` e `/pickup` |
+| [`onde-estamos`](mods/onde-estamos/README.md) | A band above the prompt with the current request, the plan step and what runs in the background | No |
+| [`aviso-contexto`](mods/aviso-contexto/README.md) | Warns when the context passes 75% and 90% and leads you to the handoff | Ships the `/handoff` and `/pickup` skills itself |
 
-## Requisitos
+## Requirements
 
-- Claude Code com suporte a mods (plugins com hooks em TypeScript). Confira com `claude --version` e atualize se `/plugin` não existir.
-- Acesso de leitura a este projeto no GitLab da the company (peça convite ao dono do grupo **Hub de IA Experimentação**).
-- Git configurado no seu computador para clonar do `git.example.invalid` (chave SSH ou credencial HTTPS).
+- A Claude Code version with mod support (plugins with TypeScript hooks). If `/plugin` does not exist, update Claude Code.
+- Read access to this project on the internal GitLab (ask the owner of the **Hub de IA Experimentação** group for an invite).
+- Git configured on your computer to clone from `git.example.invalid` (SSH key or HTTPS credential).
 
-## Instalar
+## Install
 
-No prompt do Claude Code:
+At the Claude Code prompt:
 
 ```text
 /plugin marketplace add https://git.example.invalid/group/claude-code-mods.git
@@ -23,35 +23,46 @@ No prompt do Claude Code:
 /plugin install aviso-contexto@hub-de-ia-mods
 ```
 
-Você pode instalar só um dos dois. Depois de instalar, rode `/reload-plugins` ou abra uma nova sessão.
+You can install just one of the two. After installing, run `/reload-plugins` or open a new session.
 
-Fora do Claude Code, no terminal, os comandos são os mesmos com `claude plugin` no lugar de `/plugin`.
+From a plain terminal the commands are the same with `claude plugin` in place of `/plugin`.
 
-## Como conferir que funcionou
+## Check that it works
 
-1. `/plugin` deve listar `onde-estamos` e `aviso-contexto` como instalados.
-2. Mande um pedido longo (40 caracteres ou mais). A faixa `Pedido (agora): ...` aparece acima do prompt.
-3. O aviso de contexto só aparece quando o uso passa de 75%. Para ver sem esperar, use uma sessão longa ou peça a um colega que já tenha visto.
+1. `/plugin` should list `onde-estamos` and `aviso-contexto` as installed.
+2. Send a request of 25 characters or more. A `Request (now): ...` line appears above the prompt.
+3. The context warning only shows once usage passes 75%. To see it sooner, lower the threshold in the mod's settings (see below).
 
-## Skills que acompanham
+## Settings
 
-O `aviso-contexto` instala duas skills. Elas existem porque o aviso diz "digite `/handoff`": sem a skill, o comando não existe.
+Both mods have settings in `/config` (look for the plugin name).
 
-| Skill | O que faz |
+| Mod | Setting | Default | What it does |
+| --- | --- | --- | --- |
+| `aviso-contexto` | `warnAt` | 75 | Context % of the first, gentle warning |
+| `aviso-contexto` | `urgentAt` | 90 | Context % of the urgent warning and system notification |
+| `aviso-contexto` | `resetBelow` | 50 | Warnings start over once the context drops below this % |
+| `onde-estamos` | `minAskChars` | 25 | Messages shorter than this (such as "go ahead") do not replace the request shown |
+
+## Bundled skills
+
+`aviso-contexto` installs two skills. They exist because the warning says "type `/handoff`": without the skill that command would not exist.
+
+| Skill | What it does |
 | --- | --- |
-| `/handoff` | Grava o estado do trabalho (objetivo, o que foi feito, próximos passos, decisões pendentes) em `~/.local/state/handoffs/<pasta>/` para uma próxima sessão retomar. Não continua a tarefa. |
-| `/pickup` | Numa sessão nova, lê o último handoff daquela pasta, confere pasta e branch e retoma do primeiro próximo passo. |
+| `/handoff` | Saves the state of the work (goal, what is done, next steps, pending decisions) to `~/.local/state/handoffs/<folder>/` so a later session can resume. It does not continue the task. |
+| `/pickup` | In a new session, reads the latest handoff for that folder, checks folder and branch, and resumes from the first next step. |
 
-Fluxo recomendado ao receber o aviso:
+Recommended flow when you get the warning:
 
-1. Termine a etapa em andamento.
-2. Digite `/handoff`.
-3. Limpe a sessão (`/clear`) ou abra uma nova **na mesma pasta**.
-4. Digite `/pickup`.
+1. Finish the step in progress.
+2. Type `/handoff`.
+3. Clear the session (`/clear`) or open a new one **in the same folder**.
+4. Type `/pickup`.
 
-Se você já tem uma skill sua chamada `handoff` ou `pickup`, os nomes vão coincidir. Nesse caso use a do plugin pelo nome completo (`/aviso-contexto:handoff`) ou remova a sua.
+If you already have a skill of your own called `handoff` or `pickup`, the names will collide. Use the plugin's by its full name (`/aviso-contexto:handoff`) or remove yours.
 
-## Atualizar e remover
+## Update and remove
 
 ```text
 /plugin marketplace update hub-de-ia-mods
@@ -59,20 +70,19 @@ Se você já tem uma skill sua chamada `handoff` ou `pickup`, os nomes vão coin
 /plugin uninstall aviso-contexto@hub-de-ia-mods
 ```
 
-## Limitações conhecidas
+## Known limitations
 
-- Todos os textos estão em português. Trocar o idioma exige editar o código do mod.
-- Os limites de 75% e 90% são fixos no código (`mods/aviso-contexto/hooks/levels.ts`).
-- O `aviso-contexto` só confere o contexto quando um turno termina. Numa execução autônoma muito longa, o aviso pode chegar tarde.
-- O `onde-estamos` mostra o que roda em segundo plano apenas depois que um turno termina, então o número pode ficar desatualizado entre um turno e outro.
+- All text is in English. Another language means editing the mod's code.
+- The context check runs after each tool call and when a turn ends. A single very long step with no tool call can still pass a threshold before it is noticed.
+- `onde-estamos` reads subagents live, but shell commands, monitors, workflows and schedules only refresh when a turn or subagent ends, so their count can lag.
 
-## Desenvolver e testar
+## Develop and test
 
 ```bash
-claude plugin validate .                    # marketplace e manifestos
-claude plugin test mods/onde-estamos        # testes do mod
+claude plugin validate .                    # marketplace and manifests
+claude plugin test mods/onde-estamos        # mod tests
 claude plugin test mods/aviso-contexto
-claude --plugin-dir mods/onde-estamos       # roda o mod direto da pasta, sem instalar
+claude --plugin-dir mods/onde-estamos       # runs the mod straight from the folder, no install
 ```
 
-Mudanças entram por merge request. Ao mudar um mod, aumente a `version` no `plugin.json` dele, para a atualização chegar aos colegas.
+Changes go in through a merge request. When you change a mod, raise the `version` in its `plugin.json` so the update reaches your colleagues.
