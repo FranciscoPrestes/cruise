@@ -43,6 +43,31 @@
       "title": "Minimum request length",
       "description": "Messages shorter than this many characters (such as \"go ahead\") do not replace the request shown in the band.",
       "default": 25
+    },
+    "effort": {
+      "type": "string",
+      "title": "Effort steering",
+      "description": "Pick the reasoning effort for each prompt with a small judge: off, haiku (your own Claude login, no key), jev (TypeSafe hosted API, needs a key) or laya (a model running on your machine, see the README). It only ever goes down from the effort you set in the app.",
+      "default": "off",
+      "options": [
+        "off",
+        "haiku",
+        "jev",
+        "laya"
+      ]
+    },
+    "judgeUrl": {
+      "type": "string",
+      "title": "Judge URL (jev or laya)",
+      "description": "Where the judge listens. Empty uses https://api.typesafe.ai/v1/systemone for jev and http://127.0.0.1:8787/v1/systemone for laya.",
+      "default": ""
+    },
+    "judgeKey": {
+      "type": "string",
+      "title": "Judge key (jev)",
+      "description": "TypeSafe API key for jev. A laya server on your own machine needs none. Kept in Claude Code's secure storage.",
+      "default": "",
+      "sensitive": true
     }
   }
 }

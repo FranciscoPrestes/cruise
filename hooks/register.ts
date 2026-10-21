@@ -1,14 +1,33 @@
 import type { Register } from 'claude-code'
 
 import { checkContext, contextLimits } from './context'
-import { registerProgress, trackShell } from './progress'
+import { afterRequest, effortFor, judgeFrom, judgeMode, notePrompt, report } from './effort'
+import { DEFAULT_MIN_ASK_CHARS } from './helpers'
+import { noteAsk, registerProgress, startProgress, trackShell } from './progress'
 
 // Each feature can be switched off in the plugin's settings. The engine allows one unfiltered hook per event,
 // so the events several features share are owned here, and each feature's function is called from them.
 export const register: Register = (on, options) => {
   const wantContext = options.context !== false
   const wantProgress = options.progress !== false
+  const wantEffort = judgeMode(options) !== 'off'
   const limits = contextLimits(options)
+  const judge = judgeFrom(options)
+  const minAskChars = typeof options.minAskChars === 'number' ? options.minAskChars : DEFAULT_MIN_ASK_CHARS
+
+  on('session.start', async ($, e, next) => {
+    if (wantProgress) startProgress($)
+    await $.command.register({ name: 'cruise', description: 'Show what Cruise is doing: context, progress and effort steering' })
+    return next(e)
+  })
+
+  on('command.run', { command: 'cruise' }, async $ => ({ text: await report($, options) }))
+
+  on('prompt.submit', async ($, e, next) => {
+    if (wantProgress) await noteAsk($, e, minAskChars)
+    if (wantEffort) await notePrompt($, e)
+    return next(e)
+  })
 
   on('tool.call', async ($, e, next) => {
     const out = await next(e)
@@ -19,10 +38,12 @@ export const register: Register = (on, options) => {
 
   // Checked before every model request and again the moment its response is complete: context only grows between
   // requests, so a long run of steps is warned mid-turn, and a reply that jumps past a threshold is flagged
-  // before any tool it asks for runs.
+  // before any tool it asks for runs. The effort of a main-loop request is steered here too.
   on('turn.step', async function* ($, e, next) {
     if (wantContext) await checkContext($, limits)
-    const result = yield* next(e)
+    const steer = wantEffort && e.agentId === undefined ? await effortFor($, e, judge) : undefined
+    const result = yield* next(steer ? { ...e, effort: steer } : e)
+    if (wantEffort && e.agentId === undefined) await afterRequest($, e, steer, result.usage ?? undefined)
     if (wantContext) await checkContext($, limits)
     return result
   })

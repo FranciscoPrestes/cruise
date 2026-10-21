@@ -3,6 +3,29 @@ export type Ask = { text: string; at: number }
 export type Step = { title: string; status: 'pending' | 'in_progress' | 'completed' }
 export type Plan = Readonly<Record<string, Step>>
 export type BgTask = { id: string; type: string }
+export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+export type EffortState = {
+  // The prompt waiting for a verdict (judged on the first request of its turn, when the model is known).
+  pending: { text: string; afterQuestion: boolean } | null
+  // The effort chosen for the current work; null until the first verdict.
+  pick: Effort | null
+  // Why steering stopped for this session (the prompt cache did not survive an effort change); null while it runs.
+  paused: string | null
+  // The effort the app itself asked for on the last request: the ceiling.
+  appSeen: string | null
+  // Counters for /cruise: verdicts asked, follow-ups that kept the pick, judge failures, tokens, requests steered.
+  judged: number
+  kept: number
+  failed: number
+  judgeTokens: number
+  steered: number
+  // How many times each effort was picked.
+  picks: Readonly<Record<string, number>>
+  // The effort and time of the previous main-loop request, for the cache guard.
+  lastSent: { effort: string; at: number } | null
+  // The judge's reason for the current pick.
+  why: string
+}
 
 declare module 'claude-code' {
   interface PluginState {
@@ -17,6 +40,8 @@ declare module 'claude-code' {
       progressBackground: readonly BgTask[]
       // Bumped once a minute so the "x min ago" label redraws on its own.
       progressTick: number
+      // Effort steering (optional): the judge's verdicts and the cache guard.
+      effort: EffortState
     }
   }
 }
