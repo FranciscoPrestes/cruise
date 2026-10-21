@@ -1,17 +1,13 @@
 {
-  "name": "hub-de-ia-mods",
+  "name": "cruise",
+  "description": "Cruise control for Claude Code, by Francisco Prestes",
   "owner": {
     "name": "Francisco Prestes"
   },
   "plugins": [
     {
-      "name": "onde-estamos",
-      "source": "./mods/onde-estamos"
-    },
-    {
-      "name": "aviso-contexto",
-      "source": "./mods/aviso-contexto"
+      "name": "cruise",
+      "source": "./"
     }
-  ],
-  "description": "Claude Code mods"
+  ]
 }

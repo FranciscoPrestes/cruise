@@ -5,10 +5,10 @@ import type { Ask, BgTask, Plan } from '../types'
 import { addTask, endedTaskId, removeTask, snapshot } from './tasks'
 import { DEFAULT_MIN_ASK_CHARS, age, backgroundSummary, isRealAsk, oneLine, planFromTodos, planSummary } from './helpers'
 
-const ask = atom({ plugin: 'onde-estamos', key: 'ask' } as const, null as Ask | null)
-const plan = atom({ plugin: 'onde-estamos', key: 'plan' } as const, {} as Plan)
-const background = atom({ plugin: 'onde-estamos', key: 'background' } as const, [] as readonly BgTask[])
-const tick = atom({ plugin: 'onde-estamos', key: 'tick' } as const, 0)
+const ask = atom({ plugin: 'cruise', key: 'progressAsk' } as const, null as Ask | null)
+const plan = atom({ plugin: 'cruise', key: 'progressPlan' } as const, {} as Plan)
+const background = atom({ plugin: 'cruise', key: 'progressBackground' } as const, [] as readonly BgTask[])
+const tick = atom({ plugin: 'cruise', key: 'progressTick' } as const, 0)
 
 const TICK_MS = 60_000
 
@@ -21,6 +21,12 @@ async function track($: EngineInterface, type: string, id: string | undefined): 
   if (id) await quietly(update($, background, list => addTask(list, { id, type })))
 }
 
+// Any tool can start a background shell (Bash with run_in_background, a command sent to the background
+// with Ctrl+B or by its timeout, another shell tool): they all report it as `backgroundTaskId`.
+export async function trackShell($: EngineInterface, out: { result?: unknown }): Promise<void> {
+  await track($, 'shell', field(out.result, 'backgroundTaskId'))
+}
+
 async function untrack($: EngineInterface, id: string | undefined): Promise<void> {
   if (id) await quietly(update($, background, list => removeTask(list, id)))
 }
@@ -31,7 +37,7 @@ async function runningAgents($: EngineInterface): Promise<readonly string[]> {
   return agents.filter(a => a.status === 'running').map(() => 'subagent')
 }
 
-export const register: Register = (on, options) => {
+export const registerProgress: Register = (on, options) => {
   const minAskChars = typeof options.minAskChars === 'number' ? options.minAskChars : DEFAULT_MIN_ASK_CHARS
 
   // Redraws the band once a minute so "x min ago" does not freeze between events.
@@ -80,14 +86,6 @@ export const register: Register = (on, options) => {
   })
 
   // Background work is tracked as it starts and ends, so the count does not wait for a turn to finish.
-  // Any tool can start a background shell (Bash with run_in_background, a command sent to the background
-  // with Ctrl+B or by its timeout, another shell tool): they all report it as `backgroundTaskId`.
-  on('tool.call', async ($, e, next) => {
-    const out = await next(e)
-    await track($, 'shell', field(out.result, 'backgroundTaskId'))
-    return out
-  })
-
   on('tool.call', { tool: 'Monitor' }, async ($, e, next) => {
     const out = await next(e)
     await track($, 'monitor', field(out.result, 'taskId'))

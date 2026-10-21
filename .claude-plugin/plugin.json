@@ -1,0 +1,48 @@
+{
+  "name": "cruise",
+  "version": "1.0.0",
+  "description": "Cruise control for Claude Code: watches the context, shows where you are and (optionally) picks the reasoning effort for each prompt",
+  "author": {
+    "name": "Francisco Prestes"
+  },
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "context": {
+      "type": "boolean",
+      "title": "Context warnings",
+      "description": "Warn when the context fills up and point to /handoff.",
+      "default": true
+    },
+    "warnAt": {
+      "type": "number",
+      "title": "First warning (% of context)",
+      "description": "Context percentage that triggers the first, gentle warning.",
+      "default": 75
+    },
+    "urgentAt": {
+      "type": "number",
+      "title": "Urgent warning (% of context)",
+      "description": "Context percentage that triggers the urgent warning and a system notification. Never below the first warning.",
+      "default": 90
+    },
+    "resetBelow": {
+      "type": "number",
+      "title": "Reset below (% of context)",
+      "description": "After a compaction drops the context below this percentage, warnings start over. Never above the first warning.",
+      "default": 50
+    },
+    "progress": {
+      "type": "boolean",
+      "title": "Progress band",
+      "description": "Show the band above the prompt with the current request, the plan step and background work.",
+      "default": true
+    },
+    "minAskChars": {
+      "type": "number",
+      "title": "Minimum request length",
+      "description": "Messages shorter than this many characters (such as \"go ahead\") do not replace the request shown in the band.",
+      "default": 25
+    }
+  }
+}

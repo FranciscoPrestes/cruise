@@ -10,7 +10,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
       tool: 'TodoWrite',
       todos: [{ content: 'Read', activeForm: 'Reading the backend', status: 'in_progress' }],
     } as never)
-    const ui = await $.ui.mount({ plugin: 'onde-estamos', surface, component: 'AbovePrompt', props: { bodyColumns: 120 } as never })
+    const ui = await $.ui.mount({ plugin: 'cruise', surface, component: 'AbovePrompt', props: { bodyColumns: 120 } as never })
     expect(await ui.findAll({ text: /Request/ })).not.toHaveLength(0)
     expect(await ui.findAll({ text: /Step 1 of 1: Reading the backend/ })).not.toHaveLength(0)
   })
@@ -23,13 +23,13 @@ test('a subagent task list does not overwrite the main plan', async ($, on) => {
   await $.prompt.submit({ text: 'integrate billing into the planning app using the existing connection' })
   await $.tool.call({ tool: 'TodoWrite', todos: [{ content: 'Main', activeForm: 'Doing the main work', status: 'in_progress' }] } as never)
   await $.tool.call({ tool: 'TodoWrite', agentId: 'sub-1', todos: [{ content: 'From the subagent', activeForm: 'Subagent', status: 'in_progress' }] } as never)
-  const ui = await $.ui.mount({ plugin: 'onde-estamos', surface: 'terminal', component: 'AbovePrompt', props: { bodyColumns: 120 } as never })
+  const ui = await $.ui.mount({ plugin: 'cruise', surface: 'terminal', component: 'AbovePrompt', props: { bodyColumns: 120 } as never })
   expect(await ui.findAll({ text: /Doing the main work/ })).not.toHaveLength(0)
   expect(await ui.findAll({ text: /Subagent/ })).toHaveLength(0)
 })
 
 const mountBand = ($: Parameters<Parameters<typeof test>[1]>[0]) =>
-  $.ui.mount({ plugin: 'onde-estamos', surface: 'terminal', component: 'AbovePrompt', props: { bodyColumns: 120 } as never })
+  $.ui.mount({ plugin: 'cruise', surface: 'terminal', component: 'AbovePrompt', props: { bodyColumns: 120 } as never })
 
 test('a shorter request counts when the minimum length is lowered', { options: { minAskChars: 10 } }, async ($, on) => {
   on('clock.now', async () => ({ value: 1_000 }) as never)
