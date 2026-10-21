@@ -22,7 +22,7 @@ Running in background: 2 agents, 1 command
 - A new request clears the previous plan.
 - Task lists from **subagents** are ignored: the step shown is always the main conversation's.
 - The "x min ago" label refreshes by itself once a minute.
-- Subagents are read live. Commands, monitors, workflows and schedules refresh when a turn or subagent ends.
+- Subagents, background commands, monitors and schedules are followed live: they appear when they start and leave when they end or are stopped. Anything else (workflows, for example) refreshes when a turn or subagent ends.
 - The band is informational only: if something inside it fails, the prompt and tools carry on normally.
 - The band hides while Claude Code shows its satisfaction survey.
 
@@ -39,4 +39,5 @@ Depends on no skills and no other plugins.
 
 - `hooks/register.tsx`: wires the band to Claude Code events.
 - `hooks/helpers.ts`: pure functions (one-line text, age, plan summary).
+- `hooks/tasks.ts`: pure functions that track background tasks.
 - `types/index.d.ts`: shape of the data kept in the session.

@@ -74,7 +74,7 @@ If you already have a skill of your own called `handoff` or `pickup`, the names 
 
 - All text is in English. Another language means editing the mod's code.
 - The context check runs after each tool call and when a turn ends. A single very long step with no tool call can still pass a threshold before it is noticed.
-- `onde-estamos` reads subagents live, but shell commands, monitors, workflows and schedules only refresh when a turn or subagent ends, so their count can lag.
+- `onde-estamos` follows subagents, background commands, monitors and schedules as they start and end. Workflows and tasks started outside the session's tools only refresh when a turn or subagent ends.
 
 ## Develop and test
 
