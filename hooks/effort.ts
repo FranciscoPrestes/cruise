@@ -62,7 +62,7 @@ export function judgeFrom(options: PluginOptions): Judge {
   return { mode, url, key: typeof options.judgeKey === 'string' ? options.judgeKey.trim() : '' }
 }
 
-// A prompt the person typed is judged on the first request of its turn. Commands and system notes are not prompts.
+// A prompt the person typed is judged on the next main-loop request. Commands and system notes are not prompts.
 export async function notePrompt($: EngineInterface, e: { text: string; command?: unknown; isMeta?: true }): Promise<void> {
   if (e.command || e.isMeta || !e.text.trim()) return
   const afterQuestion = await lastReplyAsked($)
@@ -132,7 +132,7 @@ async function ask($: EngineInterface, judge: Judge, text: string, top: Effort, 
   }
 }
 
-// Settles the pending prompt into a pick: a short follow-up keeps the pick, anything else asks the judge.
+// Settles the pending prompt into a pick (once: it is cleared before the judge is asked): a short follow-up keeps the pick, anything else asks the judge.
 async function decide($: EngineInterface, judge: Judge, top: Effort): Promise<void> {
   const state = await read($, effortState)
   const pending = state.pending
@@ -161,13 +161,13 @@ async function decide($: EngineInterface, judge: Judge, top: Effort): Promise<vo
 }
 
 // The effort to send on this model request, or nothing to let the app's own effort go out unchanged.
-export async function effortFor($: EngineInterface, e: { model: string; effort?: unknown; index: number }, judge: Judge): Promise<Effort | undefined> {
+export async function effortFor($: EngineInterface, e: { model: string; effort?: unknown }, judge: Judge): Promise<Effort | undefined> {
   if (!isSteerable(e.model, e.effort)) return undefined
   const app = e.effort
   const before = await read($, effortState)
   if (before.paused) return undefined
   if (before.appSeen !== app) await update($, effortState, s => ({ ...s, appSeen: app }))
-  if (e.index === 0) await decide($, judge, app)
+  await decide($, judge, app)
   const { pick } = await read($, effortState)
   if (!pick) return undefined
   const effort = clampTo(pick, app)

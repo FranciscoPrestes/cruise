@@ -156,3 +156,17 @@ test('a task created but not started shows its subject as the step', async ($, o
   await $.tool.call({ tool: 'TaskCreate', subject: 'Draft the report', description: 'd' } as never)
   expect(await (await mountBand($)).findAll({ text: /Step 1 of 1: Draft the report/ })).not.toHaveLength(0)
 })
+
+test('the progress band can be switched off in the settings', { options: { progress: false } }, async ($, on) => {
+  on('clock.now', async () => ({ value: 1_000 }) as never)
+  on('prompt.submit', async () => ({ text: 'ok' }) as never)
+  await $.prompt.submit({ text: 'integrate billing into the planning app using the existing connection' })
+  // With the band off nothing draws it: the mount finds nothing to render, or renders without the request line.
+  let drawn = false
+  try {
+    drawn = (await (await mountBand($)).findAll({ text: /Request/ })).length > 0
+  } catch {
+    drawn = false
+  }
+  expect(drawn).toBe(false)
+})

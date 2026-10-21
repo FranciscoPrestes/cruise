@@ -95,3 +95,13 @@ test('a response that jumps past the threshold is flagged as soon as it complete
   for await (const _chunk of $.turn.step({ turnId: 't6', index: 0, model: 'm', messageCount: 10 } as never)) void _chunk
   expect(toasts).toHaveLength(1)
 })
+
+test('context warnings can be switched off in the settings', { options: { context: false } }, async ($, on) => {
+  const toasts: string[] = []
+  on('session.usage', async () => usage(95))
+  on('ui.status', async () => ({ value: undefined }) as never)
+  on('ui.toast', async (_$, e) => { toasts.push(e.text); return { value: undefined } as never })
+  on('turn.complete', async () => ({ text: '' }))
+  await $.turn.complete({ reason: 'answer', answer: 'ok', durationMs: 1, isAborted: false, turnId: 't9' })
+  expect(toasts).toHaveLength(0)
+})

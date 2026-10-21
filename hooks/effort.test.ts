@@ -7,7 +7,7 @@ const usage = (read: number, wrote: number) => ({ input_tokens: 2, output_tokens
 type Setup = { sent: unknown[]; judged: string[]; toasts: string[]; calls: { url?: string; auth?: string }[]; clock: { advance: (ms: number) => Promise<void> } }
 
 // Everything beneath the plugin is a stub; the plugin's own hooks run for real.
-function stubs(on: any, opts: { replies?: unknown[]; reply?: unknown; steps?: ReturnType<typeof usage>[]; fetchBody?: string } = {}): Setup {
+function stubs(on: any, opts: { replies?: unknown[]; reply?: unknown; steps?: ReturnType<typeof usage>[]; fetchBody?: string; throwJudge?: boolean } = {}): Setup {
   const clock = mock.clock(on)
   const out: Setup = { sent: [], judged: [], toasts: [], calls: [], clock }
   let asked = 0
@@ -17,9 +17,10 @@ function stubs(on: any, opts: { replies?: unknown[]; reply?: unknown; steps?: Re
   on('ui.toast', async (_$: unknown, e: { text: string }) => { out.toasts.push(e.text); return { value: undefined } as never })
   on('ui.status', async () => ({ value: undefined }) as never)
   on('session.usage', async () => ({ value: { startedAt: 0, context: { window: 1, tokens: 0, percent: 10 } } }) as never)
-  on('model.complete', async (_$: unknown, e: { prompt: string }) => { out.judged.push(e.prompt); const r = opts.replies ? opts.replies[asked] : opts.reply; asked += 1; return { value: r ?? verdict('low') } as never })
+  on('model.complete', async (_$: unknown, e: { prompt: string }) => { out.judged.push(e.prompt); if (opts.throwJudge) throw new Error('boom'); const r = opts.replies ? opts.replies[asked] : opts.reply; asked += 1; return { value: r ?? verdict('low') } as never })
   on('http.fetch', async (_$: unknown, e: { url: string; init?: { headers?: Record<string, string> } }) => {
     out.calls.push({ url: e.url, auth: e.init?.headers?.authorization })
+    if (opts.throwJudge) throw new Error('connection refused')
     return { value: { ok: true, status: 200, headers: {}, text: opts.fetchBody ?? '' } } as never
   })
   on('turn.step', async function* (_$: unknown, e: { effort?: unknown; turnId: string; index: number }, _next: unknown) {
@@ -157,4 +158,44 @@ test('a healthy cache after an effort change keeps steering on', { options: { ef
   }
   expect(s.sent).toEqual(['low', 'high', 'low'])
   expect(s.toasts).toHaveLength(0)
+})
+
+test('a judge that throws (model error, connection refused) never holds the request back, and is counted', { options: { effort: 'haiku' } }, async ($, on) => {
+  const s = stubs(on, { throwJudge: true })
+  await $.prompt.submit({ text: ASK })
+  await run($)
+  expect(s.sent).toEqual(['high'])
+  const report = await $.command.run({ command: 'cruise', args: '' } as never)
+  expect(JSON.stringify(report)).toContain('judge failures: 1')
+})
+
+test('/cruise reports the judge, the pick and the counters', { options: { effort: 'haiku' } }, async ($, on) => {
+  stubs(on)
+  await $.prompt.submit({ text: ASK })
+  await run($)
+  const text = JSON.stringify(await $.command.run({ command: 'cruise', args: '' } as never))
+  expect(text).toContain('judge haiku')
+  expect(text).toContain('current pick: low')
+  expect(text).toContain('Verdicts: 1')
+})
+
+test('/cruise says plainly when effort steering is off', async ($, on) => {
+  stubs(on)
+  const text = JSON.stringify(await $.command.run({ command: 'cruise', args: '' } as never))
+  expect(text).toContain('effort steering is off')
+})
+
+test('an unreachable laya server (connection refused) never holds the request back', { options: { effort: 'laya' } }, async ($, on) => {
+  const s = stubs(on, { throwJudge: true })
+  await $.prompt.submit({ text: ASK })
+  await run($)
+  expect(s.sent).toEqual(['high'])
+})
+
+test('if the person lowers the app effort mid-work, the pick never goes above it', { options: { effort: 'haiku' } }, async ($, on) => {
+  const s = stubs(on, { reply: verdict('high') })
+  await $.prompt.submit({ text: 'investigate why the nightly export job corrupts rows when two workers overlap' })
+  await run($, { effort: 'high' })
+  await run($, { effort: 'medium', index: 1 })
+  expect(s.sent).toEqual(['high', 'medium'])
 })
