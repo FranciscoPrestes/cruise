@@ -23,12 +23,15 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // O plano é o da conversa principal: a lista de tarefas de um subagente não o sobrescreve.
   on('tool.call', { tool: 'TodoWrite' }, async ($, e, next) => {
+    if (e.agentId) return next(e)
     await quietly(update($, plan, () => planFromTodos(e.input.todos)))
     return next(e)
   })
 
   on('tool.call', { tool: 'TaskCreate' }, async ($, e, next) => {
+    if (e.agentId) return next(e)
     const out = await next(e)
     const id = out.result?.task?.id
     if (id) await quietly(update($, plan, p => ({ ...p, [id]: { title: e.input.subject, status: 'pending' } })))
@@ -36,6 +39,7 @@ export const register: Register = on => {
   })
 
   on('tool.call', { tool: 'TaskUpdate' }, async ($, e, next) => {
+    if (e.agentId) return next(e)
     const { taskId, status, activeForm, subject } = e.input
     await quietly(update($, plan, p => {
       const step = p[taskId]
