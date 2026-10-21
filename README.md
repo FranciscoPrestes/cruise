@@ -73,7 +73,7 @@ If you already have a skill of your own called `handoff` or `pickup`, the names 
 ## Known limitations
 
 - All text is in English. Another language means editing the mod's code.
-- The context check cannot see inside a single model response: a reply that by itself jumps past a threshold is warned right after it, before the next request.
+- A reply that by itself crosses a threshold is flagged the moment it completes, before any tool it asks for runs. It cannot be flagged earlier, because its size is only known once it exists.
 - Background work started outside the session's own tools (for example by another program) is not followed.
 
 ## Develop and test

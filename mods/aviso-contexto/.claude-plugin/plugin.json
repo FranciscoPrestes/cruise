@@ -1,6 +1,6 @@
 {
   "name": "aviso-contexto",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Warns when the context passes 75% and 90% and points you to the /handoff skill",
   "author": {
     "name": "Francisco Prestes"

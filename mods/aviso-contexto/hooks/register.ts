@@ -30,11 +30,14 @@ async function check($: EngineInterface, limits: Thresholds): Promise<void> {
 export const register: Register = (on, options) => {
   const limits = thresholds(options)
 
-  // Checked before every model request of a turn: context only grows between requests, so even a
-  // long run of steps with no tool call is warned mid-turn, not only when it ends.
+  // Checked before every model request and again the moment its response is complete: context only
+  // grows between requests, so a long run of steps (with or without tool calls) is warned mid-turn,
+  // and a reply that jumps past a threshold is flagged before any tool it asks for runs.
   on('turn.step', async function* ($, e, next) {
     await quietly(check($, limits))
-    return yield* next(e)
+    const result = yield* next(e)
+    await quietly(check($, limits))
+    return result
   })
 
   // Also checked after each tool call: its result is already in the context for the next request.

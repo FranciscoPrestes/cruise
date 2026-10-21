@@ -69,10 +69,27 @@ test('before a model request it already warns, even with no tool call in the ste
   on('session.usage', async () => usage(85))
   on('ui.status', async () => ({ value: undefined }) as never)
   on('ui.toast', async (_$, e) => { toasts.push(e.text); return { value: undefined } as never })
-  // The kit has no engine beneath turn.step to send the request, so the stream ends in an error;
-  // what matters is that the warning was already shown by then, i.e. before the request.
-  try {
-    for await (const chunk of $.turn.step({ turnId: 't5', index: 3, model: 'm', messageCount: 40 } as never)) void chunk
-  } catch {}
+  on('turn.step', async function* (_$, _e, _next) {
+    yield { kind: 'text', index: 0, text: 'ok' } as never
+    return { turnId: 't5', index: 3, answer: 'ok', toolUses: [] } as never
+  })
+  const chunks: unknown[] = []
+  for await (const chunk of $.turn.step({ turnId: 't5', index: 3, model: 'm', messageCount: 40 } as never)) chunks.push(chunk)
+  expect(chunks).toHaveLength(1)
+  expect(toasts).toHaveLength(1)
+})
+
+test('a response that jumps past the threshold is flagged as soon as it completes', async ($, on) => {
+  const toasts: string[] = []
+  let calls = 0
+  // 50% before the request, 85% once the response is complete.
+  on('session.usage', async () => usage(++calls === 1 ? 50 : 85))
+  on('ui.status', async () => ({ value: undefined }) as never)
+  on('ui.toast', async (_$, e) => { toasts.push(e.text); return { value: undefined } as never })
+  on('turn.step', async function* (_$, _e, _next) {
+    yield { kind: 'text', index: 0, text: 'big reply' } as never
+    return { turnId: 't6', index: 0, answer: 'big reply', toolUses: [] } as never
+  })
+  for await (const _chunk of $.turn.step({ turnId: 't6', index: 0, model: 'm', messageCount: 10 } as never)) void _chunk
   expect(toasts).toHaveLength(1)
 })
