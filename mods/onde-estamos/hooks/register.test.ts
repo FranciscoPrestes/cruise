@@ -149,3 +149,10 @@ test('the "x min ago" label moves on by itself as the minutes pass', async ($, o
   await clock.advance(5 * 60_000)
   expect(await band.findAll({ text: /Request \(5 min ago\)/ })).not.toHaveLength(0)
 })
+
+test('a task created but not started shows its subject as the step', async ($, on) => {
+  on('tool.call', async (_$, e) => ({ result: e.tool === 'TaskCreate' ? { task: { id: '3', subject: 'Draft the report' } } : {} }) as never)
+  await askAndMount($, on)
+  await $.tool.call({ tool: 'TaskCreate', subject: 'Draft the report', description: 'd' } as never)
+  expect(await (await mountBand($)).findAll({ text: /Step 1 of 1: Draft the report/ })).not.toHaveLength(0)
+})

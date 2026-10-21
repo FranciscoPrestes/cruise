@@ -73,10 +73,12 @@ test('before a model request it already warns, even with no tool call in the ste
     yield { kind: 'text', index: 0, text: 'ok' } as never
     return { turnId: 't5', index: 3, answer: 'ok', toolUses: [] } as never
   })
-  const chunks: unknown[] = []
-  for await (const chunk of $.turn.step({ turnId: 't5', index: 3, model: 'm', messageCount: 40 } as never)) chunks.push(chunk)
-  expect(chunks).toHaveLength(1)
-  expect(toasts).toHaveLength(1)
+  const toastsWhenFirstChunkArrived: number[] = []
+  for await (const _chunk of $.turn.step({ turnId: 't5', index: 3, model: 'm', messageCount: 40 } as never)) {
+    toastsWhenFirstChunkArrived.push(toasts.length)
+  }
+  // The response is still streaming when its first chunk arrives: the warning must already be out.
+  expect(toastsWhenFirstChunkArrived).toEqual([1])
 })
 
 test('a response that jumps past the threshold is flagged as soon as it completes', async ($, on) => {
