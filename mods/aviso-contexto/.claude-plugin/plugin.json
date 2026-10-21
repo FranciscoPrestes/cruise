@@ -1,0 +1,6 @@
+{
+  "name": "aviso-contexto",
+  "version": "0.3.0",
+  "description": "Avisa quando o contexto passa de 75% e 90%, e lembra de rodar a skill /handoff",
+  "types": "./types/index.d.ts"
+}

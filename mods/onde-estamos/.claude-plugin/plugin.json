@@ -1,0 +1,6 @@
+{
+  "name": "onde-estamos",
+  "version": "0.1.0",
+  "description": "Faixa acima do prompt: pedido atual, etapa do plano e o que roda em segundo plano",
+  "types": "./types/index.d.ts"
+}

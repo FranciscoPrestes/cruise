@@ -1,0 +1,8 @@
+{
+  "name": "hub-de-ia-mods",
+  "owner": { "name": "Francisco Prestes" },
+  "plugins": [
+    { "name": "onde-estamos", "source": "./mods/onde-estamos" },
+    { "name": "aviso-contexto", "source": "./mods/aviso-contexto" }
+  ]
+}
