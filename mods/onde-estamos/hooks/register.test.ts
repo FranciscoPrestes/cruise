@@ -1,4 +1,4 @@
-import { expect, test } from 'claude-code/testing'
+import { expect, mock, test } from 'claude-code/testing'
 
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`shows request and step in the band (${surface})`, async ($, on) => {
@@ -136,4 +136,16 @@ test('the engine\'s own list at Stop corrects anything the band missed', async (
   const band = await mountBand($)
   expect(await band.findAll({ text: /1 monitor/ })).not.toHaveLength(0)
   expect(await band.findAll({ text: /command/ })).toHaveLength(0)
+})
+
+test('the "x min ago" label moves on by itself as the minutes pass', async ($, on) => {
+  const clock = mock.clock(on)
+  on('prompt.submit', async () => ({ text: 'ok' }) as never)
+  on('session.start', async () => ({ cwd: '/tmp' }) as never)
+  await $.session.start({ source: 'startup', cwd: '/tmp' } as never)
+  await $.prompt.submit({ text: 'integrate billing into the planning app using the existing connection' })
+  const band = await mountBand($) // stays mounted: nothing remounts it, so only the tick can redraw it
+  expect(await band.findAll({ text: /Request \(now\)/ })).not.toHaveLength(0)
+  await clock.advance(5 * 60_000)
+  expect(await band.findAll({ text: /Request \(5 min ago\)/ })).not.toHaveLength(0)
 })

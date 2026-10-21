@@ -25,6 +25,8 @@ At the Claude Code prompt:
 
 You can install just one of the two. After installing, run `/reload-plugins` or open a new session.
 
+The installer may say some options are "not yet set". That is fine: every option has a default (see Settings), so nothing needs configuring unless you want to change it.
+
 From a plain terminal the commands are the same with `claude plugin` in place of `/plugin`.
 
 ## Check that it works
