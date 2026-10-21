@@ -4,7 +4,7 @@ const ASK = 'change the color of the save button on the settings page to blue'
 const verdict = (effort: string, sure = 0.9) => ({ isAnswered: true, text: JSON.stringify({ effort, sure, why: 'test' }), usage: { input_tokens: 100, output_tokens: 20 } })
 const usage = (read: number, wrote: number) => ({ input_tokens: 2, output_tokens: 70, cache_read_input_tokens: read, cache_creation_input_tokens: wrote })
 
-type Setup = { sent: unknown[]; judged: string[]; toasts: string[]; calls: { url?: string; auth?: string }[]; clock: { advance: (ms: number) => Promise<void> } }
+type Setup = { sent: unknown[]; judged: string[]; toasts: string[]; calls: { url?: string; auth?: string; body?: string }[]; clock: { advance: (ms: number) => Promise<void> } }
 
 // Everything beneath the plugin is a stub; the plugin's own hooks run for real.
 function stubs(on: any, opts: { replies?: unknown[]; reply?: unknown; steps?: ReturnType<typeof usage>[]; fetchBody?: string; throwJudge?: boolean } = {}): Setup {
@@ -18,8 +18,8 @@ function stubs(on: any, opts: { replies?: unknown[]; reply?: unknown; steps?: Re
   on('ui.status', async () => ({ value: undefined }) as never)
   on('session.usage', async () => ({ value: { startedAt: 0, context: { window: 1, tokens: 0, percent: 10 } } }) as never)
   on('model.complete', async (_$: unknown, e: { prompt: string }) => { out.judged.push(e.prompt); if (opts.throwJudge) throw new Error('boom'); const r = opts.replies ? opts.replies[asked] : opts.reply; asked += 1; return { value: r ?? verdict('low') } as never })
-  on('http.fetch', async (_$: unknown, e: { url: string; init?: { headers?: Record<string, string> } }) => {
-    out.calls.push({ url: e.url, auth: e.init?.headers?.authorization })
+  on('http.fetch', async (_$: unknown, e: { url: string; init?: { headers?: Record<string, string>; body?: string } }) => {
+    out.calls.push({ url: e.url, auth: e.init?.headers?.authorization, body: e.init?.body })
     if (opts.throwJudge) throw new Error('connection refused')
     return { value: { ok: true, status: 200, headers: {}, text: opts.fetchBody ?? '' } } as never
   })
@@ -121,7 +121,7 @@ test('laya: the local URL is used and no key is sent', { options: { effort: 'lay
   await $.prompt.submit({ text: ASK })
   await run($)
   expect(s.sent).toEqual(['medium'])
-  expect(s.calls[0]?.url).toBe('http://127.0.0.1:8787/v1/systemone')
+  expect(s.calls[0]?.url).toBe('http://127.0.0.1:18787/v1/systemone')
   expect(s.calls[0]?.auth).toBe(undefined)
 })
 
@@ -198,4 +198,36 @@ test('if the person lowers the app effort mid-work, the pick never goes above it
   await run($, { effort: 'high' })
   await run($, { effort: 'medium', index: 1 })
   expect(s.sent).toEqual(['high', 'medium'])
+})
+
+test('jev: its highest label keeps an xhigh app effort instead of lowering it', { options: { effort: 'jev' } }, async ($, on) => {
+  const body = JSON.stringify({ answers: { effort: { choice: 'high', confidence: 0.9 } } })
+  const s = stubs(on, { fetchBody: body })
+  await $.prompt.submit({ text: 'investigate why the nightly export job corrupts rows when two workers overlap' })
+  await run($, { effort: 'xhigh' })
+  expect(s.sent).toEqual(['xhigh'])
+  // the hosted judge is offered three levels at most, whatever the app is on
+  expect(Object.keys(JSON.parse(s.calls[0]?.body ?? '{}').questions.effort.criteria)).toEqual(['low', 'medium', 'high'])
+})
+
+test('jev: a lower label still lowers an xhigh app effort', { options: { effort: 'jev' } }, async ($, on) => {
+  const body = JSON.stringify({ answers: { effort: { choice: 'low', confidence: 0.9 } } })
+  const s = stubs(on, { fetchBody: body })
+  await $.prompt.submit({ text: ASK })
+  await run($, { effort: 'xhigh' })
+  expect(s.sent).toEqual(['low'])
+})
+
+test('laya: a trained checkpoint can be named, and the default asks the server to route', { options: { effort: 'laya', judgeModel: 'cruise-effort' } }, async ($, on) => {
+  const s = stubs(on, { fetchBody: JSON.stringify({ answers: { effort: { choice: 'low', confidence: 0.9 } } }) })
+  await $.prompt.submit({ text: ASK })
+  await run($)
+  expect(JSON.parse(s.calls[0]?.body ?? '{}').model).toBe('cruise-effort')
+})
+
+test('laya: with no checkpoint named the server routes by language', { options: { effort: 'laya' } }, async ($, on) => {
+  const s = stubs(on, { fetchBody: JSON.stringify({ answers: { effort: { choice: 'low', confidence: 0.9 } } }) })
+  await $.prompt.submit({ text: ASK })
+  await run($)
+  expect(JSON.parse(s.calls[0]?.body ?? '{}').model).toBe('jev-1')
 })

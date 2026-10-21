@@ -7,6 +7,7 @@ import type { EngineInterface, PluginOptions } from 'claude-code'
 import type { Effort, EffortState } from '../types'
 import {
   cacheRewritten,
+  HTTP_TOP,
   clampTo,
   criteriaFor,
   effortLine,
@@ -16,6 +17,7 @@ import {
   judgeQuestion,
   judgeSystem,
   levelsUpTo,
+  liftHighest,
   parseHaiku,
   parseJev,
   settle,
@@ -25,7 +27,7 @@ import type { Usage, Verdict } from './effort-rules'
 export type JudgeMode = 'off' | 'haiku' | 'jev' | 'laya'
 
 export const JEV_URL = 'https://api.typesafe.ai/v1/systemone'
-export const LAYA_URL = 'http://127.0.0.1:8787/v1/systemone'
+export const LAYA_URL = 'http://127.0.0.1:18787/v1/systemone'
 // Haiku 5.5 by name: a Claude Code build that predates it maps the plain "haiku" alias to Haiku 4.5, at ten times the price.
 const HAIKU_MODEL = 'claude-haiku-5-5'
 const HAIKU_TIMEOUT_MS = 6000
@@ -54,12 +56,13 @@ export function judgeMode(options: PluginOptions): JudgeMode {
   return mode === 'haiku' || mode === 'jev' || mode === 'laya' ? mode : 'off'
 }
 
-export type Judge = { mode: JudgeMode; url: string; key: string }
+export type Judge = { mode: JudgeMode; url: string; key: string; model: string }
 
 export function judgeFrom(options: PluginOptions): Judge {
   const mode = judgeMode(options)
   const url = typeof options.judgeUrl === 'string' && options.judgeUrl.trim() ? options.judgeUrl.trim() : mode === 'laya' ? LAYA_URL : JEV_URL
-  return { mode, url, key: typeof options.judgeKey === 'string' ? options.judgeKey.trim() : '' }
+  const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
+  return { mode, url, key: text(options.judgeKey), model: text(options.judgeModel) }
 }
 
 // A prompt the person typed is judged on the next main-loop request. Commands and system notes are not prompts.
@@ -92,12 +95,12 @@ async function askHaiku($: EngineInterface, text: string, top: Effort, current: 
 }
 
 async function askHttp($: EngineInterface, judge: Judge, text: string, top: Effort, current: Effort | null, afterQuestion: boolean): Promise<Judged> {
-  const levels = levelsUpTo(top)
+  const levels = levelsUpTo(clampTo(top, HTTP_TOP))
   const headers: Record<string, string> = { 'content-type': 'application/json' }
   if (judge.key) headers.authorization = `Bearer ${judge.key}`
   // Only the next message and two small facts leave the machine: never the conversation.
   const body = JSON.stringify({
-    model: judge.mode === 'laya' ? 'jev-1' : 'jev-latest',
+    model: judge.model || (judge.mode === 'laya' ? 'jev-1' : 'jev-latest'),
     state: {
       task: 'Choose the lowest reasoning effort an agentic assistant needs for the next user message. Judge scope and amount of work. A short follow-up keeps the current effort.',
       current_effort: current,
@@ -120,7 +123,8 @@ async function askHttp($: EngineInterface, judge: Judge, text: string, top: Effo
   } catch {
     // No usage in the reply: counted as 0.
   }
-  return { verdict: parseJev(res.text, levels), tokens }
+  const verdict = parseJev(res.text, levels)
+  return { verdict: verdict && { ...verdict, effort: liftHighest(verdict.effort, top) }, tokens }
 }
 
 async function ask($: EngineInterface, judge: Judge, text: string, top: Effort, current: Effort | null, afterQuestion: boolean): Promise<Judged> {

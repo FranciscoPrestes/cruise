@@ -1,0 +1,1 @@
+{ "name": "cache-probe", "version": "0.0.1", "description": "Measures prompt-cache reads/writes while alternating effort per request" }

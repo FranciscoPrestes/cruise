@@ -5,7 +5,6 @@
   "author": {
     "name": "Francisco Prestes"
   },
-  "license": "MIT",
   "types": "./types/index.d.ts",
   "userConfig": {
     "context": {
@@ -59,7 +58,7 @@
     "judgeUrl": {
       "type": "string",
       "title": "Judge URL (jev or laya)",
-      "description": "Where the judge listens. Empty uses https://api.typesafe.ai/v1/systemone for jev and http://127.0.0.1:8787/v1/systemone for laya.",
+      "description": "Where the judge listens. Empty uses https://api.typesafe.ai/v1/systemone for jev and http://127.0.0.1:18787/v1/systemone for laya.",
       "default": ""
     },
     "judgeKey": {
@@ -68,6 +67,12 @@
       "description": "TypeSafe API key for jev. A laya server on your own machine needs none. Kept in Claude Code's secure storage.",
       "default": "",
       "sensitive": true
+    },
+    "judgeModel": {
+      "type": "string",
+      "title": "Judge model (jev or laya)",
+      "description": "Which checkpoint to ask for. Empty lets the server choose (Jev: jev-latest, Laya: routes by language). Use it to point Laya at a checkpoint you trained.",
+      "default": ""
     }
   }
 }

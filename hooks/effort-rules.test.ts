@@ -8,6 +8,7 @@ import {
   isFollowUp,
   isSteerable,
   levelsUpTo,
+  liftHighest,
   parseHaiku,
   parseJev,
   settle,
@@ -64,6 +65,12 @@ test('a Jev / Laya answer is read from answers.effort', () => {
   expect(parseJev('<html>', levels)).toBe(undefined)
 })
 
+test('Laya\'s probability is used, not its concentration score', () => {
+  const levels = levelsUpTo('high')
+  const body = JSON.stringify({ answers: { effort: { choice: 'low', confidence: 0.23, answer_confidence: 0.51, probabilities: { low: 0.51, medium: 0.45, high: 0.04 } } } })
+  expect(parseJev(body, levels)?.sure).toBe(0.51)
+})
+
 test('an unsure judge leaves the current effort alone', () => {
   expect(settle({ effort: 'low', sure: 0.3, why: '' }, 'high')).toBe('high')
   expect(settle({ effort: 'low', sure: 0.9, why: '' }, 'high')).toBe('low')
@@ -91,4 +98,11 @@ test('the band line names the pick, the ceiling and a pause', () => {
   expect(effortLine({ ...base, pick: 'low', why: 'tiny edit' })).toBe('Effort low (app: high) · tiny edit')
   expect(effortLine({ ...base, pick: 'high' })).toBe('Effort high')
   expect(effortLine({ ...base, paused: 'x' })).toContain('paused')
+})
+
+test('the highest label of a three-level judge keeps a higher app effort', () => {
+  expect(liftHighest('high', 'xhigh')).toBe('xhigh')
+  expect(liftHighest('high', 'max')).toBe('max')
+  expect(liftHighest('high', 'high')).toBe('high')
+  expect(liftHighest('medium', 'xhigh')).toBe('medium')
 })

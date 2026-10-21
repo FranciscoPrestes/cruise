@@ -1,90 +1,193 @@
-# Claude Code mods — the company
+# Cruise
 
-Two mods for people who use Claude Code all day and want to always know **what is being done** and **when the session is getting too full**.
+**Cruise control for Claude Code**, by Francisco Prestes. One plugin, three jobs, each of which you can switch off:
 
-| Mod | What it is for | Needs anything else? |
+| | What it does | On by default |
 | --- | --- | --- |
-| [`onde-estamos`](mods/onde-estamos/README.md) | A band above the prompt with the current request, the plan step and what runs in the background | No |
-| [`aviso-contexto`](mods/aviso-contexto/README.md) | Warns when the context passes 75% and 90% and leads you to the handoff | Ships the `/handoff` and `/pickup` skills itself |
+| **Context** | Warns when the context passes 75% and 90% and points you to `/handoff`, before quality drops | yes |
+| **Progress** | A band above the prompt with your current request, the plan step and what runs in the background | yes |
+| **Effort** | A small judge picks the reasoning effort for each prompt, so a button-colour change does not run at `high` | **no**, you choose a judge |
 
-## Requirements
-
-- A Claude Code version with mod support (plugins with TypeScript hooks). If `/plugin` does not exist, update Claude Code.
-- Read access to this project on the internal GitLab (ask the owner of the **Hub de IA Experimentação** group for an invite).
-- Git configured on your computer to clone from `git.example.invalid` (SSH key or HTTPS credential).
+```text
+Request (12 min ago): change the colour of the save button on the settings page to blue
+Step 3 of 5: Writing the integration tests
+Effort low (app: high) · tiny edit
+Running in background: 2 agents, 1 command
+```
 
 ## Install
 
 At the Claude Code prompt:
 
 ```text
-/plugin marketplace add https://git.example.invalid/group/claude-code-mods.git
-/plugin install onde-estamos@hub-de-ia-mods
-/plugin install aviso-contexto@hub-de-ia-mods
+/plugin marketplace add https://git.example.invalid/group/cruise.git
+/plugin install cruise@cruise
 ```
 
-You can install just one of the two. After installing, run `/reload-plugins` or open a new session.
+Then run `/reload-plugins` or open a new session. The repository is visible to everyone logged in to the internal GitLab, and you need Git configured to clone from `git.example.invalid` (SSH key or HTTPS credential).
 
-The installer may say some options are "not yet set". That is fine: every option has a default (see Settings), so nothing needs configuring unless you want to change it.
+The installer may say some options are "not yet set". That is fine: every option has a default. Change any of them with `/plugin configure cruise@cruise`.
 
-From a plain terminal the commands are the same with `claude plugin` in place of `/plugin`.
-
-## Check that it works
-
-1. `/plugin` should list `onde-estamos` and `aviso-contexto` as installed.
-2. Send a request of 25 characters or more. A `Request (now): ...` line appears above the prompt.
-3. The context warning only shows once usage passes 75%. To see it sooner, lower the threshold in the mod's settings (see below).
+Check it works: `/cruise` prints what Cruise is doing, and sending a request of 25 characters or more makes the band appear.
 
 ## Settings
 
-Both mods have settings in `/config` (look for the plugin name).
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `context` | on | Context warnings |
+| `warnAt` / `urgentAt` / `resetBelow` | 75 / 90 / 50 | Context % of the first warning, the urgent one, and where warnings start over |
+| `progress` | on | The progress band |
+| `minAskChars` | 25 | Messages shorter than this ("go ahead") do not replace the request shown |
+| `effort` | **off** | `off`, `haiku`, `jev` or `laya`: see below |
+| `judgeUrl` | empty | Where a `jev` or `laya` judge listens. Empty means the hosted Jev, or `http://127.0.0.1:18787/v1/systemone` for Laya |
+| `judgeKey` | empty | TypeSafe key for `jev`. Kept in Claude Code's secure storage. Laya needs none |
+| `judgeModel` | empty | Which checkpoint to ask for. Empty lets the server choose. Set it to `multilingual`, or to a checkpoint you trained |
 
-| Mod | Setting | Default | What it does |
-| --- | --- | --- | --- |
-| `aviso-contexto` | `warnAt` | 75 | Context % of the first, gentle warning |
-| `aviso-contexto` | `urgentAt` | 90 | Context % of the urgent warning and system notification |
-| `aviso-contexto` | `resetBelow` | 50 | Warnings start over once the context drops below this % |
-| `onde-estamos` | `minAskChars` | 25 | Messages shorter than this (such as "go ahead") do not replace the request shown |
+## Effort steering
+
+### What it does, and what it never does
+
+For each prompt you type, a small judge reads the message and picks the lowest effort that still does the job. Cruise then sends the model requests of that work at that effort.
+
+- **It only goes down.** The effort you set in the app is the ceiling. Cruise never sends a higher one, so it can never cost more than your own setting (apart from the judge itself), and it never sends a level the model does not accept.
+- **You stay in charge.** If you change the effort in the app, the new value becomes the ceiling immediately.
+- **It stops by itself if the prompt cache is ever rewritten** after an effort change. It says so once and leaves your effort alone for the rest of the session.
+- **A failing, slow or unreachable judge never holds a prompt.** The request goes out at your own effort.
+- **Only the models where this was measured** are steered: the Opus, Sonnet and Fable 5 families. Haiku takes no effort setting and is left alone. Subagents are left alone.
+- A short follow-up ("yes", "go", "ok") keeps the current pick and asks no judge.
+
+### Does changing the effort break the prompt cache?
+
+This decides whether the whole idea pays, so it was measured, not assumed. Anthropic's documentation says that changing the top-level effort between requests invalidates the cache, and that a per-message effort change (beta) preserves it on models that support it. On Claude Code 2.1.306 we alternated `low` and `high` on every request of a six-request task:
+
+| Model | Cache read grew from → to (tokens) | New tokens written per request |
+| --- | --- | --- |
+| Sonnet 5.5 | 45,432 → 46,376 | about 100 (one request 638) |
+| Opus 5.5 | 45,033 → 45,882 | about 78 (one request 615) |
+| Fable 5.1 | 45,974 → 46,936 | about 103 (one request 653) |
+
+In all three the cache kept being read and nothing was rewritten. Limits: one trivial task per model, one run each, Claude Code 2.1.306 only; Opus before the 5 family and Amazon Bedrock were not measured (Anthropic's documentation says per-message effort is not available for Opus 5 on Bedrock). The built-in guard exists for exactly the cases we did not measure. The probe that produced these numbers is in `eval/cache-probe/`: run it on your own setup before relying on them.
+
+### Pick your judge
+
+| `effort` | Judge | Needs | Costs | What leaves your machine |
+| --- | --- | --- | --- | --- |
+| `off` | none | nothing | nothing | nothing |
+| `haiku` | Claude Haiku 5.5, on your own Claude login | nothing | the judge's tokens, on your account | the next message and two small facts, to Anthropic |
+| `jev` | TypeSafe Jev (hosted) | a TypeSafe API key | what TypeSafe charges | the next message and two small facts, **to TypeSafe** |
+| `laya` | Laya, a model that runs on your machine | the setup below | disk, memory and a little CPU | nothing |
+
+"Two small facts" means the effort you are on and whether the assistant's last reply ended with a question. **Cruise never sends the conversation to any judge.** This is a deliberate difference from effortless, which sends recent conversation to its judge. The trade-off is a little less context for follow-ups, which the follow-up rule covers.
+
+### Will it actually save money?
+
+Be honest with the numbers, because this depends on how you work:
+
+- The effortless project (the idea this builds on) measured, on 4 easy coding tasks run through the API, 21% less cost than Opus at medium, 29% less than high and 42% less than xhigh. On Sonnet it came out even against medium and saved 10% against high and 35% against xhigh. These are their numbers: few tasks, mostly easy ones, and plan usage was not measured. We have not reproduced them.
+- **If you already work at `medium`, expect little or nothing on Sonnet and a modest saving on Opus.** If you work at `high` or `xhigh`, there is much more to save.
+- **With the `haiku` judge the saving is smaller than those figures.** Haiku is very cheap, effortless puts it at roughly $0.001 to $0.002 per prompt, but it is not free, and that figure was not included in their numbers. On easy prompts it is a small part of the cost; if you send many tiny prompts it adds up. `jev` costs a key; `laya` costs only local resources.
+- **A judge that is wrong is the real cost.** An effort that is too low can mean a worse answer or more retries. Judge accuracy, from the effortless project's labelled prompts: Haiku 93%, Jev 99% (their figures). Laya without training, measured here on the same prompts (below): 75% in English and 60% to 65% in Portuguese.
+- Run `/cruise` after a day of real work: it shows how many prompts were judged, how many requests were sent at a lower effort than yours, and the judge's tokens. Decide with your own numbers.
+
+### Laya on your machine
+
+Laya is a small open-source model (Apache 2.0) that answers typed decisions in one pass, in tens of milliseconds, and speaks the same protocol as Jev. Cruise talks to it through `judgeUrl`.
+
+**The easiest way: let your own Claude Code do it.** Install Cruise, then paste this into Claude Code:
+
+```text
+Run the cruise:setup-laya skill. Tell me what it will download and how much disk and memory it needs, wait for my OK, and then install and configure everything.
+```
+
+If the plugin is not installed yet, paste this instead and it will install the plugin first:
+
+```text
+Install the Cruise plugin: run `claude plugin marketplace add https://git.example.invalid/group/cruise.git` and then `claude plugin install cruise@cruise`. Then run the cruise:setup-laya skill: tell me what it will download and how much disk and memory it needs, wait for my OK, and then install and configure everything.
+```
+
+**What to expect (measured on a Mac with 10 cores and 34 GB of memory):**
+
+| | |
+| --- | --- |
+| Python | **3.10 or newer is required.** macOS ships 3.9, which silently installs an old Laya (0.3.4). The skill uses `uv` with Python 3.12 |
+| Install | about 20 seconds for the packages, **757 MB** on disk (mostly PyTorch) |
+| Model download | the multilingual checkpoint (322M parameters), **about 650 MB**, from huggingface.co on first use. The English one (421M) is optional, about 800 MB more |
+| Total disk | about **1.5 GB** (multilingual only) or 2.2 GB with both; keep 3 GB free |
+| Memory | **about 0.5 GB** while loading and answering (multilingual only); **0.8 GB** with both checkpoints loaded |
+| Speed | **23 to 38 ms** per decision after warm-up, which is below what you notice. The first request after starting is slower |
+| CPU | a short burst per prompt, then idle. Nothing runs between prompts |
+| Network | none after the download, if you keep the server on `127.0.0.1` |
+| Port | `18787` by default. The skill picks a free one if it is taken |
+
+Things the skill takes care of, and why:
+
+- **Bind to `127.0.0.1` only.** Laya's own server listens on all network interfaces by default. Cruise needs it on your machine alone, with no key.
+- A port such as 8787 was already used on the machine this was tested on, so the default is unusual and the skill checks for a free one.
+- Models are kept under `~/.local/share/cruise/laya` so uninstalling is one command.
+- On Linux and Windows the skill installs the CPU build of PyTorch, so it does not pull gigabytes of GPU libraries you do not need.
+- Starting at login is optional and asked about. A launcher script is provided; a macOS LaunchAgent and a systemd user unit are described but **not tested**.
+- It asks before every download and before touching any setting.
+
+To remove everything: stop the server, delete `~/.local/share/cruise/laya`, remove the login item if you created one, and set `effort` back to `off`.
+
+**How accurate is Laya? Measured, not promised.** `eval/judge_eval.py` sends the effortless project's 75 labelled prompts to any Jev-compatible judge, exactly as Cruise does, and applies Cruise's rules. `eval/judge-cases.json` is the original (English); `eval/judge-cases-pt.json` is our Portuguese translation of the same prompts (made by Claude and not reviewed by a native speaker, so a first check, not a benchmark). Laya 0.4.13 with no training, on that machine:
+
+| Prompts | Checkpoint | Right (all 75) | Right (20 held out) | Too low | Too high |
+| --- | --- | --- | --- | --- | --- |
+| English | automatic routing | 75% | 80% | 7 | 12 |
+| English | multilingual | 60% | 65% | 19 | 11 |
+| Portuguese | automatic routing | 60% | 55% | **22** | 8 |
+| Portuguese | multilingual | 61% | 60% | **21** | 8 |
+| Portuguese | English | 65% | 65% | 9 | 17 |
+
+"Right" means the effort is one the labels accept; "too low" is the risky error, because it can mean a worse answer. For comparison the effortless project reports 93% for Haiku and 99% for Jev on the English set. **Without training, Laya is not a judge to trust, least of all in Portuguese:** about three prompts in ten would be sent at too low an effort. Laya's own documentation says to treat it as a fast base to specialise, not as a zero-shot decision engine, and this agrees. More to know:
+
+- Laya's `confidence` field is how concentrated its distribution is, not a probability. Cruise reads the probability of the answer instead; a threshold copied from Jev would misfire (it reads 0.23 for a 51% pick). With the probability, the threshold barely changes the result up to 0.4.
+- Training on the effortless examples works mechanically but is not enough on its own. We trained on the 55 non-held-out cases for 12 epochs (about 3.4 minutes on that Mac, a 1.6 GB checkpoint) and tested on the 20 held-out: exact-match accuracy went from 40% to 60%, but the model became overconfident (mean confidence 0.62 to 0.97, calibration error up). Fifty-five examples overfit. A useful Laya needs hundreds of examples, ideally from your own work, in Portuguese, and labelled by a stronger judge. The recipe is in `skills/setup-laya/SKILL.md`.
+
+**Recommendation today:** use `haiku` if you want effort steering now. Treat `laya` as experimental until it has been trained on more examples and re-measured; the local setup works and is safe (it never goes above your effort, and it stops by itself if the cache breaks), but its choices are not yet reliable.
+
+## Context warnings and the progress band
+
+- **Context.** Warns once per band at 75% (a notice) and 90% (a notice and a system notification), and shows `Context 82% · type /handoff` in the status line. Bands start over if the context drops below 50% (after a compaction). The check runs before every model request, the moment each response completes, after every tool call and when a turn ends. A reply that by itself crosses a threshold is flagged the moment it completes, not before: its size is only known once it exists.
+- **Progress.** The current request, `Step N of M` from Claude's task list (a subagent's list is ignored), the effort pick when steering is on, and what runs in the background: subagents, commands, monitors, workflows and schedules, followed as they start and end, and reset to Claude Code's own list at the end of every turn. The "x min ago" label refreshes by itself every minute.
 
 ## Bundled skills
 
-`aviso-contexto` installs two skills. They exist because the warning says "type `/handoff`": without the skill that command would not exist.
-
 | Skill | What it does |
 | --- | --- |
-| `/handoff` | Saves the state of the work (goal, what is done, next steps, pending decisions) to `~/.local/state/handoffs/<folder>/` so a later session can resume. It does not continue the task. |
-| `/pickup` | In a new session, reads the latest handoff for that folder, checks folder and branch, and resumes from the first next step. |
+| `/handoff` | Saves the state of the work (goal, what is done, next steps, pending decisions) to `~/.local/state/handoffs/<folder>/` so a later session can resume. Does not continue the task |
+| `/pickup` | In a new session, reads the latest handoff for that folder, checks folder and branch, and resumes from the first next step |
+| `/cruise:setup-laya` | Installs and configures Laya on your machine, step by step, asking before each download |
 
-Recommended flow when you get the warning:
-
-1. Finish the step in progress.
-2. Type `/handoff`.
-3. Clear the session (`/clear`) or open a new one **in the same folder**.
-4. Type `/pickup`.
-
-If you already have a skill of your own called `handoff` or `pickup`, the names will collide. Use the plugin's by its full name (`/aviso-contexto:handoff`) or remove yours.
+Recommended flow when the context warning appears: finish the step, `/handoff`, `/clear` (or open a new session in the same folder), `/pickup`. If you already have your own skills called `handoff` or `pickup`, the names collide: use the plugin's by its full name (`/cruise:handoff`) or remove yours.
 
 ## Update and remove
 
 ```text
-/plugin marketplace update hub-de-ia-mods
-/plugin uninstall onde-estamos@hub-de-ia-mods
-/plugin uninstall aviso-contexto@hub-de-ia-mods
+/plugin marketplace update cruise
+/plugin uninstall cruise@cruise
 ```
 
 ## Known limitations
 
-- All text is in English. Another language means editing the mod's code.
-- A reply that by itself crosses a threshold is flagged the moment it completes, before any tool it asks for runs. It cannot be flagged earlier, because its size is only known once it exists.
-- Background work is followed from the moment a tool reports it (including commands sent to the background with Ctrl+B or by a timeout). At the end of every turn the band is reset to Claude Code's own list, so anything it missed in between is corrected there.
+- All text is in English.
+- Effort steering covers the main conversation only; subagents run at their own effort.
+- The cache guard needs a request that follows an effort change to notice a rewrite, so at most one request pays for it before steering stops.
+- Background work is followed from the moment a tool reports it (including commands sent to the background with Ctrl+B or by a timeout); at the end of every turn the band is reset to Claude Code's own list.
+- Laya: see above. Without training it is not reliable, in Portuguese least of all.
 
 ## Develop and test
 
 ```bash
-claude plugin validate .                    # marketplace and manifests
-claude plugin test mods/onde-estamos        # mod tests
-claude plugin test mods/aviso-contexto
-claude --plugin-dir mods/onde-estamos       # runs the mod straight from the folder, no install
+claude plugin validate .      # manifest, marketplace and hooks
+claude plugin test .          # 80 tests
+claude --plugin-dir .         # run the plugin straight from this folder
+python3 eval/judge_eval.py --url <judge url> --mode laya   # score a judge on the labelled prompts
 ```
 
-Changes go in through a merge request. When you change a mod, raise the `version` in its `plugin.json` so the update reaches your colleagues.
+Changes go in through a merge request. Raise `version` in `.claude-plugin/plugin.json` when you change behaviour, so the update reaches your colleagues.
+
+## Credits
+
+The idea of an effort judge, its prompt wording and the labelled prompts in `eval/judge-cases.json` come from [effortless](https://github.com/HeyCubit/effortless) by HeyCubit (MIT). Laya is [NandhaKishorM/laya](https://github.com/NandhaKishorM/laya) (Apache 2.0) and is installed separately, never bundled. Jev is a hosted service by TypeSafe. See `NOTICE`.

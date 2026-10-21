@@ -18,7 +18,9 @@ const CACHE_TTL_GUARD_MS = 4 * 60_000
 const REWRITE_MIN_TOKENS = 5000
 const FOLLOW_UP_MAX_CHARS = 12
 const FOLLOW_UP_MAX_WORDS = 2
-const UNSURE_BELOW = 0.5
+// Below this probability for its own answer a judge counts as unsure. Measured on Laya without training: the
+// threshold barely matters up to 0.4 and costs accuracy above it (see eval/judge_eval.py).
+const UNSURE_BELOW = 0.4
 
 export const isEffort = (value: unknown): value is Effort => EFFORTS.includes(value as Effort)
 
@@ -28,6 +30,11 @@ export const isSteerable = (model: string, appEffort: unknown): appEffort is Eff
 // The levels the judge may choose: from low up to the effort the person set in the app, never above it.
 // A level the app itself uses is one the model accepts, and Cruise can then never cost more than the person's own choice.
 export const levelsUpTo = (top: Effort): readonly Effort[] => EFFORTS.slice(0, EFFORTS.indexOf(top) + 1)
+
+// The Jev and Laya judges offer at most three levels (what a Laya head is trained on). Their highest label means
+// "as hard as it gets", so it keeps a higher effort the person set instead of lowering it.
+export const HTTP_TOP: Effort = 'high'
+export const liftHighest = (effort: Effort, top: Effort): Effort => (effort === HTTP_TOP && EFFORTS.indexOf(top) > EFFORTS.indexOf(HTTP_TOP) ? top : effort)
 
 export const clampTo = (effort: Effort, top: Effort): Effort => (EFFORTS.indexOf(effort) > EFFORTS.indexOf(top) ? top : effort)
 
@@ -96,11 +103,13 @@ export function parseJev(text: string, levels: readonly Effort[]): Verdict | und
   try {
     const json = JSON.parse(text) as Record<string, unknown>
     const answers = (json.answers ?? (json.result as Record<string, unknown> | undefined)?.answers) as
-      | Record<string, { choice?: unknown; confidence?: number; probabilities?: Record<string, number> }>
+      | Record<string, { choice?: unknown; confidence?: number; answer_confidence?: number; probabilities?: Record<string, number> }>
       | undefined
     const choice = answers?.effort?.choice
     if (!isEffort(choice) || !levels.includes(choice)) return undefined
-    const sure = answers?.effort?.confidence ?? answers?.effort?.probabilities?.[choice]
+    // A probability, whichever field carries it: `confidence` means different things in Jev and Laya (Laya's is how
+    // concentrated the distribution is, so a clear 51% pick reads 0.23 there).
+    const sure = answers?.effort?.answer_confidence ?? answers?.effort?.probabilities?.[choice] ?? answers?.effort?.confidence
     return { effort: choice, sure: typeof sure === 'number' ? sure : undefined, why: typeof sure === 'number' ? `${Math.round(sure * 100)}% sure` : '' }
   } catch {
     return undefined
