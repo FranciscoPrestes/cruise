@@ -156,7 +156,9 @@ node scripts/check-version.mjs # hooks/version.ts must equal plugin.json
 python3 eval/judge_eval.py --url <judge url> --mode laya
 ```
 
-Pull requests are welcome; raise `version` in `.claude-plugin/plugin.json` when behaviour changes so the update reaches everyone. Known limits: text is English only; steering covers the main conversation only; the cache guard needs one request after a change to notice a rewrite.
+Pull requests are welcome. Do not change version numbers in your PR: the maintainer handles version bumps and releases after reviewing and merging contributions.
+
+Known limits: text is English only; steering covers the main conversation only; the cache guard needs one request after a change to notice a rewrite.
 
 ## License
 
