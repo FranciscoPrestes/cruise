@@ -8,12 +8,12 @@ Laya without training is not a reliable judge (see the top-level README). This f
 
 ```bash
 python3 train/extract_prompts.py   # every prompt you typed, plus how much work it set off (tool calls, tokens, time)
-python3 train/label_prompts.py     # a Claude model labels each one low / medium / high, seeing the work it caused
+python3 train/label_prompts.py     # a Claude model labels each one with one of the five levels (low, medium, high, xhigh, max), seeing the work it caused
 python3 train/build_dataset.py     # train.csv and eval.csv, split by session so nothing leaks
-python3 train/haiku_baseline.py    # the Haiku judge on the same held-out prompts: the bar a trained Laya has to reach
+python3 train/haiku_baseline.py --examples --save haiku-picks.json   # the Haiku judge on the same held-out prompts: the bar a trained Laya has to reach
 ```
 
-Then train with `laya-train` (installed by the `/cruise:setup-laya` skill) and score the result on the held-out prompts and on `eval/judge-cases.json` / `eval/judge-cases-pt.json` with `eval/judge_eval.py`. The recipe and the exact command are in `skills/setup-laya/SKILL.md`.
+Then train with `laya-train` (the five levels are in the `label` column; repeat the rare `xhigh` and `max` rows three times in the training file, since there are few) (installed by the `/cruise:setup-laya` skill) and score the result on the held-out prompts and on `eval/judge-cases.json` / `eval/judge-cases-pt.json` with `eval/judge_eval.py`. The recipe and the exact command are in `skills/setup-laya/SKILL.md`.
 
 ## Training: the settings that worked
 
@@ -35,4 +35,4 @@ At inference a judge only sees the prompt text. At labelling time we also know w
 
 ## What the numbers mean
 
-`haiku_baseline.py` is the honest comparison: the same held-out prompts, the same labels, the judge Cruise would use today. A trained Laya is worth running locally only if it gets close to that. On the data this was built on it did: both get about half of the noisy labels right, and Laya with Cruise's cautious rule makes far fewer "too low" mistakes (9% against 22%) while steering about half the prompts. "Too low" (a lower effort than the label) is the risky error.
+`haiku_baseline.py` is the honest comparison: the same held-out prompts, the same labels, the judge Cruise would use today. `score_laya.py --save` scores a Laya server and keeps its probabilities, and `compare.py` puts Haiku, Laya and "always `medium`" on one ruler (exact, easy found, hard found, false alarms, mean level and a cost where a level too low counts three times a level too high). On the data this was built on, with all five levels, both judges get about half of the noisy labels right (50% against 37% for always `medium`); Haiku also finds about half of the hard prompts, Laya about one in ten, because `xhigh` and `max` are rare in anyone's sessions (59 and 10 prompts out of 2,796 here). See the README for the table.

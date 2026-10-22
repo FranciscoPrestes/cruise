@@ -51,7 +51,7 @@ test('haiku: a simple prompt goes out at the effort the judge picked, below the 
   await run($)
   expect(s.sent).toEqual(['low'])
   expect(s.judged).toHaveLength(1)
-  expect(s.judged[0]).toContain('Highest level allowed: high')
+  expect(s.judged[0]).toContain('Highest level allowed: max')
 })
 
 test('the conversation never leaves: the judge sees the next message and two small facts', { options: { effort: 'haiku' } }, async ($, on) => {
@@ -200,14 +200,13 @@ test('steer down: if the person lowers the app effort mid-work, the pick never g
   expect(s.sent).toEqual(['high', 'medium'])
 })
 
-test('jev: its highest label keeps an xhigh app effort instead of lowering it', { options: { effort: 'jev' } }, async ($, on) => {
+test('jev: it is offered every level up to the top level, whatever the app is on, and a lower label lowers an xhigh app', { options: { effort: 'jev' } }, async ($, on) => {
   const body = JSON.stringify({ answers: { effort: { choice: 'high', confidence: 0.9 } } })
   const s = stubs(on, { fetchBody: body })
   await $.prompt.submit({ text: 'investigate why the nightly export job corrupts rows when two workers overlap' })
   await run($, { effort: 'xhigh' })
-  expect(s.sent).toEqual(['xhigh'])
-  // the hosted judge is offered three levels at most, whatever the app is on
-  expect(Object.keys(JSON.parse(s.calls[0]?.body ?? '{}').questions.effort.criteria)).toEqual(['low', 'medium', 'high'])
+  expect(s.sent).toEqual(['high'])
+  expect(Object.keys(JSON.parse(s.calls[0]?.body ?? '{}').questions.effort.criteria)).toEqual(['low', 'medium', 'high', 'xhigh', 'max'])
 })
 
 test('jev: a lower label still lowers an xhigh app effort', { options: { effort: 'jev' } }, async ($, on) => {
@@ -246,16 +245,16 @@ test('jev gets a structured state', { options: { effort: 'jev' } }, async ($, on
   expect(JSON.parse(s.calls[0]?.body ?? '{}').state.next_message).toBe(ASK)
 })
 
-test('laya: an unsure "low" becomes medium, and a plausible "high" is kept', { options: { effort: 'laya' } }, async ($, on) => {
-  const unsureLow = JSON.stringify({ answers: { effort: { choice: 'low', probabilities: { low: 0.5, medium: 0.42, high: 0.08 } } } })
+test('laya: a "low" that does not reach the median becomes medium', { options: { effort: 'laya' } }, async ($, on) => {
+  const unsureLow = JSON.stringify({ answers: { effort: { choice: 'low', probabilities: { low: 0.45, medium: 0.47, high: 0.08 } } } })
   const s = stubs(on, { fetchBody: unsureLow })
   await $.prompt.submit({ text: ASK })
   await run($)
   expect(s.sent).toEqual(['medium'])
 })
 
-test('laya: a plausible "high" keeps the app effort even when "low" leads', { options: { effort: 'laya' } }, async ($, on) => {
-  const s = stubs(on, { fetchBody: JSON.stringify({ answers: { effort: { choice: 'low', probabilities: { low: 0.6, medium: 0.1, high: 0.3 } } } }) })
+test('laya: enough weight on "high" lifts the pick even when "low" leads', { options: { effort: 'laya' } }, async ($, on) => {
+  const s = stubs(on, { fetchBody: JSON.stringify({ answers: { effort: { choice: 'low', probabilities: { low: 0.3, medium: 0.1, high: 0.6 } } } }) })
   await $.prompt.submit({ text: ASK })
   await run($)
   expect(s.sent).toEqual(['high'])
@@ -268,7 +267,7 @@ test('the Haiku judge is on by default', async ($, on) => {
   expect(s.judged).toHaveLength(1)
 })
 
-test('both ways: on a medium app a hard prompt is lifted to high', { options: { effort: 'haiku' } }, async ($, on) => {
+test('both ways: on a medium app a hard prompt is lifted to high', { options: { effort: 'haiku', topLevel: 'high' } }, async ($, on) => {
   const s = stubs(on, { reply: verdict('high') })
   await $.prompt.submit({ text: 'investigate why the nightly export job corrupts rows when two workers overlap' })
   await run($, { effort: 'medium' })
@@ -291,15 +290,15 @@ test('both ways: the top level setting decides how high a hard prompt may go', {
   expect(s.sent).toEqual(['max'])
 })
 
-test('both ways: a verdict above the top level is refused and the app effort goes out', { options: { effort: 'haiku' } }, async ($, on) => {
+test('both ways: a verdict above the top level is refused and the app effort goes out', { options: { effort: 'haiku', topLevel: 'high' } }, async ($, on) => {
   const s = stubs(on, { reply: verdict('xhigh') })
   await $.prompt.submit({ text: 'rewrite the whole billing engine and migrate every customer' })
   await run($, { effort: 'medium' })
   expect(s.sent).toEqual(['medium'])
 })
 
-test('jev, both ways: its highest label lifts a medium app to the top level', { options: { effort: 'jev', topLevel: 'xhigh' } }, async ($, on) => {
-  const body = JSON.stringify({ answers: { effort: { choice: 'high', confidence: 0.9 } } })
+test('laya, five levels: weight on xhigh lifts a medium app to xhigh', { options: { effort: 'laya', topLevel: 'xhigh' } }, async ($, on) => {
+  const body = JSON.stringify({ answers: { effort: { choice: 'xhigh', probabilities: { low: 0.05, medium: 0.05, high: 0.1, xhigh: 0.7, max: 0.1 } } } })
   const s = stubs(on, { fetchBody: body })
   await $.prompt.submit({ text: 'investigate why the nightly export job corrupts rows when two workers overlap' })
   await run($, { effort: 'medium' })

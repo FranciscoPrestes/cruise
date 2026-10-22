@@ -2,10 +2,10 @@
 """Scores Cruise's Haiku judge (prompt text only, no hindsight) on the evaluation CSV, as a baseline for a trained Laya.
 
 It asks the same instructions as judgeSystem() in hooks/effort-rules.ts (copied below: keep them in step) one prompt at
-a time through your own `claude -p` login, and compares the answer with the labels in eval.csv. Use it to see whether a
-trained Laya is as good as the judge it is meant to replace.
+a time through your own `claude -p` login, offers all five levels with `medium` as the app's default, and compares the
+answer with the labels in eval.csv.
 
-    python3 train/haiku_baseline.py [--model claude-haiku-5-5] [--workers 6] [--limit N]
+    python3 train/haiku_baseline.py [--model claude-haiku-5-5] [--workers 6] [--limit N] [--eval-file eval.csv]
 """
 import argparse
 import csv
@@ -14,18 +14,14 @@ import os
 import re
 import subprocess
 import tempfile
-from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-LEVELS = ["low", "medium", "high"]
-CRITERIA = {
-    "low": "quick answer, no tools, no planning",
-    "medium": "normal work: a few tool calls or edits",
-    "high": "hard or large multi-step job: many tool calls, costly mistakes",
-}
+from levels import CRITERIA, EXAMPLES, LEVELS, line, summarize
+
+APP_DEFAULT = "medium"
 SYSTEM = (
-    "You choose the reasoning effort an agentic assistant (it reads files, runs tools and edits things, not only code) should use for the user's next message. Pick the lowest effort that will still do the job well; a wrong answer costs more than the saving.\n\n"
+    "You choose the reasoning effort an agentic assistant (it reads files, runs tools and edits things, not only code) should use for the user's next message. Pick the effort the job needs: the lowest that will still do it well, and a higher one when the job is hard or a mistake would be costly. A wrong answer costs more than the saving.\n\n"
     "Levels you may choose:\n" + "\n".join(f"- {k}: {v}" for k, v in CRITERIA.items()) + "\n\n"
     'Judge the SCOPE and the amount of work, not whether it is code. A short message can ask for a lot: "review the whole repo" or "migrate everything" are big, tool-heavy jobs.\n'
     'A short follow-up ("yes", "go", "ok", or the same in any language) continues the current work: keep the current level.\n'
@@ -35,16 +31,21 @@ SYSTEM = (
 )
 
 
-def ask(model, text, workdir):
+def system_with_examples():
+    listing = "\n".join(f'- "{text}" -> {level}' for level, text in EXAMPLES)
+    return SYSTEM.replace("Reply with JSON only", f"Examples of the right level (the real messages are different, judge their scope the same way):\n{listing}\n\nReply with JSON only")
+
+
+def ask(model, text, workdir, examples=False):
     match = re.match(r"last reply asked a question: (yes|no)\nmessage: ([\s\S]*)", text)
     after_question, message = match.group(1) == "yes", match.group(2)
     prompt = (
-        f"Current level: none yet\nHighest level allowed: high\nThe assistant's last reply ended with a question: {'yes' if after_question else 'no'}\n\n"
-        f"Next message:\n{message[:2000]}"
+        f"Current level: none yet\nLevel the app uses by default: {APP_DEFAULT}\nHighest level allowed: {LEVELS[-1]}\n"
+        f"The assistant's last reply ended with a question: {'yes' if after_question else 'no'}\n\nNext message:\n{message[:2000]}"
     )
     cmd = [
         "claude", "-p", "--model", model, "--no-session-persistence", "--disable-slash-commands", "--strict-mcp-config",
-        "--tools", "", "--setting-sources", "", "--output-format", "json", "--system-prompt", SYSTEM, prompt,
+        "--tools", "", "--setting-sources", "", "--output-format", "json", "--system-prompt", system_with_examples() if examples else SYSTEM, prompt,
     ]
     try:
         out = subprocess.run(cmd, capture_output=True, text=True, cwd=workdir, timeout=120)
@@ -65,27 +66,24 @@ def main():
     parser.add_argument("--model", default="claude-haiku-5-5")
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument("--eval-file", default="eval.csv")
+    parser.add_argument("--examples", action="store_true", help="add the made-up examples to the instructions")
+    parser.add_argument("--save", default="", help="write the answers to this file in the data folder, to score them against other labels later")
     args = parser.parse_args()
-    rows = list(csv.DictReader(open(Path(os.path.expanduser(args.dir)) / "eval.csv", encoding="utf-8")))
+    rows = list(csv.DictReader(open(Path(os.path.expanduser(args.dir)) / args.eval_file, encoding="utf-8")))
     if args.limit:
         rows = rows[: args.limit]
     workdir = tempfile.mkdtemp(prefix="cruise-baseline-")
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
-        answers = list(pool.map(lambda r: ask(args.model, r["text"], workdir), rows))
-    rank = {e: i for i, e in enumerate(LEVELS)}
-    count = Counter()
-    for row, (got, _) in zip(rows, answers):
-        if got is None:
-            count["none"] += 1
-        elif got == row["label"]:
-            count["right"] += 1
-        elif rank[got] < rank[row["label"]]:
-            count["too low"] += 1
-        else:
-            count["too high"] += 1
-    n = len(rows)
+        answers = list(pool.map(lambda r: ask(args.model, r["text"], workdir, args.examples), rows))
+    if args.save:
+        target = Path(os.path.expanduser(args.dir)) / args.save
+        target.write_text(json.dumps([{"text": r["text"], "pick": a[0]} for r, a in zip(rows, answers)]))
+        os.chmod(target, 0o600)
+    answered = [(r, a[0]) for r, a in zip(rows, answers) if a[0]]
     tokens = sum(t for _, t in answers)
-    print(f"{args.model} judge on {n} held-out prompts: right {count['right']} ({100 * count['right'] / n:.0f}%), too low {count['too low']}, too high {count['too high']}, no answer {count['none']}; {tokens / n:.0f} tokens per judged prompt")
+    print(f"{args.model} judge on {len(rows)} held-out prompts ({len(rows) - len(answered)} without an answer), {tokens / len(rows):.0f} tokens per judged prompt")
+    print(line("haiku", summarize([r for r, _ in answered], [p for _, p in answered])))
 
 
 if __name__ == "__main__":

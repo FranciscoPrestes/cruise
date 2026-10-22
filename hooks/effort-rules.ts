@@ -29,7 +29,7 @@ export const isSteerable = (model: string, appEffort: unknown): appEffort is Eff
 
 // How far the judge may move the effort: `both` up and down from the app's effort, `down` only lower.
 export type Steer = 'both' | 'down'
-export const DEFAULT_REACH: Effort = 'high'
+export const DEFAULT_REACH: Effort = 'max'
 
 export const steerFrom = (value: unknown): Steer => (value === 'down' ? 'down' : 'both')
 export const reachFrom = (value: unknown): Effort => (isEffort(value) ? value : DEFAULT_REACH)
@@ -43,11 +43,6 @@ export function allowedTop(app: Effort, steer: Steer, reach: Effort): Effort {
 
 // The levels the judge may choose, from low up to `top`.
 export const levelsUpTo = (top: Effort): readonly Effort[] => EFFORTS.slice(0, EFFORTS.indexOf(top) + 1)
-
-// The Jev and Laya judges offer at most three levels (what a Laya head is trained on). Their highest label means
-// "as hard as it gets", so it keeps a higher effort the person set instead of lowering it.
-export const HTTP_TOP: Effort = 'high'
-export const liftHighest = (effort: Effort, top: Effort): Effort => (effort === HTTP_TOP && EFFORTS.indexOf(top) > EFFORTS.indexOf(HTTP_TOP) ? top : effort)
 
 export const clampTo = (effort: Effort, top: Effort): Effort => (EFFORTS.indexOf(effort) > EFFORTS.indexOf(top) ? top : effort)
 
@@ -70,8 +65,26 @@ export function effortLine(state: EffortState): string | null {
   return `Effort ${state.pick}${ceiling}${state.why ? ` · ${state.why}` : ''}`
 }
 
+// Made-up examples (none comes from anyone's sessions) that anchor the levels. Keep in step with EXAMPLES in train/levels.py.
+const EXAMPLES: readonly (readonly [Effort, string])[] = [
+  ['low', 'rename the variable foo to count in utils.ts'],
+  ['low', 'what does git rebase do?'],
+  ['low', 'muda a cor do botão de salvar para azul'],
+  ['medium', 'add a retry with backoff to the upload function and update its tests'],
+  ['medium', 'explain how the auth middleware works and where tokens are validated'],
+  ['medium', 'cria um endpoint para listar pedidos com paginação'],
+  ['high', 'the nightly export corrupts rows when two workers overlap: find the cause and fix it'],
+  ['high', 'review this whole repo for security problems and give me a prioritised list'],
+  ['high', 'migra o módulo de cobrança de REST para GraphQL sem quebrar os clientes'],
+  ['xhigh', 'design and build a multi-tenant permission system across the API, the web app and the mobile app, with a migration plan'],
+  ['xhigh', "p99 latency doubled after last week's release across a dozen services and nobody knows why: investigate end to end"],
+  ['max', 'prove or refute that this lock-free queue is linearizable, then fix the implementation if it is not'],
+  ['max', 'port the entire compiler backend to a new intermediate representation while every existing test keeps passing'],
+]
+
 export function judgeSystem(levels: readonly Effort[]): string {
   const list = levels.map(l => `- ${l}: ${CRITERIA[l]}`).join('\n')
+  const examples = EXAMPLES.filter(([level]) => levels.includes(level)).map(([level, text]) => `- "${text}" -> ${level}`).join('\n')
   return `You choose the reasoning effort an agentic assistant (it reads files, runs tools and edits things, not only code) should use for the user's next message. Pick the effort the job needs: the lowest that will still do it well, and a higher one when the job is hard or a mistake would be costly. A wrong answer costs more than the saving.
 
 Levels you may choose:
@@ -81,6 +94,9 @@ Judge the SCOPE and the amount of work, not whether it is code. A short message 
 A short follow-up ("yes", "go", "ok", or the same in any language) continues the current work: keep the current level.
 If the message answers a question the assistant just asked, judge the work that answer starts. If it corrects or adds to ongoing work, keep at least the current level.
 If the person asks for deep thought ("think hard", "be thorough"), pick the highest level you may choose; if they ask for a quick answer, pick low.
+
+Examples of the right level (the real messages are different, judge their scope the same way):
+${examples}
 
 Reply with JSON only: {"effort":"<level>","sure":0.0-1.0 how sure you are,"why":"at most 6 words, in the user's language"}`
 }
@@ -134,18 +150,23 @@ export function parseJev(text: string, levels: readonly Effort[]): Verdict | und
   }
 }
 
-// How careful the Jev and Laya judges are. A wrong "low" costs more than a missed saving, so the top level is kept as soon
-// as it is plausible, and "low" needs real confidence. Tuned on a Laya trained on our own sessions (see the README): it
-// cut the "too low" errors from 32% to 9% of held-out prompts while still steering about half of them below the top.
-export const TOP_PLAUSIBLE = 0.25
-export const LOW_NEEDS = 0.6
+// How careful the Jev and Laya judges are. They return a probability for every level they were offered. A level that
+// is too low costs more than one that is too high, so the pick is not the likeliest level but the lowest one whose
+// cumulative probability reaches QUANTILE: at 0.5 it is the median of the judge's belief, higher is more careful.
+// 0.5 is where a Laya trained on our own sessions picked as many levels as the labels held; every step up made it ask for
+// more effort than the work needed (see the README and train/compare.py).
+export const QUANTILE = 0.5
 
-export function cautiousPick(probs: Readonly<Record<string, number>>, levels: readonly Effort[]): Effort {
+export function quantilePick(probs: Readonly<Record<string, number>>, levels: readonly Effort[], tau: number = QUANTILE): Effort {
+  const known = levels.reduce((sum, level) => sum + (probs[level] ?? 0), 0)
   const top = levels[levels.length - 1] ?? 'low'
-  if (levels.length === 1 || (probs[top] ?? 0) >= TOP_PLAUSIBLE) return top
-  const rest = levels.slice(0, -1)
-  const lowest = rest[0] ?? top
-  return rest.length === 1 || (probs[lowest] ?? 0) >= LOW_NEEDS ? lowest : (rest[1] ?? lowest)
+  if (known <= 0) return top
+  let total = 0
+  for (const level of levels) {
+    total += (probs[level] ?? 0) / known
+    if (total >= tau - 1e-9) return level
+  }
+  return top
 }
 
 // A judge that is unsure of its own answer leaves the current level alone.

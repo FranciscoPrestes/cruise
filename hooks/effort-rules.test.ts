@@ -2,16 +2,16 @@ import { expect, test } from 'claude-code/testing'
 
 import {
   cacheRewritten,
-  cautiousPick,
   clampTo,
   effortLine,
   endsOnQuestion,
   isFollowUp,
   isSteerable,
+  judgeSystem,
   levelsUpTo,
-  liftHighest,
   parseHaiku,
   parseJev,
+  quantilePick,
   settle,
 } from './effort-rules'
 import type { EffortState } from '../types'
@@ -111,20 +111,34 @@ test('the band line names the pick, the ceiling and a pause', () => {
   expect(effortLine({ ...base, paused: 'x' })).toContain('paused')
 })
 
-test('the highest label of a three-level judge keeps a higher app effort', () => {
-  expect(liftHighest('high', 'xhigh')).toBe('xhigh')
-  expect(liftHighest('high', 'max')).toBe('max')
-  expect(liftHighest('high', 'high')).toBe('high')
-  expect(liftHighest('medium', 'xhigh')).toBe('medium')
+test('the quantile pick is the lowest level whose cumulative probability reaches tau', () => {
+  const all = levelsUpTo('max')
+  expect(quantilePick({ low: 0.8, medium: 0.15, high: 0.05 }, all, 0.7)).toBe('low')
+  expect(quantilePick({ low: 0.5, medium: 0.4, high: 0.1 }, all, 0.7)).toBe('medium')
+  expect(quantilePick({ low: 0.5, medium: 0.1, high: 0.4 }, all, 0.7)).toBe('high')
+  expect(quantilePick({ low: 0.05, medium: 0.05, high: 0.1, xhigh: 0.7, max: 0.1 }, all, 0.7)).toBe('xhigh')
+  expect(quantilePick({ low: 0.02, medium: 0.03, high: 0.1, xhigh: 0.15, max: 0.7 }, all, 0.7)).toBe('max')
+  expect(quantilePick({ low: 0.5, medium: 0.5 }, all, 0.5)).toBe('low')
 })
 
-test('the cautious pick keeps the top level once it is plausible and asks for confidence before "low"', () => {
-  const three = levelsUpTo('high')
-  expect(cautiousPick({ low: 0.8, medium: 0.15, high: 0.05 }, three)).toBe('low')
-  expect(cautiousPick({ low: 0.5, medium: 0.4, high: 0.1 }, three)).toBe('medium')
-  expect(cautiousPick({ low: 0.6, medium: 0.1, high: 0.3 }, three)).toBe('high')
-  expect(cautiousPick({ low: 0.1, medium: 0.6, high: 0.3 }, three)).toBe('high')
-  expect(cautiousPick({ low: 0.9, medium: 0.1 }, levelsUpTo('medium'))).toBe('low')
-  expect(cautiousPick({ low: 0.5, medium: 0.5 }, levelsUpTo('medium'))).toBe('medium')
-  expect(cautiousPick({ low: 1 }, levelsUpTo('low'))).toBe('low')
+test('a more careful tau never picks lower than a less careful one', () => {
+  const probs = { low: 0.3, medium: 0.3, high: 0.2, xhigh: 0.15, max: 0.05 }
+  const rank = (e: string) => levelsUpTo('max').indexOf(e as never)
+  const picks = [0.5, 0.6, 0.7, 0.8, 0.9, 0.99].map(t => rank(quantilePick(probs, levelsUpTo('max'), t)))
+  expect(picks).toEqual([...picks].sort((a, b) => a - b))
+})
+
+test('probabilities are restricted to the levels offered and renormalised', () => {
+  // xhigh and max are not offered: their mass is ignored, not given to "low"
+  expect(quantilePick({ low: 0.1, medium: 0.1, high: 0.1, xhigh: 0.35, max: 0.35 }, levelsUpTo('high'), 0.7)).toBe('high')
+  expect(quantilePick({}, levelsUpTo('high'))).toBe('high')
+  expect(quantilePick({ low: 1 }, levelsUpTo('low'))).toBe('low')
+})
+
+
+test('the Haiku instructions carry only examples of the levels on offer', () => {
+  const text = judgeSystem(levelsUpTo('high'))
+  expect(text).toContain('-> high')
+  expect(text).not.toContain('-> xhigh')
+  expect(judgeSystem(levelsUpTo('max'))).toContain('-> max')
 })

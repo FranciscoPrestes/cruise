@@ -38,7 +38,7 @@ The animation above is the whole plugin, one stage at a time:
 
 1. **You send a message.** It is the only thing Cruise looks at.
 2. **A small judge reads that message**, never your conversation: just the text, whether the last reply ended with a question, and the effort now in use. The judge is `haiku` (your own Claude login), `jev` (a hosted API) or `laya` (a model on your machine).
-3. **It sets the effort the job needs.** A typo fix goes down to `low`, a normal edit stays at `medium`, a repository-wide review goes up to `high`. The effort you set in the app is the starting point (often `medium`), and the judge may move it either way; a judge that fails or is unsure leaves your setting alone.
+3. **It sets the effort the job needs.** A typo fix goes down to `low`, a normal edit stays at `medium`, a repository-wide review goes up to `high`, and a genuinely huge or unclear job can go to `xhigh` or `max`. The effort you set in the app is the starting point (often `medium`), and the judge may move it either way; a judge that fails or is unsure leaves your setting alone.
 4. **It watches the context.** At 60% and 80% it warns you and points to `/handoff`, so a long session ends with a clean hand-off rather than a quiet loss of quality. A progress band above the prompt keeps the current request and plan step in view.
 
 ## Install
@@ -81,7 +81,7 @@ Check it works: `/cruise` prints what Cruise is doing, and sending a request of 
 | `minAskChars` | 25 | Messages shorter than this ("go ahead") do not replace the request shown |
 | `effort` | **haiku** | `off`, `haiku`, `jev` or `laya`: see below |
 | `steer` | both | `both`: the judge may raise or lower the effort from your app's. `down`: only lower it |
-| `topLevel` | high | The highest effort the judge may pick: `high`, `xhigh` or `max` (the last two cost more, and not every model takes them) |
+| `topLevel` | max | The highest effort the judge may pick: `high`, `xhigh` or `max`. The judge chooses among all five levels Claude Code offers; lower this to cap the cost of the hardest jobs |
 | `judgeUrl` | empty | Where a `jev` or `laya` judge listens. Empty means the hosted Jev, or `http://127.0.0.1:18787/v1/systemone` for Laya |
 | `judgeKey` | empty | TypeSafe key for `jev`. Kept in Claude Code's secure storage. Laya needs none |
 | `judgeModel` | empty | The judge's model. Empty: Haiku 5.5 for `haiku`, the server's choice for `jev` and `laya` (set it to `multilingual`, or to a checkpoint you trained) |
@@ -93,7 +93,7 @@ Check it works: `/cruise` prints what Cruise is doing, and sending a request of 
 
 For each prompt you type, a small judge reads the message and picks the lowest effort that still does the job. Cruise then sends the model requests of that work at that effort.
 
-- **It moves the effort up or down.** The effort you set in the app is the starting point. A quick fix goes lower; a hard job goes higher, up to the `topLevel` setting (`high` by default; `xhigh` and `max` cost more and not every model takes them). If you would rather it never spent more than your own setting, set `steer` to `down`.
+- **It moves the effort up or down.** The effort you set in the app is the starting point. A quick fix goes lower; a hard job goes higher, up to the `topLevel` setting (`max` by default, so all five levels are in play: `low`, `medium`, `high`, `xhigh`, `max`). If you would rather it never spent more than your own setting, set `steer` to `down`.
 - **You stay in charge.** If you change the effort in the app, the new value becomes the starting point immediately. Every behaviour has a switch: see Settings.
 - **It stops by itself if the prompt cache is ever rewritten** after an effort change. It says so once and leaves your effort alone for the rest of the session.
 - **A failing, slow or unreachable judge never holds a prompt.** The request goes out at your own effort.
@@ -190,27 +190,37 @@ To remove everything: stop the server, delete `~/.local/share/cruise/laya`, remo
 - Laya's `confidence` field is how concentrated its distribution is, not a probability. Cruise reads the probability of the answer instead; a threshold copied from Jev would misfire (it reads 0.23 for a 51% pick). With the probability, the threshold barely changes the result up to 0.4.
 - Training on the effortless examples works mechanically but is not enough on its own. We trained on the 55 non-held-out cases for 12 epochs (about 3.4 minutes on that Mac, a 1.6 GB checkpoint) and tested on the 20 held-out: exact-match accuracy went from 40% to 60%, but the model became overconfident (mean confidence 0.62 to 0.97, calibration error up). Fifty-five examples overfit. A useful Laya needs hundreds of examples, ideally from your own work, in Portuguese, and labelled by a stronger judge. The recipe is in `skills/setup-laya/SKILL.md`.
 
-#### After training on your own sessions
+#### After training on your own sessions, with all five levels
 
-`train/` turns your own Claude Code sessions into a training set (see `train/README.md`): every prompt you typed, labelled low / medium / high in hindsight by a Claude model that also sees how much work the prompt set off. We ran it on 401 sessions of one person: 3,025 prompts, 2,795 labelled by Haiku 5.5 for under US$ 0.30 (and again by Sonnet 5.5 for about US$ 4, to check the labels). We fine-tuned `laya-multilingual` on 2,175 of them and tested on 620 prompts from 71 sessions it never saw (the split is by session, so nothing leaks). The held-out prompts were then scored against the same labels:
+Claude Code offers five efforts (`low`, `medium`, `high`, `xhigh`, `max`), so the judges choose among five, not three. `train/` turns your own Claude Code sessions into a training set (see `train/README.md`): every prompt you typed, labelled in hindsight by a Claude model that also sees how much work the prompt set off. We ran it on 401 sessions of one person: 3,025 prompts, 2,796 labelled by Haiku 5.5 for under US$ 0.30 and again by Sonnet 5.5 for about US$ 4. We fine-tuned `laya-multilingual` on 2,177 of them and tested on 619 prompts from 71 sessions it never saw (the split is by session, so nothing leaks).
 
-| Judge on the 620 held-out prompts | Right | Too low | Too high | Steered below the top level |
-| --- | --- | --- | --- | --- |
-| Haiku 5.5, as `effort: haiku` runs it | 52% | 22% | 25% | |
-| Laya before training | 41% | | | |
-| Laya after training, plain best guess | 53% | 34% | 13% | |
-| **Laya after training, Cruise's cautious rule** | 39% | **9%** | 52% | **51%** |
+**The data is the limit.** Of the 2,796 prompts Haiku labelled, 1,173 were `low`, 985 `medium`, 569 `high`, **59 `xhigh` and 10 `max`**: people rarely type a prompt that needs the top levels, and in the held-out prompts there were 10 `xhigh` and one `max`. Nothing below says how well any judge picks those two levels; it only says how well it separates easy from ordinary from hard.
 
-On the effortless prompts the trained model never saw: English 67% right, 8 of 75 too low (before: 60% and 19); Portuguese 68% right, 7 too low (before: 61% and 21). It answers in about 25 ms, locally, at no cost and with nothing leaving the machine. What this does and does not say:
+Scored against Haiku's labels on the 619 held-out prompts (Sonnet's labels give the same picture):
 
-- **Trained Laya matches Haiku on accuracy; it does not beat it.** About half of the prompts is also all that Haiku gets right, because the labels themselves are noisy: Haiku and Sonnet, labelling the same prompts, agree on only 70% (97% within one level), and Haiku asks for more effort than Sonnet in 730 of the 848 disagreements. These labels are an opinion about the effort a prompt needs, not a measurement of answer quality, which nothing here measures.
-- **The cautious rule is what makes it safe to use.** A wrong "low" costs more than a missed saving, so with a probability for each level Cruise keeps the top level as soon as it has a 25% chance (`TOP_PLAUSIBLE`) and asks for 60% confidence before choosing "low" (`LOW_NEEDS`). On the held-out prompts that cut "too low" from 34% to 9% (5% against Sonnet's labels, 6% against the prompts both models agree on), at the price of steering about half the prompts instead of most. The thresholds were tuned on this one model: re-tune them (`train/score_laya.py`) if you train your own.
-- **Savings are the open question.** Steering half the prompts below your effort saves something only if those prompts were over-served at your effort. Use `/cruise` on real work before drawing conclusions.
-- **Training is cheap but easy to get wrong on a busy laptop.** Fine-tuning with the defaults (batch of 8, up to 1,024 tokens) filled the 34 GB Mac's memory and swap and had to be killed. Training only the head left the model at chance (37%). The settings that worked: `--micro-batch 2 --grad-accum 16 --max-len 256 --encoder-lr 2e-5 --head-lr 2e-4 --epochs 2`, at low priority (`nice -n 15`), about 10 minutes for 2,175 prompts.
+| Judge | Exact | Easy found (picks `low` when labelled `low`) | Hard found (`high` or more when labelled `high` or more) | False alarms (`high` or more when labelled `low` or `medium`) | Mean level (labels 0.73) |
+| --- | --- | --- | --- | --- | --- |
+| Always `medium` (do nothing) | 37% | 0% | 0% | 0% | 1.00 |
+| **Haiku 5.5**, with Cruise's made-up examples (what `effort: haiku` runs) | 52% | 53% | 48% | 12% | 0.83 |
+| Haiku 5.5, without the examples | 51% | 46% | 55% | 16% | 0.95 |
+| **Laya after training**, Cruise's rule (the median of its probabilities) | 48% | 44% | 11% | 6% | 0.78 |
+| Laya after training, plain best guess | 54% | 71% | 2% | 2% | 0.53 |
+
+"Mean level" counts `low` as 0 and `max` as 4: lower means cheaper, and `medium` is the baseline of 1.00.
+
+What this says, and does not say:
+
+- **Both judges beat doing nothing at exact accuracy (50% against 37%) and find about half of the easy prompts. Haiku also finds about half of the hard ones; the trained Laya almost never does** (11%), because the hard levels are rare in what it learned. Laya's strength is the cheap, private, offline side: it picks `low` correctly for about 44% of the easy prompts in 25 ms, with nothing leaving your machine.
+- **If a level too low is three times as bad as a level too high, neither judge clearly beats always `medium`** on these labels (cost 1.00 for Haiku with examples, 1.03 for always `medium`, 1.12 for Laya). If it is only twice as bad, Haiku with examples comes out ahead (0.77 against 0.84). The labels are noisy: Haiku and Sonnet, labelling the same prompts, agree on 68% (96% within one level), so a judge cannot do much better than half exact. Treat these as a first, honest measurement and watch `/cruise` on real work before drawing conclusions. Nothing here measures the quality of the answers or the tokens saved.
+- **Tuning the rule.** A judge returns a probability for every level. Cruise picks the lowest level whose cumulative probability reaches 0.5 (`QUANTILE`). Asking for more (0.6, 0.7) made Laya demand more effort than the work needed: at 0.7 its mean level was 1.56 against 0.79 in the labels. A hybrid (Laya for the easy ones, Haiku for the rest) did not beat Haiku alone. Re-tune with `train/score_laya.py`, `train/compare.py` and your own sessions.
+- **The Haiku examples are made up** (13 sentences written for this project, none from anyone's sessions): they moved Haiku from asking for more effort than the labels to matching them, at about 50 extra tokens per judged prompt (236 against 188).
+- **Training is cheap but easy to get wrong on a busy laptop.** Fine-tuning with the defaults (batch of 8, up to 1,024 tokens) filled the 34 GB Mac's memory and swap and had to be killed. Training only the head left the model at chance. The settings that worked: `--micro-batch 2 --grad-accum 16 --max-len 256 --encoder-lr 2e-5 --head-lr 2e-4 --epochs 2`, at low priority (`nice -n 15`), about 15 minutes. The rare levels were repeated three times in the training file so the model sees them at all.
 - **The data and the model are private.** They contain your prompts. They live under `~/.local/share/cruise/laya-training` (mode 700), never in this repository, and must not be shared.
-- **A bug the real prompts exposed.** Haiku sometimes closes its answer badly (`"why":"...","}`), and Cruise used to throw such answers away: on real prompts about one verdict in five was lost (the request went out at your own effort, safe but with no saving). The reader now takes the fields one by one.
+- **A bug the real prompts exposed.** Haiku sometimes closes its answer badly (`"why":"...","}`), and Cruise used to throw such answers away: on real prompts about one verdict in five was lost. The reader now takes the fields one by one.
 
-**Recommendation today:** `haiku` is the simplest way to start. `laya` is worth it if you want effort steering for free, offline and private **and** you are willing to train it on your own sessions first (untrained it is not reliable, least of all in Portuguese). Either way, watch `/cruise` for a few days.
+**Ultracode** (the toggle you see under `/effort`) is not something Cruise can switch on: a plugin cannot change it. It stays your call for the hardest jobs.
+
+**Recommendation today:** `haiku` is the best way to start and the default. `laya` is worth it if you want effort steering offline and private **and** you are willing to train it on your own sessions first; expect it to lower the effort of easy prompts well and to miss most of the hard ones. Either way, watch `/cruise` for a few days.
 
 ## Context warnings and the progress band
 

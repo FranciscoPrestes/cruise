@@ -11,7 +11,7 @@ Cruise already works with its defaults, so make that clear first: "Everything be
 
 ## 1. Read the options
 
-Run `claude plugin configure cruise@prestes --json` to see every option, its type and its current value. Use the names it prints. The defaults of version 1.3 are:
+Run `claude plugin configure cruise@prestes --json` to see every option, its type and its current value. Use the names it prints. The defaults of version 1.4 are:
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
@@ -20,7 +20,7 @@ Run `claude plugin configure cruise@prestes --json` to see every option, its typ
 | `progress` | true | the band above the prompt |
 | `effort` | haiku | who judges the effort: `off`, `haiku`, `jev`, `laya` |
 | `steer` | both | `both` = up or down from the app's effort, `down` = only lower |
-| `topLevel` | high | the highest effort the judge may pick: `high`, `xhigh`, `max` |
+| `topLevel` | max | the highest effort the judge may pick: `high`, `xhigh`, `max` |
 | `judgeModel` | empty | the judge's model; empty = Haiku 5.5 (or the server's choice for jev/laya) |
 | `updates` | check | `check`, `auto`, `off` |
 
@@ -34,7 +34,7 @@ Run `claude plugin configure cruise@prestes --json` to see every option, its typ
    - **laya**: a small model on the user's own machine, nothing leaves it. About 1.5 GB of disk, weak until trained on the user's own sessions. If they want it, ask for a clear yes and run the `setup-laya` skill instead of configuring it here.
    - **off**: no steering. Their app's effort goes out untouched.
 4. If effort is on: **direction** (`steer`, both). "Should it be allowed to raise the effort for a hard job, or only lower it? Raising is what makes it useful for hard problems, and it costs more tokens on those; lowering only saves." Recommend `both`.
-5. If `steer` is both: **top level** (`topLevel`, high). "How high may it go on a hard job? `high` is safe everywhere. `xhigh` and `max` think much harder and cost more, and not every model accepts them." Recommend `high`, and say they can raise it later.
+5. If `steer` is both: **top level** (`topLevel`, max). "The judge picks among all five levels Claude Code offers: low, medium, high, xhigh and max. How high may it go on a hard job? `max` uses every level; `high` or `xhigh` cap the cost of the hardest jobs." Recommend leaving `max`, and say they can lower it later. Mention that Ultracode (the toggle under `/effort`) is not something Cruise can switch on.
 6. **Updates** (`updates`, check). "Cruise looks on GitHub once a day for a new version and tells you; you decide when to install it with `/cruise:update`. Do you prefer it to install by itself (`auto`), or never look (`off`)?" Recommend `check`.
 7. Only for **jev**: tell the user to run `/plugin configure cruise@prestes` themselves to paste the key, because that command keeps it in secure storage. Do not ask them to type the key into the chat.
 

@@ -75,13 +75,13 @@ python3 eval/judge_eval.py --url http://127.0.0.1:<PORT>/v1/systemone --mode lay
 
 ## Training Laya on the user's own sessions (optional, ask first)
 
-Untrained Laya is weak; trained on the person's own sessions it matched the Haiku judge on accuracy in our test and, with Cruise's cautious rule, made far fewer "too low" mistakes (see the README). The pipeline is in this plugin's `train/` folder (find it under `~/.claude/plugins/cache/cruise/cruise/*/train/`; read `train/README.md` first). Be explicit with the user about three things before starting:
+Untrained Laya is weak. Trained on the person's own sessions, with all five levels, it matched the Haiku judge on exact accuracy (about 50%, against 37% for always `medium`) and found easy prompts about as well, but it found hard ones much less often (see the README). Say that to the user. The pipeline is in this plugin's `train/` folder (find it under `~/.claude/plugins/cache/cruise/cruise/*/train/`; read `train/README.md` first). Be explicit with the user about three things before starting:
 
 1. **Privacy.** It reads every prompt they typed in `~/.claude/projects`. The data and the trained model are written only under `~/.local/share/cruise/laya-training` (mode 700), never into a repository, and must never be shared. The labelling step sends the prompts to Anthropic through the user's own `claude -p` login, as normal use does (about US$ 0.30 for 3,000 prompts with Haiku). Prompts that look like they hold a key or token are dropped.
 2. **Memory.** Do not train with the defaults on a laptop in use: a batch of 8 with long texts filled a 34 GB Mac's memory and swap. Use the lean settings below, at low priority, and watch `sysctl vm.swapusage`; stop if swap grows.
 3. **Honesty about the result.** The labels are a model's opinion of the effort a prompt needs, not a measurement of answer quality. Say what the held-out numbers show and that real savings are only known after a few days of `/cruise`.
 
-Steps: `extract_prompts.py`, `label_prompts.py`, `build_dataset.py`, `haiku_baseline.py` (the bar to reach), then:
+Steps: `extract_prompts.py`, `label_prompts.py` (five levels), `build_dataset.py`, `haiku_baseline.py --examples` (the bar to reach); repeat the rare `xhigh` and `max` rows three times in the training CSV; then:
 
 ```bash
 nice -n 15 "$BASE/venv/bin/laya-train" --data ~/.local/share/cruise/laya-training/train.csv --eval ~/.local/share/cruise/laya-training/eval.csv \

@@ -1,6 +1,6 @@
 {
   "name": "cruise",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Cruise control for Claude Code: watches the context, shows where you are and (optionally) picks the reasoning effort for each prompt",
   "author": {
     "name": "Francisco Prestes"
@@ -69,8 +69,8 @@
     "topLevel": {
       "type": "string",
       "title": "Highest effort the judge may pick",
-      "description": "The ceiling when the judge lifts the effort above your app setting: high, xhigh or max. xhigh and max cost more and not every model accepts them.",
-      "default": "high",
+      "description": "The highest effort the judge may pick when a job is hard: high, xhigh or max (every level your model offers; max is the default). Lower it if you want a cheaper ceiling.",
+      "default": "max",
       "options": [
         "high",
         "xhigh",

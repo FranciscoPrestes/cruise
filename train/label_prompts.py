@@ -8,7 +8,7 @@ the text alone. Calls use --no-session-persistence, no tools, no plugins, so the
 
 Your prompts are sent to Anthropic exactly as when you use Claude Code. Output stays in the same private folder.
 
-    python3 train/label_prompts.py [--model claude-haiku-5-5] [--limit N] [--workers 6]
+    python3 train/label_prompts.py [--model claude-haiku-5-5] [--levels 5] [--limit N] [--workers 6]
 """
 import argparse
 import json
@@ -20,26 +20,49 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-LEVELS = ["low", "medium", "high"]
+ALL_LEVELS = ["low", "medium", "high", "xhigh", "max"]
 BATCH = 20
 MESSAGE_CHARS = 900
 
-SYSTEM = """You label prompts that a person typed to an agentic coding assistant (it reads files, runs tools, edits things) with the LOWEST reasoning effort that would still have done the job well. You see the prompt and, in hindsight, how much work it set off. Labels train a small model that will later guess the effort from the prompt text alone, so label what the prompt itself calls for.
+DEFINITIONS = {
+    "low": "a quick answer or lookup, a rename, a typo, a one-line or single-file edit, chit-chat, a thank-you, a plain yes/no/\"go\" that continues work already planned and easy.",
+    "medium": "normal work: read a few files and edit across them, write a function or its tests, explain a module, draft text, a bug with an obvious area, an ordinary question that needs a little digging.",
+    "high": "hard or large multi-step work: debugging an unknown cause, a large refactor or migration, architecture or design, a security or full-repo review, a long investigation, research across many sources, anything where a mistake is costly.",
+    "xhigh": "very hard work: a long investigation or a big change across many files and systems where the cause or the design is genuinely unclear, many dozens of steps, and a wrong turn wastes hours.",
+    "max": "the hardest work there is: research-level or whole-system problems with no known approach, sustained effort over hundreds of steps, where the best possible reasoning is worth any cost.",
+}
+HINTS = {
+    3: [
+        "- 0 to 2 tool calls and a short reply usually means low, unless the prompt itself plainly asked for something deep that was answered from memory.",
+        "- Several tool calls (about 3 to 15) usually means medium.",
+        "- Many tool calls (about 15 or more), a long run, or heavy output usually means high, unless the work was big only because of repetitive, mechanical steps (then medium).",
+    ],
+    5: [
+        "- 0 to 2 tool calls and a short reply usually means low, unless the prompt itself plainly asked for something deep that was answered from memory.",
+        "- Several tool calls (about 3 to 15) usually means medium.",
+        "- About 15 to 40 tool calls, or a long run or heavy output, usually means high.",
+        "- About 40 to 100 tool calls usually means xhigh, if the work really was hard and not just repetitive.",
+        "- More than about 100 tool calls, or a very long run, usually means max, again only if the work was hard in itself. Repetitive, mechanical steps (renaming across files, bulk edits) count one level lower than their size suggests.",
+    ],
+}
+
+
+def system(levels):
+    listing = "\n".join(f"- {level}: {DEFINITIONS[level]}" for level in levels)
+    hints = "\n".join(HINTS[len(levels)])
+    names = "|".join(f'"{level}"' for level in levels)
+    return f"""You label prompts that a person typed to an agentic coding assistant (it reads files, runs tools, edits things) with the LOWEST reasoning effort that would still have done the job well. You see the prompt and, in hindsight, how much work it set off. Labels train a small model that will later guess the effort from the prompt text alone, so label what the prompt itself calls for.
 
 Levels:
-- low: a quick answer or lookup, a rename, a typo, a one-line or single-file edit, chit-chat, a thank-you, a plain yes/no/"go" that continues work already planned and easy.
-- medium: normal work: read a few files and edit across them, write a function or its tests, explain a module, draft text, a bug with an obvious area, an ordinary question that needs a little digging.
-- high: hard or large multi-step work: debugging an unknown cause, a large refactor or migration, architecture or design, a security or full-repo review, a long investigation, research across many sources, anything where a mistake is costly.
+{listing}
 
 How to use the hindsight numbers. They are evidence, not a rule:
-- 0 to 2 tool calls and a short reply usually means low, unless the prompt itself plainly asked for something deep that was answered from memory.
-- Several tool calls (about 3 to 15) usually means medium.
-- Many tool calls (about 15 or more), a long run, or heavy output usually means high, unless the work was big only because of repetitive, mechanical steps (then medium).
+{hints}
 - A prompt that is mostly pasted material (logs, a document, code) is judged by what is asked of it.
 - A short reply to a question ("yes", "do it", "B", "go") is judged by the work it started.
 - If the signals disagree, trust what the prompt asks for.
 
-Reply with JSON only: an array with one object per prompt, in the same order, {"id": <number>, "effort": "low"|"medium"|"high"}. No other text."""
+Reply with JSON only: an array with one object per prompt, in the same order, {{"id": <number>, "effort": {names}}}. No other text."""
 
 
 def describe(i, row):
@@ -53,11 +76,11 @@ def describe(i, row):
     )
 
 
-def ask(model, batch, workdir):
+def ask(model, batch, workdir, levels):
     prompt = "\n".join(describe(i, row) for i, row in enumerate(batch))
     cmd = [
         "claude", "-p", "--model", model, "--no-session-persistence", "--disable-slash-commands", "--strict-mcp-config",
-        "--tools", "", "--setting-sources", "", "--output-format", "json", "--system-prompt", SYSTEM, prompt,
+        "--tools", "", "--setting-sources", "", "--output-format", "json", "--system-prompt", system(levels), prompt,
     ]
     out = subprocess.run(cmd, capture_output=True, text=True, cwd=workdir, timeout=300)
     events = json.loads(out.stdout)
@@ -65,7 +88,7 @@ def ask(model, batch, workdir):
     text = result.get("result", "")
     match = re.search(r"\[[\s\S]*\]", text)
     answers = json.loads(match.group(0)) if match else []
-    labels = {int(a["id"]): a["effort"] for a in answers if isinstance(a, dict) and a.get("effort") in LEVELS}
+    labels = {int(a["id"]): a["effort"] for a in answers if isinstance(a, dict) and a.get("effort") in levels}
     return labels, float(result.get("total_cost_usd") or 0.0)
 
 
@@ -74,6 +97,7 @@ def main():
     parser.add_argument("--dir", default="~/.local/share/cruise/laya-training")
     parser.add_argument("--model", default="claude-haiku-5-5")
     parser.add_argument("--out", default="")
+    parser.add_argument("--levels", type=int, choices=(3, 5), default=5, help="3 = low/medium/high, 5 = every level Claude Code offers")
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument("--seed", type=int, default=7)
@@ -92,7 +116,8 @@ def main():
 
         random.Random(args.seed).shuffle(unique)
         unique = unique[: args.limit]
-    target = folder / (args.out or f"labels-{args.model}.jsonl")
+    levels = ALL_LEVELS[: 3 if args.levels == 3 else 5]
+    target = folder / (args.out or f"labels{args.levels}-{args.model}.jsonl")
     done = set()
     if target.exists():
         done = {json.loads(line)["key"] for line in open(target, encoding="utf-8")}
@@ -103,7 +128,7 @@ def main():
     workdir = tempfile.mkdtemp(prefix="cruise-label-")
     spent, failed, written = 0.0, 0, 0
     with ThreadPoolExecutor(max_workers=args.workers) as pool, open(target, "a", encoding="utf-8") as sink:
-        futures = {pool.submit(ask, args.model, batch, workdir): batch for batch in batches}
+        futures = {pool.submit(ask, args.model, batch, workdir, levels): batch for batch in batches}
         for n, future in enumerate(as_completed(futures), 1):
             batch = futures[future]
             try:

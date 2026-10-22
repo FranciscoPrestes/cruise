@@ -23,7 +23,7 @@ export const HELP = [
   '  progress       true | false             the band above the prompt',
   '  effort         haiku | jev | laya | off   who judges the effort',
   '  steer          both | down              both = up or down from your app\'s effort, down = only lower',
-  '  topLevel       high | xhigh | max       the highest effort the judge may pick',
+  '  topLevel       high | xhigh | max       the highest effort the judge may pick (max by default)',
   '  judgeModel     a model or checkpoint name   the judge\'s model (Haiku by default)',
   '  updates        check | auto | off       daily update check (check = ask before installing)',
   'Update now: /cruise:update   ·   Hand off a long session: /handoff, then /pickup',

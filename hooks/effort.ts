@@ -7,9 +7,7 @@ import type { EngineInterface, PluginOptions } from 'claude-code'
 import type { Effort, EffortState } from '../types'
 import {
   cacheRewritten,
-  HTTP_TOP,
   clampTo,
-  cautiousPick,
   criteriaFor,
   effortLine,
   endsOnQuestion,
@@ -20,9 +18,9 @@ import {
   judgeSystem,
   layaState,
   levelsUpTo,
-  liftHighest,
   parseHaiku,
   parseJev,
+  quantilePick,
   reachFrom,
   settle,
   steerFrom,
@@ -101,7 +99,7 @@ async function askHaiku($: EngineInterface, judge: Judge, text: string, top: Eff
 }
 
 async function askHttp($: EngineInterface, judge: Judge, text: string, top: Effort, current: Effort | null, afterQuestion: boolean): Promise<Judged> {
-  const levels = levelsUpTo(clampTo(top, HTTP_TOP))
+  const levels = levelsUpTo(top)
   const headers: Record<string, string> = { 'content-type': 'application/json' }
   if (judge.key) headers.authorization = `Bearer ${judge.key}`
   // Only the next message and two small facts leave the machine: never the conversation.
@@ -135,8 +133,8 @@ async function askHttp($: EngineInterface, judge: Judge, text: string, top: Effo
   const parsed = parseJev(res.text, levels)
   if (!parsed) return { tokens }
   // With the full distribution, decide cautiously (and the pick is final: no separate "unsure" gate). Without it, the answer's own choice.
-  const effort = parsed.probs ? cautiousPick(parsed.probs, levels) : parsed.effort
-  return { verdict: { effort: liftHighest(effort, top), why: parsed.why, sure: parsed.probs ? undefined : parsed.sure }, tokens }
+  const effort = parsed.probs ? quantilePick(parsed.probs, levels) : parsed.effort
+  return { verdict: { effort, why: parsed.why, sure: parsed.probs ? undefined : parsed.sure }, tokens }
 }
 
 async function ask($: EngineInterface, judge: Judge, text: string, top: Effort, app: Effort, current: Effort | null, afterQuestion: boolean): Promise<Judged> {
