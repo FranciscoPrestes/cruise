@@ -1,0 +1,896 @@
+text,label
+"last reply asked a question: no
+message: WARN  c.n.legado.SOAPClient - WSDL v1 deprecated, endpoint will be removed 2026-12-31
+
+Temos 23 integrações SOAP com parceiros. Levanta todas no código, agrupa por parceiro e propõe como migrar pra REST mantendo compatibilidade.",high
+"last reply asked a question: yes
+message: sim, pode trocar",low
+"last reply asked a question: no
+message: what does the X-Frame-Options header do",low
+"last reply asked a question: no
+message: redis.exceptions.ConnectionError: Error 111 connecting to localhost:6379. Connection refused.
+
+Atualiza o docs/setup.md com um passo de subir o Redis via docker compose antes de rodar os testes.",medium
+"last reply asked a question: no
+message: f1 score macro e weighted é a mesma coisa?",low
+"last reply asked a question: no
+message: Depois do upgrade para Go 1.24, `go test -race ./...` em `internal/worker` reporta data race em `jobQueue.Drain`, mas só quando rodamos com `-count=20`. Reproduza, explique o happens-before que está faltando e conserte sem introduzir mutex global. Escreva um teste que falhe de forma confiável com `-race` antes da correção.",xhigh
+"last reply asked a question: no
+message: df.dropna() altera o df original ou retorna uma copia?",low
+"last reply asked a question: no
+message: Write a README.md for the `ledger-sync` CLI in this repo. Read `cmd/root.go` and `cmd/sync.go` to get the real flags, and document install, the `--since` and `--dry-run` flags, the exit codes returned from `sync.Run()`, and one worked example. Keep it under 120 lines.",medium
+"last reply asked a question: no
+message: Audit the whole Flutter app for jank caused by main-isolate work. Anything over 8ms on the UI thread in a typical session should be listed with file, call stack and a proposed move to a background isolate or a cheaper algorithm. Instrument with Timeline events first so we have a baseline.",xhigh
+"last reply asked a question: no
+message: Good afternoon. I am not a programmer, so I apologize for the basic question: what does the abbreviation CI/CD stand for? A short answer would be perfectly fine.",low
+"last reply asked a question: no
+message: Plan and execute a migration of the iOS app's networking layer from our hand-rolled URLSession wrapper (Networking/HTTPClient.swift, ~40 call sites) to async/await with structured concurrency. Constraints: no behavior change in retry/backoff, keep the certificate pinning in PinningDelegate.swift working, and ship it incrementally behind a feature flag so we can roll back per endpoint. Start by inventorying every call site and its cancellation semantics.",xhigh
+"last reply asked a question: no
+message: tests pass on ci but prod throws NullPointerException in the tax calc after we upgraded the xml parser lib. no stack trace in logs bc someone swallowed it. help",high
+"last reply asked a question: no
+message: Draft a release-notes entry for v2.4.0 based on the commits since tag v2.3.1. Group into Added, Fixed, Changed. Skip anything that is only refactoring or CI. Write it into CHANGELOG.md following the existing format at the top of the file.",medium
+"last reply asked a question: no
+message: muda o epochs pra 50 em treino_lstm.py, tá com 10 ainda",low
+"last reply asked a question: no
+message: we think someone got our stripe webhook secret from an old commit. need you to grep full git history for anything that looks like a leaked key, list every file+commit, then rotate plan for each service it touches. dont rewrite history yet just report",high
+"last reply asked a question: no
+message: Please change the version number in the file version.txt from 4.2.1 to 4.2.2. Thank you very much.",low
+"last reply asked a question: no
+message: random_state 42 no notebook de previsao de churn pode ser trocado por 7 la na linha onde cria o RandomForestClassifier",low
+"last reply asked a question: no
+message: Em eval/report.py, ajuste o `round(score, 2)` para `round(score, 4)` na função format_f1.",low
+"last reply asked a question: no
+message: Could you please tell me what ""deprecated"" means when a developer says a function in our old code is deprecated? Thank you.",low
+"last reply asked a question: no
+message: O aplicativo trava aleatoriamente quando o usuário gira o telefone enquanto envia uma foto. Já tentamos de tudo. Pode achar a causa?",high
+"last reply asked a question: no
+message: Please, is it correct that a Kubernetes pod can contain more than one container? A simple yes or no will do, thank you.",low
+"last reply asked a question: no
+message: rename var `usr_pwd` to `user_password_hash` in auth/login.py",low
+"last reply asked a question: no
+message: Please rename the variable 'df2' to 'customer_churn_data' in the file churn_report.py. I would appreciate it, as the current name is confusing for my team.",low
+"last reply asked a question: no
+message: Nossa suíte `pytest` em `ingest-api/` passou de 4 min para 19 min depois da migração para SQLAlchemy 2.0. Faça um profiling com `--durations=50` e `cProfile`, identifique os gargalos (desconfio das fixtures `db_session` com escopo `function` recriando o schema inteiro), e refatore para transações com savepoint e rollback por teste, sem quebrar o isolamento. Me traga números de antes e depois.",xhigh
+"last reply asked a question: no
+message: converte esse arquivo de config .ini pra yaml, as chaves com ponto viram aninhadas ta? o arquivo ta em config/app.ini",medium
+"last reply asked a question: no
+message: Escreva testes de propriedade com Hypothesis para `pricing/discount_engine.py`: invariantes como idempotência da aplicação de cupom, monotonicidade do total em relação à quantidade e que a soma de descontos nunca excede o subtotal. Se achar contraexemplos, abra-os como testes de regressão fixos e corrija o código. Arredondamento tem que continuar em `Decimal` com `ROUND_HALF_EVEN`.",xhigh
+"last reply asked a question: yes
+message: no, keep the old tokens valid for 24h",high
+"last reply asked a question: no
+message: Prezado, a nossa área de risco de crédito precisa de um modelo que seja ao mesmo tempo preciso, explicável para o regulador e comprovadamente justo entre grupos demográficos. Esses objetivos parecem conflitantes. Poderia estudar o estado da arte, propor uma abordagem original que concilie os três e implementar um protótipo com avaliação rigorosa?",max
+"last reply asked a question: no
+message: o StandardScaler pode ser fitado no teste tbm ou só no treino?",low
+"last reply asked a question: no
+message: ORA-01017: invalid username/password; logon denied
+
+Redige uma mensagem educada pro DBA pedindo a redefinição das credenciais do usuário de serviço da aplicação de relatórios (sem incluir senha).",medium
+"last reply asked a question: no
+message: Bom dia. Nosso aplicativo de desktop para Windows e Mac demora quase um minuto para abrir quando o cliente possui muitos arquivos. Poderia medir onde está o gargalo, propor melhorias e implementá-las sem alterar o comportamento que os clientes já conhecem?",high
+"last reply asked a question: yes
+message: Yes, go ahead and use the real device farm run, and bisect the regression across the last 60 commits automatically.",xhigh
+"last reply asked a question: no
+message: pytest tests/test_billing.py::test_proration_mid_month is failing with an off-by-one on the day count. Debug billing/proration.py and fix it without changing the test.",medium
+"last reply asked a question: no
+message: can u review the whole rbac refactor branch, i suspect theres a privilege escalation hole where org admins can edit other orgs roles. trace every endpoint that touches roles",high
+"last reply asked a question: no
+message: sha256 or sha1 for file checksums in our release notes? just tell me which",low
+"last reply asked a question: no
+message: qual o comando pra ativar o venv aqui no mac",low
+"last reply asked a question: no
+message: Convert the callback-style `getUserByEmail` in db/users.js to async/await and update its two call sites in services/auth.js. Keep the same error messages.",medium
+"last reply asked a question: no
+message: como eu salvo um modelo sklearn com joblib?",low
+"last reply asked a question: no
+message: Hello, would you kindly change the port in the file docker-compose.yml from 8080 to 8081? I would greatly appreciate it.",low
+"last reply asked a question: no
+message: TypeError: Cannot read properties of undefined (reading 'map') at renderItens (src/components/Carrinho.tsx:42)
+
+Corrige e escreve uma mensagem de commit em português seguindo conventional commits.",medium
+"last reply asked a question: no
+message: Would you mind telling me what the letters in ""SQL"" stand for? I want to write them correctly in the migration proposal.",low
+"last reply asked a question: yes
+message: no, just the staging one",low
+"last reply asked a question: no
+message: O teste de integração `OrderSettlementIT` em `services/billing/src/test/java/.../OrderSettlementIT.java` falha em ~1 de cada 40 execuções no CI, sempre com `OptimisticLockException` em `LedgerEntry`, mas nunca localmente. Preciso que você investigue a causa raiz (suspeito de interação entre o consumer Kafka `SettlementListener` e o `@Scheduled` de `LedgerReconciler`), reproduza de forma determinística com um teste que force o intervalo de corrida e só então proponha a correção. Não use `Thread.sleep` nem retry no teste.",xhigh
+"last reply asked a question: yes
+message: Option B. Keep the old schema readable during the rollout and write the backfill so it can be resumed after a crash.",xhigh
+"last reply asked a question: no
+message: o xgboost aceita valores nulos direto ou preciso tratar antes",low
+"last reply asked a question: no
+message: Olá! Os relatórios que o aplicativo de desktop exporta para planilha estão saindo com valores diferentes dos mostrados na tela, mas apenas em alguns meses do ano. Suspeito de algo ligado a fuso horário ou arredondamento, mas não sei. Poderia investigar a fundo e corrigir, avisando se outros cálculos podem ter o mesmo defeito?",high
+"last reply asked a question: yes
+message: Yes, that is correct, please proceed with the name orion-pipeline.",low
+"last reply asked a question: no
+message: o build do maven quebra com 'cannot find symbol ProdutoLegadoDTO', acho q alguem moveu o pacote. descobre onde foi parar e arruma os imports",medium
+"last reply asked a question: no
+message: Build failed: Module not found: Can't resolve '@/utils/formatarData'
+
+Corrige o import e documenta no README o alias @ configurado no tsconfig.",medium
+"last reply asked a question: no
+message: Please tell me which command I should type in the terminal to start a Jupyter notebook.",low
+"last reply asked a question: no
+message: Excuse me, which command shows the logs of a Docker container named billing-api? I would like to pass it along to our operations colleague. Thank you.",low
+"last reply asked a question: no
+message: Nossos testes unitários de `auth/token_refresh.ts` mockam `Date.now` globalmente e passam, mas em produção usuários são deslogados na virada do dia em UTC. Investigue o fluxo completo de expiração entre `auth-gateway` e `session-store`, escreva um teste com relógio falso controlado que reproduza o bug e corrija.",xhigh
+"last reply asked a question: no
+message: Find the deadlock. It hangs the Linux build of the app roughly once per 500 launches, thread dump attached in /tmp/hang-4411.txt: the main thread waits in QMutex inside Settings::flush() while the audio thread is in AudioEngine::reconfigure(). Reconstruct the lock order, show the cycle, and fix it with a lock hierarchy rather than timeouts.",xhigh
+"last reply asked a question: no
+message: Our Electron app (Lumen Notes) leaks about 3 MB per note opened and never recovers after closing. Heap snapshots show retained detached DOM nodes held by closures in src/renderer/editor/PluginHost.ts. Find the leak, write a repeatable Puppeteer script that measures heap growth over 500 open/close cycles, and fix it with before/after numbers.",xhigh
+"last reply asked a question: no
+message: need to upgrade .net framework 4.5 to .net 8 for the whole solution, 60 projects, some use wcf and webforms. figure out whats blocking and what order to port",high
+"last reply asked a question: no
+message: troca o uso de java.util.Date por LocalDate no arquivo ClienteService.java, cuidado com o formato dd/MM/yyyy q usamos la",medium
+"last reply asked a question: yes
+message: Go with option B, keep the old env var names as aliases and mention it in the docs.",medium
+"last reply asked a question: no
+message: Hello. Could you please change the Node version in our Dockerfile from 18 to 20? It is on the first line, I believe. Thank you kindly.",low
+"last reply asked a question: no
+message: como eu listo as versoes instaladas do scikit-learn e do pandas com pip",low
+"last reply asked a question: yes
+message: Yes, that sounds right. Please change the column name to 'order_date' as you suggested.",low
+"last reply asked a question: no
+message: Tem um teste flaky em `tests/test_cache_invalidation.py::test_concurrent_writers` que falha só no runner arm64 do GitHub Actions. Rode com `pytest-repeat` e `--forked`, capture a ordenação das operações com logs, e me diga se o problema é no teste ou em `cache/lru_shared.py` (suspeito de falta de barreira de memória no contador). Corrija o que for o culpado de verdade.",xhigh
+"last reply asked a question: no
+message: Hello! In the file forecast_sales.py, could you please fix the typo in the function name 'calcualte_mean' so that it reads 'calculate_mean'? Many thanks.",low
+"last reply asked a question: no
+message: NullPointerException at CalculoComissaoService.aplicarDesconto(CalculoComissaoService.java:1847)
+
+esse arquivo tem 6 mil linhas, sem teste, e só estoura em produção no fechamento do mês. Acha a causa raiz, sem mudar o comportamento do resto.",high
+"last reply asked a question: no
+message: python 2 to 3 on the billing engine. 120k lines, no tests. whats the safest order to do this in",high
+"last reply asked a question: no
+message: error LNK2019: unresolved external symbol _CriptoInit@8 referenced in function _main
+
+A DLL de criptografia é de um fornecedor que faliu e não temos o fonte. Preciso portar esse app Delphi pra .NET 8. Como lidamos com essa dependência?",high
+"last reply asked a question: no
+message: is port 22 open to the world a problem lol",low
+"last reply asked a question: no
+message: we're moving from struts 1 to spring boot. theres like 400 actions and a bunch of custom tag libs. dont just start rewriting, propose a strategy that lets us migrate page by page while prod keeps running",high
+"last reply asked a question: no
+message: qual flag do pytest mostra o print dentro dos testes",low
+"last reply asked a question: no
+message: ./app/dashboard/layout.tsx
+Error: You're importing a component that needs useState. It only works in a Client Component but none of its parents are marked with ""use client""
+
+What's the cleanest way to fix this without turning the whole layout into a client component?",medium
+"last reply asked a question: no
+message: Hello. Could you please tell me what the command is to check which version of Docker is installed on this machine? Thank you.",low
+"last reply asked a question: no
+message: Olá! Preciso de ajuda com um problema em aberto: nossos sensores de fábrica geram séries temporais com dados faltantes de forma irregular e não existe método na literatura que funcione bem para o nosso caso. Poderia investigar e propor um algoritmo novo de imputação, com justificativa matemática, implementação e um experimento que demonstre que ele supera os métodos conhecidos?",max
+"last reply asked a question: yes
+message: sim, pode usar o java 17",medium
+"last reply asked a question: no
+message: is md5 ok for password hashing or nah",low
+"last reply asked a question: yes
+message: Please use the second option, the one with the smaller batch size. Thank you!",low
+"last reply asked a question: yes
+message: Sim, quero a versão mais ambiciosa, mesmo que demore mais.",max
+"last reply asked a question: no
+message: Cold start on the Pixel 4a is 3.8s, target is 1.5s. Profile it with Perfetto and the Baseline Profile tooling, break down time across Application.onCreate, Hilt graph init, the first Compose frame and the initial /v2/feed request, and then fix the top three offenders in order of payoff. I want measurements before and after each change, not guesses.",xhigh
+"last reply asked a question: no
+message: Qual o comando para listar os pacotes pip instalados no venv atual e filtrar só scikit-learn e xgboost?",low
+"last reply asked a question: no
+message: Summarize the diff between `config/staging.yaml` and `config/prod.yaml` as a table I can drop into a Slack message: key, staging value, prod value, and a one-line note on why it might differ.",medium
+"last reply asked a question: no
+message: esse stored procedure sp_fecha_caixa ta duplicado em dois arquivos sql, vê se sao iguais mesmo ou tem diferenca",medium
+"last reply asked a question: no
+message: prod incident: auth service started returning 200 for expired jwts around 3am. no deploy that i know of. figure out why, check the token validation path and any middleware ordering changes in the last 2 weeks",high
+"last reply asked a question: no
+message: we need to delete dead code before migrating but nobody knows whats dead. reflection and xml wiring everywhere so grep wont cut it. how would you approach it and then do it",high
+"last reply asked a question: no
+message: found a base64 blob in a cron script that looks like it phones home to some random domain. not ours. analyze what it does, find how it got in, check other repos for same thing",high
+"last reply asked a question: no
+message: Is COBOL still being used today? A simple yes or no is fine.",low
+"last reply asked a question: no
+message: Monte uma estratégia de testes para a migração do monólito Rails `legacy-erp` para o serviço novo `ledger-v2`: testes de caracterização sobre o comportamento atual dos 14 endpoints de `app/controllers/ledger/`, shadow traffic comparando respostas, e um harness de diff que ignore campos não determinísticos (timestamps, UUIDs). Entregue o harness e os primeiros 3 endpoints cobertos.",xhigh
+"last reply asked a question: no
+message: Os testes de contrato entre `payments-service` e `invoice-service` estão verdes, mas em produção a semana passada tivemos um 422 porque `invoice-service` passou a exigir `taxId` não nulo. Revise como o Pact está configurado em `contracts/` e redesenhe o fluxo (provider verification no CI do provider, `can-i-deploy`, versionamento por branch) para que esse tipo de quebra seja barrada antes do merge. Implemente e adicione um teste que reproduza o incidente.",xhigh
+"last reply asked a question: yes
+message: Sim, pode analisar o repositório inteiro, incluindo os notebooks antigos.",max
+"last reply asked a question: no
+message: split the shared utils jar into proper libs. dont know what depends on what. mapp it out first then propose the split",high
+"last reply asked a question: no
+message: Could you please remind me what the command is to stop and remove all containers started by Docker Compose? Many thanks.",low
+"last reply asked a question: no
+message: bump the jwt expiry in config/auth.yml from 24h to 1h",low
+"last reply asked a question: no
+message: ERROR: relation ""usuarios_backup"" does not exist
+LINE 1: SELECT * FROM usuarios_backup WHERE ativo = true;
+
+Revisa o script migrar.sql, corrige e comenta cada bloco explicando o que faz.",medium
+"last reply asked a question: no
+message: Crash reports on our Android app (com.northwind.fieldops) show a rare SIGSEGV in libsqlcipher.so only on Samsung A-series devices running Android 13, roughly 1 in 40k sessions. Stack always ends in SyncWorker.flushOutbox() -> OutboxDao.markSent(). I suspect a race between WorkManager's retry and the foreground SyncService both holding a SupportSQLiteDatabase handle after DbKeyRotator.rotate() closes it. Trace every path that can touch the DB after rotate(), prove or disprove the race, and propose a fix that doesn't serialize all DB access behind one global lock.",xhigh
+"last reply asked a question: yes
+message: pode ser o 0.001 mesmo",low
+"last reply asked a question: no
+message: Teste de carga: crie uma suíte k6 para `POST /v2/orders` que valide p99 < 300ms a 800 rps por 10 min, com dados realistas, e depois use os resultados para achar o gargalo real (pool de conexões do Hikari, N+1 em `OrderMapper`, ou serialização). Quero flamegraph e a correção com medição comparativa.",xhigh
+"last reply asked a question: yes
+message: isso aí o numero de epocas pode deixar em 50",low
+"last reply asked a question: no
+message: Qual flag do pandas `read_csv` eu uso para ler só as colunas 'user_id' e 'churn_flag'?",low
+"last reply asked a question: yes
+message: sim pode seguir",low
+"last reply asked a question: no
+message: Fatal error: Uncaught Error: Call to undefined function mysql_connect() in /var/www/sistema/lib/db.php:12
+
+São uns 1.200 arquivos PHP 5.3 usando a extensão mysql_*. Preciso migrar tudo pra PDO sem quebrar nada. Qual estratégia você recomenda e pode começar?",high
+"last reply asked a question: no
+message: panic: runtime error: index out of range [3] with length 3
+goroutine 1 [running]:
+main.parseLinha(0xc000012345)
+	parser/linha.go:58
+
+Explica o que aconteceu e adiciona um comentário no código acima da correção.",medium
+"last reply asked a question: yes
+message: Yes, please go ahead and use the staging environment. Thank you.",low
+"last reply asked a question: yes
+message: The first one, please.",low
+"last reply asked a question: no
+message: acha onde que o metodo calcularIcms eh chamado nesse projeto",medium
+"last reply asked a question: no
+message: Hi there. Is a ""monolith"" the opposite of ""microservices""? A short answer is perfectly fine, as I am preparing for a call with the vendor.",low
+"last reply asked a question: yes
+message: go ahead, but do it in small commits so i can bisect if the thing breaks",high
+"last reply asked a question: no
+message: strangler fig or big bang for the inventory service? we have 6 devs and 9 months. give me an actual recommendation with tradeoffs not a survey",high
+"last reply asked a question: no
+message: Add a `--dry-run` flag to scripts/purge_stale_sessions.py. When set, it should only print the session IDs it would delete and the count, without executing the DELETE. Use argparse like the rest of the script.",medium
+"last reply asked a question: no
+message: Prezado assistente, temos uma hipótese de que nosso modelo de detecção de fraude está aprendendo um atalho espúrio ligado ao horário das transações, e não o comportamento fraudulento de fato. Poderia desenhar e executar uma investigação causal completa sobre todo o código e os dados, propondo um método para remover esse atalho sem perder desempenho?",max
+"last reply asked a question: no
+message: Thank you for your help so far. Could you kindly rename the file CustMast_OLD.java to CustomerMaster.java in the current folder? I would like it to have a clearer name.",low
+"last reply asked a question: no
+message: qual o comando pra instalar o xgboost com pip",low
+"last reply asked a question: no
+message: tem um loop aqui no ProcessaFila.cs q parece q nunca termina quando a lista ta vazia, confere se eh isso mesmo",medium
+"last reply asked a question: no
+message: i think the event bus in this code is being used as a hidden global state thing. trace who publishes and who subscribes to each topic and flag the sketchy ones",high
+"last reply asked a question: no
+message: Em src/features/build_features.py, troque o `random_state=42` por `random_state=SEED` na chamada de train_test_split da linha 58. A constante SEED já está importada de config.py.",low
+"last reply asked a question: no
+message: Test failed: expected 200 but got 401 em auth.test.js › deve renovar o token
+
+Explica em poucas linhas o motivo no corpo do PR e sugere um título.",medium
+"last reply asked a question: no
+message: Write a status update for my manager about the cache-invalidation bug: root cause is in `cache/store.js` where `invalidate()` skips keys with a trailing slash. I've fixed it and added a test. Remaining: deploy to staging Thursday. 5 sentences max.",medium
+"last reply asked a question: no
+message: Is it correct that Java 8 is considered an old version now? I just need a quick answer for my status report.",low
+"last reply asked a question: no
+message: procura todos os lugares q usam md5 pra senha no projeto, preciso fazer um levantamento antes de trocar pra bcrypt",medium
+"last reply asked a question: yes
+message: Sim, pode aplicar.",low
+"last reply asked a question: no
+message: java.lang.ClassNotFoundException: br.com.finacred.legacy.ejb.ContratoSessionBean
+	at org.jboss.modules.ModuleClassLoader.findClass(ModuleClassLoader.java:255)
+
+Depois de migrar do JBoss 5 pro WildFly 30 isso começou a estourar em vários módulos. Mapeia todos os lugares que dependem desses EJBs antigos e me propõe uma ordem de migração sem quebrar o deploy.",high
+"last reply asked a question: no
+message: Error: Invalid src prop (https://cdn.brightmart-demo.io/img/hero.jpg) on `next/image`, hostname ""cdn.brightmart-demo.io"" is not configured under images in your `next.config.js`
+
+Add it.",medium
+"last reply asked a question: no
+message: como instalo o torch versão cpu só com pip",low
+"last reply asked a question: no
+message: [ERROR] 2026-10-20 03:14:22 BatchRunner - Falha no step 'GERA_REMESSA_CNAB' codigo=-4021
+
+ninguém sabe o que o código -4021 significa, o COBOL que gera isso é de 1994. Rastreia de onde vem e me explica o que essa rotina faz.",high
+"last reply asked a question: no
+message: Warning: Each child in a list should have a unique ""key"" prop.
+Check the render method of `ProductGrid`. See https://react.dev/link/warning-keys
+
+Can you find where in ProductGrid.tsx this is happening and fix it?",medium
+"last reply asked a question: no
+message: Demonstre formalmente que o nosso método de amostragem estratificada com pesos em sampling/weighted.py produz estimadores não viesados, ou encontre o erro na prova que o time publicou no wiki.",max
+"last reply asked a question: no
+message: WARNING: An illegal reflective access operation has occurred
+WARNING: Illegal reflective access by com.thoughtworks.xstream.core.util.Fields to field java.util.TreeMap.comparator
+
+Vamos subir de Java 8 pra 21 nesse monorepo com 90 módulos Maven. Faz um plano de migração com os riscos de cada módulo e já começa pelo que tem menos dependências.",high
+"last reply asked a question: no
+message: Escreva um simulador determinístico (estilo FoundationDB) para testar `raft/replica.rs`: rede, relógio e disco virtuais com seed, injeção de partições e perda de mensagens, e um checker de linearizabilidade. Rode 10 mil seeds e me mostre qualquer violação com a seed para reproduzir.",xhigh
+"last reply asked a question: no
+message: postmortem draft for the s3 bucket exposure last week. timeline from the cloudtrail export in /logs, root cause, what data was exposed, action items. be accurate dont guess",high
+"last reply asked a question: no
+message: adiciona um print do shape do X_train logo depois do split no arquivo prepara_dados.py",low
+"last reply asked a question: no
+message: Make our Windows installer-less auto-updater (updater/ in the Tauri app) safe against partial downloads, downgrade attacks and a power loss mid-swap. Review updater/apply.rs and the signature verification path, threat-model it, and implement atomic swap with rollback plus tests that kill the process at every step.",xhigh
+"last reply asked a question: no
+message: grep for 'AKIA' in this dir real quick, think we leaked a fake key in a test file",low
+"last reply asked a question: no
+message: comando pra rodar o jupyter lab na porta 8899 sem abrir o navegador",low
+"last reply asked a question: no
+message: Could you please add a comment above the first line of data_loader.py saying ""Loads the monthly sales data""? That would help our new team members.",low
+"last reply asked a question: no
+message: Lighthouse: Largest Contentful Paint 4.8 s (poor). LCP element: <img class=""hero-banner"" src=""/banner.png"">
+
+Can you convert that to next/image with priority and sensible sizes in app/page.tsx?",medium
+"last reply asked a question: no
+message: check our crypto usage, i saw md5 and some homemade aes thing in utils/. replace w something sane and write a migration for existing encrypted rows without downtime",high
+"last reply asked a question: no
+message: Good afternoon. I would be grateful if you could change the number of epochs in config.yaml from 10 to 25. Thank you for your help.",low
+"last reply asked a question: no
+message: Can you write a CONTRIBUTING.md? Look at the Makefile targets and `.pre-commit-config.yaml` so the setup steps are accurate.",medium
+"last reply asked a question: no
+message: Good morning. Could you kindly tell me the difference between a Docker image and a Docker container in one or two sentences? Thank you in advance.",low
+"last reply asked a question: no
+message: Migre todo o nosso código de treinamento de TensorFlow 1 para uma arquitetura moderna e distribuída, mas antes mapeie todas as dependências ocultas, camadas customizadas e hacks numéricos do código atual e me diga o que pode quebrar sutilmente a acurácia.",max
+"last reply asked a question: no
+message: TypeError: Cannot read properties of undefined (reading '$scope') at Object.link (app/directives/gridEditor.js:208)
+
+Temos 340 controllers AngularJS 1.2 e precisamos ir pra React. Como migrar incrementalmente com os dois rodando juntos? Analisa o código e propõe.",high
+"last reply asked a question: no
+message: Add pagination to GET /products in routes/products.js: accept `page` (default 1) and `limit` (default 20, max 100), validate with zod, and return `{ items, page, limit, total }`. Update the existing supertest spec accordingly.",medium
+"last reply asked a question: no
+message: o que o parametro stratify faz no train_test_split",low
+"last reply asked a question: yes
+message: Pode ser o `TestMain` em `db/testmain_test.go`.",xhigh
+"last reply asked a question: no
+message: Prezado, precisamos proteger o aplicativo contra cópias e adulterações antes do lançamento, pois já encontramos versões falsas circulando. Poderia avaliar o que é viável fazer, implementar as proteções mais eficazes sem prejudicar o desempenho e me explicar o que não é possível garantir?",high
+"last reply asked a question: no
+message: Cobertura do módulo `core/scheduler/` está em 91% mas já tivemos três incidentes ali. Rode mutation testing com `mutmut` ou `cosmic-ray`, liste os mutantes sobreviventes em `compute_next_run` e `handle_dst_transition`, e escreva os testes que os matem. Preciso de atenção especial a transições de horário de verão em `America/Sao_Paulo` e `Australia/Lord_Howe`.",xhigh
+"last reply asked a question: no
+message: tem como setar o numero de casas decimais do print do pandas pra 2? qual a linha",low
+"last reply asked a question: no
+message: StandardScaler e MinMaxScaler vazam informação se eu der fit no dataset inteiro antes do split? Resposta curta, sim ou não.",low
+"last reply asked a question: yes
+message: Foi a opção 2, com float32.",low
+"last reply asked a question: no
+message: WARN  [pool-3] HikariPool-1 - Connection is not available, request timed out after 30000ms.
+
+Me ajuda a escrever a seção de troubleshooting do README sobre esse erro, com as causas mais comuns neste projeto.",medium
+"last reply asked a question: no
+message: Por gentileza, faça uma auditoria completa de acessibilidade no aplicativo, para que pessoas cegas ou com baixa visão consigam usá-lo com leitores de tela, e corrija os problemas encontrados em todas as telas.",high
+"last reply asked a question: no
+message: Error: Text content does not match server-rendered HTML.
+  Text: ""Sat, Oct 24"" vs ""Fri, Oct 23""
+
+Is this a timezone thing? Walk me through it and patch DateBadge.tsx.",medium
+"last reply asked a question: no
+message: Design a plugin sandbox for our Qt/C++ desktop CAD tool (Meridian). Today third-party plugins are loaded via dlopen into the main process and can crash it. I want out-of-process plugins over a shared-memory IPC channel with a versioned ABI, crash isolation, and under 50µs per call overhead for the hot geometry API. Write the design doc first, then prototype the IPC layer and benchmark it.",xhigh
+"last reply asked a question: no
+message: Por que `test_export_csv` passa sozinho e falha na suíte completa?",xhigh
+"last reply asked a question: no
+message: Remova o `print(df.head())` esquecido na linha 112 de pipelines/clean_orders.py.",low
+"last reply asked a question: no
+message: tem um NullPointerException na linha 212 do RelatorioMensalDAO, da uma olhada e corrige pfv",medium
+"last reply asked a question: yes
+message: Yes, that is correct, please proceed.",low
+"last reply asked a question: no
+message: Why is battery drain 4x higher on Android 14 since release 6.12? Wakelock stats point at LocationTracker, but I changed nothing there — the diff is mostly the new geofence SDK bump and the WorkManager 2.9 upgrade. Reproduce with Battery Historian, bisect, and tell me which change is responsible.",xhigh
+"last reply asked a question: no
+message: gdpr request came in, need to find every place user pii is stored or logged (db, caches, logs, analytics exports, backups configs) and build a deletion script thats safe to run in prod",high
+"last reply asked a question: no
+message: Write a small Node script, scripts/check-env.js, that reads .env.example, compares its keys against process.env, and exits with code 1 listing any missing variables. No external deps.",medium
+"last reply asked a question: no
+message: Faça uma auditoria de reprodutibilidade em todo o repositório: sementes aleatórias, versões de bibliotecas, não determinismo em GPU, ordem de carregamento de dados. Quero saber por que o mesmo treino dá resultados diferentes a cada execução e um plano para eliminar isso de vez.",max
+"last reply asked a question: no
+message: Gostaria de adicionar um chat em tempo real entre o entregador e o cliente dentro do aplicativo. Por favor, analise o que já temos, sugira a melhor forma de fazer isso considerando custo, escalabilidade e consumo de dados do celular, e depois implemente a primeira versão.",high
+"last reply asked a question: no
+message: Please replace the old server name oldsrv-fin01 with newsrv-fin02 in the file deploy_notes.txt. Thank you in advance.",low
+"last reply asked a question: no
+message: esse codigo vb6 abre conexao com o banco e nunca fecha, reescreve a funcao AbreConexao em C# com using",medium
+"last reply asked a question: no
+message: torch.no_grad() e model.eval() fazem a mesma coisa na inferência?",low
+"last reply asked a question: yes
+message: No, please do not delete it. Keep the old image for now, thank you.",low
+"last reply asked a question: no
+message: Replace the hardcoded 5000 ms timeout in clients/payment_client.py with a `PAYMENT_TIMEOUT_MS` setting read from config/settings.py, defaulting to 5000. Mention any other place that uses the literal.",medium
+"last reply asked a question: no
+message: Adicione `n_jobs=-1` no RandomForestRegressor em models/forest.py, linha 33.",low
+"last reply asked a question: yes
+message: pode ser, mas mantem o nome antigo da tabela por enquanto",medium
+"last reply asked a question: no
+message: whats the diff between xss stored and reflected, one sentence each",low
+"last reply asked a question: no
+message: Could you please tell me what the abbreviation ""CSV"" stands for? Thank you.",low
+"last reply asked a question: no
+message: Failed to compile.
+
+./app/blog/[slug]/page.tsx:12:5
+Type error: Property 'slug' does not exist on type 'Promise<{ slug: string; }>'.
+
+We just upgraded to Next 15. Update this page and any other dynamic routes for the async params change.",medium
+"last reply asked a question: yes
+message: Sim, pode seguir com a opção mais segura, mesmo que demore mais para ficar pronta. Só me avise quais telas serão afetadas.",high
+"last reply asked a question: no
+message: java.lang.NullPointerException: Cannot invoke ""String.trim()"" because ""cliente.getEmail()"" is null
+	at br.com.loja.ClienteService.normalizar(ClienteService.java:77)
+
+Corrige e atualiza o Javadoc do método pra deixar claro o comportamento com e-mail nulo.",medium
+"last reply asked a question: no
+message: something in the nightly batch leaks connections, db runs out around 3am every few days. codebase uses 4 different pooling approaches bc of history. find the leak",high
+"last reply asked a question: no
+message: troca o test_size pra 0.2 no train.py",low
+"last reply asked a question: no
+message: Please remind me of the command to build a Docker image and give it the tag harbor-web:1.2. Thank you kindly.",low
+"last reply asked a question: no
+message: Hello, would you be so kind as to change the learning rate in train_model.py from 0.01 to 0.001? Thank you very much.",low
+"last reply asked a question: no
+message: Os testes de caracterização que você escreveu passaram, mas o diff de saída em produção mostrou 3% de divergência nos valores de juros:
+
+esperado=1523.47 obtido=1523.46
+
+Provavelmente é arredondamento de float vs BigDecimal em algum ponto. Rastreia todo o cálculo e acha onde.",high
+"last reply asked a question: no
+message: Implement end-to-end encrypted attachments in the chat feature across iOS, Android and the Go backend. Design the key exchange and per-file key wrapping, handle resumable uploads of up to 2GB, and make sure thumbnails still work. Write the protocol spec, then implement the shared Rust core crate with UniFFI bindings and tests.",xhigh
+"last reply asked a question: no
+message: Could you please tell me what the default port for SSH is? I need it for a note to our infrastructure team. Thank you.",low
+"last reply asked a question: no
+message: Good morning! Could you please tell me whether a pandas DataFrame and a NumPy array are the same thing? I would like to explain it correctly in tomorrow's meeting.",low
+"last reply asked a question: no
+message: find every place that reads or writes the legacy flat file format (the .dat ones w fixed width fields) and tell me which ones would break if we change the field widths",high
+"last reply asked a question: no
+message: Memory warning kills on iPhone SE 2 when exporting a 4K, 10-minute project from ClipForge. ExportPipeline.swift decodes frames through AVAssetReader and pushes them through a Metal compositor. Instrument with Allocations and Metal System Trace, find what is holding on to CVPixelBuffers, and fix it so peak memory stays under 600MB.",xhigh
+"last reply asked a question: no
+message: Olá. Depois que atualizamos o sistema do servidor, a versão antiga do nosso aplicativo, que ainda muitos clientes usam, parou de carregar o extrato. Não podemos forçar todo mundo a atualizar de imediato. Poderia analisar o que mudou e criar uma solução que mantenha as versões antigas funcionando sem prejudicar as novas?",high
+"last reply asked a question: yes
+message: Thank you for the offer. Yes, please use the random seed 42, as my colleague suggested.",low
+"last reply asked a question: no
+message: Why is `rateLimiter` in middleware/rateLimit.js applied after `authenticate` in server.js? I think it should run first so unauthenticated floods get throttled. Check whether moving it breaks anything that reads req.user.",medium
+"last reply asked a question: no
+message: TypeError: Cannot read properties of undefined (reading 'map')
+    at OrderList (app/orders/page.tsx:41:28)
+
+fix pls",medium
+"last reply asked a question: no
+message: Os testes e2e do Playwright em `e2e/` levam 40 min e bloqueiam o merge. Meça onde o tempo vai (login repetido, seed de banco, esperas fixas), proponha e implemente sharding em 8 workers com `storageState` reaproveitado e dados isolados por worker, e garanta que a taxa de flakiness medida em 50 execuções fique abaixo de 1%.",xhigh
+"last reply asked a question: no
+message: pode apagar o import matplotlib que não está sendo usado no arquivo metricas.py",low
+"last reply asked a question: yes
+message: No, please leave that one as it is.",low
+"last reply asked a question: no
+message: Write a short runbook for rotating the signing key used by `auth/jwks.py`. Steps must match what the code actually does when it reloads keys, so read `load_keys()` and `refresh_loop()` first.",medium
+"last reply asked a question: no
+message: Write an email to the platform team explaining that we're deprecating the `/v1/orders/export` endpoint on 2026-12-01. Mention that `/v2/orders/export` needs a `X-Tenant-Id` header and returns NDJSON instead of a JSON array. Tone: direct, no fluff. Save as docs/emails/deprecate-export-v1.md.",medium
+"last reply asked a question: no
+message: faz um script em python q lista todos os arquivos .cbl da pasta e conta quantos COPY cada um tem",medium
+"last reply asked a question: no
+message: Invente uma nova função de perda para classificação com classes extremamente desbalanceadas (1 em 50 mil) que tenha garantias teóricas de calibração, e prove suas propriedades.",max
+"last reply asked a question: no
+message: how do i check who last logged in on a linux box",low
+"last reply asked a question: no
+message: adiciona random_state=42 no RandomForestClassifier da linha 31 do modelo.py",low
+"last reply asked a question: no
+message: Segue o log: ""WARN deprecated: moment() será removido na v4"". Pode escrever um parágrafo para o ADR justificando a migração pra date-fns?",medium
+"last reply asked a question: no
+message: Em data/loaders.py a função `load_parquet_batch` tem o type hint `-> list` mas retorna um pd.DataFrame. Corrija a anotação e garanta que `import pandas as pd` esteja no topo.",low
+"last reply asked a question: yes
+message: yep thats the one",low
+"last reply asked a question: no
+message: npm ERR! code ERESOLVE
+npm ERR! Could not resolve dependency: peer react@""^17.0.0"" from react-datepicker@4.8.0
+
+Documenta no CONTRIBUTING.md como resolver isso na hora de instalar.",medium
+"last reply asked a question: yes
+message: yes all of them, including the vendored ones in /lib/old",high
+"last reply asked a question: no
+message: whats the command to list open ports on mac",low
+"last reply asked a question: no
+message: Error: Hydration failed because the initial UI does not match what was rendered on the server.
+  at Header (components/Header.tsx:24)
+
+I think it's the date we show in the header. Can you take a look?",medium
+"last reply asked a question: no
+message: Preciso de um algoritmo de otimização de hiperparâmetros que funcione com orçamento de apenas 30 execuções para redes enormes. Pesquise, invente se necessário, e mostre com experimentos que é melhor que busca bayesiana convencional.",max
+"last reply asked a question: no
+message: O arquivo configs/train.yaml tem `batch_size: 64`. Dobre esse valor.",low
+"last reply asked a question: no
+message: fatal: refusing to merge unrelated histories
+
+Resume em um parágrafo pro time o que houve e como resolvemos, pra eu colar no canal #dev.",medium
+"last reply asked a question: no
+message: npm ERR! ERESOLVE could not resolve
+npm ERR! peer react@""^17.0.0"" from react-datepicker-lite@2.3.1
+npm ERR! Found: react@18.3.1
+
+What are my options here? I'd rather not use --force.",medium
+"last reply asked a question: no
+message: Is S3 an AWS service for storing files? Just a brief yes or no is fine. Thank you.",low
+"last reply asked a question: no
+message: Warning: Prop `className` did not match. Server: ""btn btn-primary css-1x2y3z"" Client: ""btn btn-primary css-9q8w7e""
+
+We use styled-components with Next 14. What's the standard fix and can you apply it?",medium
+"last reply asked a question: no
+message: Could you tell me, in one sentence, what a ""stored procedure"" is? Our database team keeps mentioning them in the legacy migration plan.",low
+"last reply asked a question: no
+message: quick q, what does CVE stand for and who assigns them",low
+"last reply asked a question: no
+message: Uncaught ReferenceError: $ is not defined at relatorios.html:77
+
+removemos o jQuery 1.4 do bundle e agora quebra em dezenas de JSPs com scripts inline. Lista tudo que depende dele e planeja a substituição.",high
+"last reply asked a question: no
+message: Migrate our Android project from Gradle Groovy to Kotlin DSL with a version catalog, and at the same time untangle the 34-module dependency graph — there are circular api() dependencies between :feature-checkout and :core-payments hidden behind :core-common. Produce the dependency graph, a staged migration plan, and execute stage one without breaking the CI build time budget of 12 minutes.",xhigh
+"last reply asked a question: no
+message: Olá. Gostaria que o senhor projetasse um sistema completo de avaliação contínua para os nossos modelos de linguagem internos, incluindo conjuntos de teste que não sejam contaminados por dados de treino, métricas que realmente reflitam a satisfação do usuário e um método estatístico para detectar regressões pequenas com poucos exemplos.",max
+"last reply asked a question: no
+message: Please could you change the title of the chart in plot_results.py from ""Results"" to ""Quarterly Revenue Forecast""? I appreciate your assistance.",low
+"last reply asked a question: no
+message: no pandas qual metodo mostra quantos valores nulos tem por coluna",low
+"last reply asked a question: no
+message: Migre os 1.2k testes de `packages/web` de Enzyme para React Testing Library. Quero um plano em fases primeiro: um codemod (jscodeshift) para os casos mecânicos como `shallow`/`mount`/`find`, uma lista dos padrões que precisam de reescrita manual, e um critério de cobertura para não perdermos asserções. Execute a primeira fase no diretório `src/components/checkout/` e valide que a cobertura de branches não caia abaixo de 82%.",xhigh
+"last reply asked a question: no
+message: como salvo um modelo do sklearn em pickle usando joblib me lembra a sintaxe rapidinho",low
+"last reply asked a question: yes
+message: yes go ahead and rotate it",low
+"last reply asked a question: yes
+message: Yes, please go ahead.",low
+"last reply asked a question: yes
+message: nao, so o modulo de estoque por enquanto",medium
+"last reply asked a question: yes
+message: Option B, keep the in-memory cache.",medium
+"last reply asked a question: no
+message: Em utils/plotting.py, mude o `figsize` padrão de plot_confusion_matrix de (6, 6) para (8, 8). Não mexa em mais nada.",low
+"last reply asked a question: yes
+message: Yes, go ahead and use the dynamic import with ssr: false for the chart component.",medium
+"last reply asked a question: no
+message: qual a diferença entre fillna e dropna em uma frase",low
+"last reply asked a question: yes
+message: Yes, use the OpenAPI spec in `api/openapi.yaml` as the source of truth and just fix the markdown.",medium
+"last reply asked a question: no
+message: Prezado assistente, nossa equipe tem um pipeline de previsão de demanda com mais de quarenta scripts espalhados, escritos ao longo de cinco anos por pessoas diferentes. Poderia, por favor, elaborar um plano completo de reescrita do sistema inteiro, com arquitetura-alvo, ordem de migração sem interromper a operação, estratégia de validação para provar que os resultados novos equivalem aos antigos e uma estimativa de riscos?",max
+"last reply asked a question: no
+message: Preciso traduzir o aplicativo inteiro para espanhol e alemão, incluindo mensagens de erro, e-mails automáticos e formatos de data e moeda. Algumas frases estão escritas direto no código e outras em arquivos separados. Poderia organizar tudo isso de maneira padronizada, sem quebrar nenhuma tela?",high
+"last reply asked a question: no
+message: remove o import do seaborn q n tá sendo usado em eda.py",low
+"last reply asked a question: no
+message: FATAL: remaining connection slots are reserved for non-replication superuser connections
+
+não sei se é leak de conexão em algum lugar desse sistema velho ou se é o pool mal configurado. Por onde começamos?",high
+"last reply asked a question: no
+message: weird: sessions seem to survive password reset. find out why and fix, also check if same issue w api tokens and oauth refresh tokens",high
+"last reply asked a question: no
+message: como vejo o shape de um tensor no pytorch",low
+"last reply asked a question: yes
+message: Sim, pode seguir com a opção B, mas mantém a camada de compatibilidade até terminarmos todos os módulos.",high
+"last reply asked a question: no
+message: Nossa equipe precisa de um método para estimar incerteza confiável nas previsões de preço de imóveis quando a distribuição dos dados muda entre cidades. Isso é um problema aberto, não sei se existe solução pronta. Poderia explorar a fundo, propor algo novo e validar com dados sintéticos e reais simulados?",max
+"last reply asked a question: no
+message: What is the shortcut command to list all files in a folder, including the hidden ones? I want to look at the old archive directory myself.",low
+"last reply asked a question: no
+message: Generate an ADR in docs/adr/ for our decision to move job scheduling from cron to a Postgres-backed queue (`jobs` table, `SELECT ... FOR UPDATE SKIP LOCKED`). Use the template in docs/adr/0000-template.md and number it after the highest existing one.",medium
+"last reply asked a question: no
+message: the thread safety in the cache layer scares me. singleton with lazy init and static maps everywhere. audit it and fix whatever is actually racy, careful tho, this thing is in the hot path",high
+"last reply asked a question: no
+message: ORA-01555: snapshot too old: rollback segment number 7 with name ""_SYSSMU7$"" too small
+
+esse job de conciliação roda em 400 procedures PL/SQL que ninguém entende mais. Preciso entender o fluxo completo antes de migrar pra Postgres. Consegue fazer um mapa de dependências entre elas?",high
+"last reply asked a question: no
+message: move all secrets out of env files and into vault across the 12 microservices. keep local dev working and dont brake the ci pipelines. plan first then do it service by service",high
+"last reply asked a question: no
+message: qual a diferença entre .loc e .iloc no pandas, rapidinho",low
+"last reply asked a question: no
+message: Como eu salvo um modelo sklearn com joblib comprimido (nível 3)? Só a linha de código.",low
+"last reply asked a question: no
+message: accuracy é uma boa métrica pra dataset desbalanceado sim ou não",low
+"last reply asked a question: yes
+message: the one in services/billing",high
+"last reply asked a question: no
+message: Hello! Would you be so kind as to remind me of the command that shows how many lines of code are in a folder? I would like to give the board a rough idea of the size of our old system.",low
+"last reply asked a question: no
+message: set DEBUG=false in .env.example",low
+"last reply asked a question: no
+message: Comando para rodar só o teste `test_target_encoder_handles_nan` com pytest, dentro de tests/test_encoders.py?",low
+"last reply asked a question: no
+message: Good morning. Does ""train/test split"" simply mean dividing the data into one part for learning and another part for checking the results? Yes or no is fine.",low
+"last reply asked a question: no
+message: Warning: A component is changing an uncontrolled input to be controlled.
+    at input
+    at CheckoutForm (CheckoutForm.tsx:88)
+
+explain why and fix it",medium
+"last reply asked a question: no
+message: org.hibernate.LazyInitializationException: could not initialize proxy - no Session
+
+acontece em 60+ telas depois de tirar o OpenSessionInViewFilter. Varre o projeto, classifica cada ocorrência e corrige.",high
+"last reply asked a question: no
+message: orders total is wrong sometimes, maybe 1 in 2000. legacy cobol-ish perl script calls into a stored proc that someone wrote in 2006. cant repro locally. help me find it",high
+"last reply asked a question: no
+message: Intermittent 'token expired' logouts on the macOS client (Harbor Sync) happen about once a week per user, always right after waking from sleep. AuthSession.refresh() looks fine to me. Check the interplay between NSBackgroundActivityScheduler, the keychain access in TokenStore.swift, and the server's refresh-token rotation with its 30s grace window. Find the actual sequence that causes it.",xhigh
+"last reply asked a question: no
+message: middleware.ts: Error: The edge runtime does not support Node.js 'crypto' module
+
+I'm verifying a JWT there. Switch it to something that works on the edge, jose maybe?",medium
+"last reply asked a question: no
+message: Good morning. Could you please tell me what the file extension .cbl usually stands for? I found a lot of them in the old billing system folder.",low
+"last reply asked a question: no
+message: Our FastAPI endpoint POST /invoices in app/api/invoices.py returns a 500 when `due_date` is omitted, with `TypeError: '<' not supported between instances of 'NoneType' and 'datetime.date'`. Find where the comparison happens and fix it so a missing due_date defaults to issue_date + 30 days.",medium
+"last reply asked a question: yes
+message: Sim, pode ser em formato de tabela, com a coluna de impacto e a de prazo.",medium
+"last reply asked a question: no
+message: Fix the memory leak suspect in workers/emailQueue.js: the `on('failed')` listener is registered inside the job processor, so it's added on every job. Move it out and confirm with a short test that listener count stays constant.",medium
+"last reply asked a question: no
+message: ERROR: duplicate key value violates unique constraint ""uq_pedido_numero""
+
+Preciso explicar isso num e-mail pro time de suporte, em linguagem simples, o que causou e o que eles devem dizer ao cliente. Pode rascunhar?",medium
+"last reply asked a question: no
+message: k8s manifests review: privileged containers, hostpath mounts, no network policies. harden it all but staging has to keep working, some of those privileges might be needed for the log agent",high
+"last reply asked a question: no
+message: Generate a docs/architecture.md section describing how a request flows through `gateway/`, `auth/` and `orders/` in this repo. Base it only on what the code imports and calls, and add a simple mermaid sequence diagram.",medium
+"last reply asked a question: no
+message: Por favor, descubra por que o app consome tanta bateria depois da última atualização.",high
+"last reply asked a question: no
+message: Quero tirar o módulo de faturamento desse monolito Rails 4 e virar serviço separado. Aqui o log de boot:
+
+DEPRECATION WARNING: `alias_method_chain` is deprecated (called from 312 places)
+
+Me dá o desenho com trade-offs (strangler fig vs reescrita) e o que muda em cada caso.",high
+"last reply asked a question: no
+message: Qual a diferença entre `df.loc` e `df.iloc`? Duas frases no máximo.",low
+"last reply asked a question: no
+message: What does the abbreviation ""ORM"" mean? A colleague used it in our migration meeting and I did not want to interrupt to ask.",low
+"last reply asked a question: no
+message: Is it correct that a higher accuracy number is always better? Please answer briefly.",low
+"last reply asked a question: no
+message: Hi! Is overfitting the same as when a model performs very well on training data but poorly on new data? A simple yes or no would be perfect.",low
+"last reply asked a question: no
+message: renomeia a variavel 'x1' pra algo com sentido em CalculoFrete.java, olha o contexto pra decidir o nome",medium
+"last reply asked a question: no
+message: comando pra listar as gpus disponiveis no torch?",low
+"last reply asked a question: yes
+message: Sim, pode rodar com o banco real em container (testcontainers) e comparar com o resultado do sqlite em memória.",xhigh
+"last reply asked a question: no
+message: Bom dia, tudo bem? Nosso modelo de recomendação de produtos perde desempenho misteriosamente cerca de três semanas após cada implantação, e ninguém da equipe encontrou a causa. Poderia, por favor, investigar o repositório inteiro, formular hipóteses sobre deriva de dados, ciclos de feedback e falhas no pipeline de atributos, e desenhar experimentos para descobrir qual delas é a verdadeira?",max
+"last reply asked a question: no
+message: Fixtures de `conftest.py` na raiz estão acopladas: mudar `make_customer` quebrou 230 testes em cascata ontem. Mapeie o grafo de dependências entre fixtures, identifique os ciclos e pontos de acoplamento, e refatore para factories explícitas (factory_boy) em etapas pequenas, cada uma com a suíte inteira verde.",xhigh
+"last reply asked a question: no
+message: [next-auth][error][CLIENT_FETCH_ERROR] ""Unexpected token < in JSON at position 0"" {error: {...}, url: ""http://localhost:3000/api/auth/session""}
+
+Why would this happen only in dev? Can you check my [...nextauth] route and explain?",medium
+"last reply asked a question: no
+message: change the session cookie in server.js to httpOnly: true",low
+"last reply asked a question: no
+message: qual flag do pytest roda só um teste especifico",low
+"last reply asked a question: no
+message: Our Alembic migration 0042_add_invoice_status.py adds a NOT NULL column without a default and fails on tables with rows. Rewrite it so it adds the column nullable, backfills 'pending', then sets NOT NULL. Include a working downgrade.",medium
+"last reply asked a question: no
+message: FileNotFoundError: [Errno 2] No such file or directory: 'config/settings.yaml'
+
+Adiciona uma docstring explicando a ordem de busca do arquivo de configuração em carregar_config() e atualiza o README.",medium
+"last reply asked a question: no
+message: Would you please change the timeout in our CI configuration file from 10 minutes to 15 minutes? I believe the setting is called timeout-minutes. Thank you very much.",low
+"last reply asked a question: no
+message: Encontre a causa raiz do vazamento de memória que derruba o nosso treino distribuído após 14 horas, mesmo depois de três tentativas de correção que não funcionaram.",max
+"last reply asked a question: no
+message: csrf protection is inconsistent. some routes have it some dont, and the spa uses cookies AND bearer tokens. figure out the right design and apply it everywhere",high
+"last reply asked a question: no
+message: troca o learning_rate de 0.01 pra 0.001 no config_rede.yaml",low
+"last reply asked a question: no
+message: Add a 'Troubleshooting' section to docs/deploy.md covering the three errors that `scripts/deploy.sh` can exit with (codes 12, 13, 14). Look at the script to see what each actually means.",medium
+"last reply asked a question: no
+message: SSL: CERTIFICATE_VERIFY_FAILED ao chamar a API de pagamentos em homologação.
+
+Escreve um runbook curto de 5 passos pra quem for diagnosticar isso na próxima vez.",medium
+"last reply asked a question: no
+message: deadlock detected
+DETAIL: Process 8841 waits for ShareLock on transaction 5521993; blocked by process 8802.
+
+Só acontece depois que migramos o ORM antigo pro novo. Acho que a ordem de updates mudou em algum lugar. Investiga.",high
+"last reply asked a question: no
+message: oracle to postgres migration. stored procs with pl/sql packages, sequences, a few hundred triggers. what breaks and how do we validate data parity",high
+"last reply asked a question: no
+message: Could you kindly remind me of the command to list all the packages installed in our Python environment? I always forget it.",low
+"last reply asked a question: no
+message: GET /api/cart 500 in 312ms
+Error: Cannot destructure property 'userId' of '(intermediate value)' as it is undefined.
+    at handler (pages/api/cart.ts:17:11)
+
+The route breaks when the user isn't logged in. Return a 401 instead and add a quick check.",medium
+"last reply asked a question: no
+message: Pipeline de CI do monorepo: 62% das falhas vermelhas dos últimos 30 dias são retestes que passam na segunda tentativa. Escreva um script que consuma os artefatos JUnit XML da API do CI, agrupe por teste e por causa provável (ordem, tempo, rede, recurso compartilhado), gere um ranking dos 20 piores ofensores e corrija os 5 primeiros com a causa raiz documentada em cada commit.",xhigh
+"last reply asked a question: no
+message: Boa tarde. Nossa diretoria decidiu que o aplicativo, que hoje existe separadamente para iOS e Android, deve passar a ter um único código compartilhado entre as duas plataformas. Você poderia avaliar o projeto atual, recomendar a melhor tecnologia para essa unificação e montar um plano de migração em etapas que não interrompa as vendas durante a transição?",high
+"last reply asked a question: no
+message: ssrf in our webhook sender, pentester found it. block internal ranges incl dns rebinding and redirects. dont break customers using custom ports",high
+"last reply asked a question: no
+message: explica pra mim o que essa classe PedidoFacade.java faz, ta enorme e ninguem da equipe sabe mais",medium
+"last reply asked a question: no
+message: Bom dia. Nossa equipe precisa dividir o código gigante da tela principal do aplicativo, que hoje tem mais de oito mil linhas em um único arquivo, em partes menores e organizadas. Como qualquer erro pode derrubar a tela mais usada, peço que você faça isso aos poucos, verificando a cada etapa que tudo continua funcionando, e que escreva testes antes de mexer.",high
+"last reply asked a question: no
+message: Rewrite the error messages in `validators/address.py` so they're actionable for API consumers. Each should say which field failed and what format is expected. Don't change exception types or the tests in `tests/test_address.py` should still pass.",medium
+"last reply asked a question: no
+message: Users report that edits made offline on iPad sometimes vanish after reconnecting, but only when they also edited the same record on the web dashboard. Our CRDT merge lives in Sync/MergeEngine.swift and the server side is the Go service `reconcile-svc`. Reproduce it deterministically, find where the lost-update happens (clock handling? tombstone GC?), and write property-based tests that would have caught it.",xhigh
+"last reply asked a question: no
+message: Turn the stack trace in `logs/crash-0914.txt` into a short incident summary for the on-call channel: what failed, likely cause based on `worker/pool.go`, and one suggested fix. Max 150 words.",medium
+"last reply asked a question: no
+message: Traceback (most recent call last):
+  File ""exportar.py"", line 31, in gerar_csv
+    writer.writerow(linha)
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2013'
+
+Corrige abrindo o arquivo com utf-8 e adiciona um changelog.",medium
+"last reply asked a question: no
+message: [ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.11.0:compile: invalid target release: 21
+
+Me escreve uma nota de release explicando que agora exigimos JDK 21.",medium
+"last reply asked a question: no
+message: Look at utils/pagination.py and tell me whether `build_cursor` is safe against tampering. Just explain, don't change anything.",medium
+"last reply asked a question: no
+message: hey so our oncall just paged me about a spike in 401s from one ip, whats the quickest awk one liner to count requests per ip in access.log",low
+"last reply asked a question: no
+message: Explain in plain prose what `reconcile_batches()` in `billing/reconcile.py` does, especially the part around the `while pending:` loop. I need to paste this into a design doc, so keep it to two paragraphs and don't include code.",medium
+"last reply asked a question: no
+message: Why does the React Native app drop to ~20 fps on the Orders screen only after the user scrolls past ~300 rows? Look at OrdersList.tsx, the useOrderSelectors hook and the Reanimated worklets in RowSwipe.tsx. Use Flipper and the Hermes sampling profiler to prove the cause before changing anything.",xhigh
+"last reply asked a question: no
+message: Good afternoon. I would be very thankful if you could add the folder node_modules to the .dockerignore file. It is a small change, but it would help our builds.",low
+"last reply asked a question: yes
+message: Pode ser a opção dois, a que reaproveita a estrutura existente. Mas, por favor, garanta que os pedidos antigos continuem aparecendo normalmente.",high
+"last reply asked a question: no
+message: esse script em perl de backup roda todo dia as 3h mas nao entendo o q ele faz, pode me explicar linha a linha?",medium
+"last reply asked a question: no
+message: move all the hardcoded config (urls, creds placeholders, feature flags) scattered thru the php app into env based config. its a mess, theres includes inside includes",high
+"last reply asked a question: no
+message: Good morning. Could you please tell me what the command is to list all running Docker containers? Thank you very much.",low
+"last reply asked a question: no
+message: Auditoria dos mocks em `services/notifications/tests/`: vários testes mockam `SmtpClient` e `PushGateway` tão fundo que nunca exercitam a lógica de retry de `Dispatcher.send`. Reescreva usando fakes in-memory com comportamento de falha configurável (timeout, 5xx intermitente, rate limit) e adicione testes para backoff exponencial com jitter e deduplicação por `idempotencyKey`.",xhigh
+"last reply asked a question: no
+message: Prezado assistente, gostaria que você revisasse todo o nosso aplicativo de desktop e substituísse a biblioteca antiga de armazenamento local pela nova que a equipe aprovou. Como esse é o coração do sistema e já tivemos perdas de dados no passado, peço muito cuidado: por favor, planeje a migração dos dados existentes dos clientes, garanta que nada seja perdido e me explique em linguagem simples o que será alterado.",high
+"last reply asked a question: no
+message: oq significa essa config no web.xml com o filter-mapping /* ? ta barrando requisicao do nosso novo front",medium
+"last reply asked a question: yes
+message: Yes, please go ahead and use the cleaned dataset.",low
+"last reply asked a question: no
+message: incident channel is asking what the openssl cmd is to check when a cert expires. remind me",low
+"last reply asked a question: no
+message: cria um teste unitario pra funcao formataCpf em utils/formatadores.php, o sistema eh php 5.6 entao nada de coisa nova",medium
+"last reply asked a question: no
+message: Would you be so kind as to rename the file deploy-old.yml to deploy-legacy.yml in the folder .github/workflows? Thank you.",low
+"last reply asked a question: no
+message: Troque `np.float` por `float` em features/scaling.py, linha 27, porque o numpy novo removeu o alias.",low
+"last reply asked a question: no
+message: rename the Customer entity to Account everywhere. hibernate mappings, xml configs, sql, reports, json contracts, all of it. and nothing can break the mobile app thats on old versions",high
+"last reply asked a question: no
+message: does sql injection still work if im using parametrized queries? short answer pls",low
+"last reply asked a question: yes
+message: yes go ahead and rotate them all",high
+"last reply asked a question: no
+message: Add docstrings to every public function in `utils/retry.py`. Use Google style, include Args/Returns/Raises, and state the backoff formula in `exponential_backoff()` exactly as implemented, including the jitter cap.",medium
+"last reply asked a question: no
+message: Segmentation fault (core dumped) ./relatorio_fiscal
+
+É C++ de 2003 com ponteiros pra todo lado, compilando agora com gcc 13. Descobre a causa e diz se vale refatorar ou isolar.",high
+"last reply asked a question: no
+message: Qual dessas tabelas realmente é usada? Tem 600 no schema e o log mostra:
+
+SELECT * FROM TB_AUX_TMP_2017_BKP2 WHERE ...
+
+Cruza com o código e diz o que dá pra descartar com segurança.",high
+"last reply asked a question: no
+message: Por favor, audite a segurança e a privacidade de todo o nosso pipeline de treinamento: possibilidade de extração de dados pessoais a partir do modelo, ataques de inferência de pertencimento, envenenamento de dados e riscos na cadeia de dependências. Entregue um plano de mitigação priorizado.",max
+"last reply asked a question: no
+message: Please update the region in the file terraform.tfvars from us-east-1 to eu-west-1. I would be most grateful.",low
+"last reply asked a question: no
+message: Os snapshots do Jest em `__snapshots__/` têm 3.400 arquivos e todo PR vem com diff de centenas de linhas que ninguém revisa. Proponha e implemente a substituição gradual por asserções explícitas nos componentes críticos (`PriceTable`, `CartSummary`, `InvoiceView`), começando pelo que tem maior taxa de mudança no histórico. Justifique a priorização com dados do `git log`.",xhigh
+"last reply asked a question: no
+message: Uncaught (in promise) TypeError: Failed to fetch
+    at submitForm (ContactForm.tsx:57)
+
+Add error handling here and show an inline error message to the user.",medium
+"last reply asked a question: no
+message: Hello, would you mind changing the replica count from 2 to 3 in the file deployment.yaml? I would appreciate it very much. Thank you.",low
+"last reply asked a question: no
+message: como converto uma coluna de string pra datetime no pandas",low
+"last reply asked a question: no
+message: dependabot flagged 63 vulns. half are transitive. triage which ones actually reachable in our code and upgrade the ones that matter, tests must stay green",high
+"last reply asked a question: no
+message: add a TODO comment above the eval() call in utils/parse.js saying it needs to be removed, security risk",low
+"last reply asked a question: no
+message: Explain what `retry_with_backoff` in app/utils/http.py does with the `jitter` argument, and tell me if the max delay can ever exceed `max_delay`.",medium
+"last reply asked a question: no
+message: Split the monolithic `AppState` Redux store in our Electron+React desktop client into feature slices without breaking the 200+ selectors and the time-travel debugging tool. Propose a migration order, write codemods for the mechanical parts, and keep every commit green.",xhigh
+"last reply asked a question: yes
+message: Sure, use `bcryptjs` rather than native bcrypt.",medium
+"last reply asked a question: no
+message: logs show 10k login attempts from rotating ips on /api/v2/login in 20 min. design rate limiting that wont lock out legit users behind corp nat. tradeoffs pls, then implement the one u recommend",high
+"last reply asked a question: no
+message: Good afternoon. What is the git command to see the last five commits in a short form? I would like to check who touched the old payroll module recently.",low
+"last reply asked a question: no
+message: Push notification delivery on iOS dropped from 97% to 81% after we moved to the new notification service extension. Trace a notification end to end: our Node dispatcher, APNs payload (mutable-content, apns-priority), the NSE in NotifyExt/NotificationService.swift and its 30s time limit. Find where they are lost.",xhigh
+"last reply asked a question: no
+message: 2026-10-20 03:12:44 ERROR job=sync_estoque falhou: HTTP 502 Bad Gateway (tentativa 3/3)
+
+Escreve um e-mail curto pro gerente avisando do incidente de ontem à noite, com tom profissional e sem jargão.",medium
+"last reply asked a question: no
+message: Too many re-renders. React limits the number of renders to prevent an infinite loop.
+    at Sidebar (components/Sidebar.tsx:19)
+
+Something with setCollapsed, I guess?",medium
+"last reply asked a question: no
+message: Sou gerente e preciso estimar a migração. Tudo que tenho é esse log do analisador:
+
+Found 2,314 files, 1.9M LOC, 47 circular dependencies, 0% test coverage
+
+Me explica o que isso significa na prática e monta um plano em fases com riscos.",high
+"last reply asked a question: no
+message: Kindly open the file config/legacy_settings.ini and tell me what value is set for the line timeout. I only need the number.",low
+"last reply asked a question: no
+message: Olá! Preciso que o aplicativo Android passe a funcionar sem internet. Hoje, quando o usuário está no metrô, a tela de pedidos fica em branco. Poderia analisar como o app busca os dados e propor uma solução completa, com armazenamento offline e sincronização quando a conexão voltar? Gostaria de entender as vantagens e desvantagens das opções antes de você começar.",high
+"last reply asked a question: no
+message: renomeia a variavel df_tmp pra df_clientes no arquivo limpeza.py",low
+"last reply asked a question: no
+message: Would you kindly explain in one sentence what a confusion matrix is? I am preparing a short slide for our directors and want to be accurate.",low
+"last reply asked a question: no
+message: I would be grateful if you could change the word ""Wharehouse"" to ""Warehouse"" in the file README.md. It looks like a spelling mistake that has been there for years.",low
+"last reply asked a question: no
+message: Please write a PR description for the changes in my working tree. Include a summary, motivation, testing notes, and a rollback plan. The rollback is just reverting the migration `0042_add_index_orders.sql`.",medium
+"last reply asked a question: no
+message: muda o batch_size de 32 pra 64 no config.yaml",low
+"last reply asked a question: no
+message: The docstring on `parse_duration()` in `src/timeutil.ts` says it supports 'w' for weeks but the code doesn't. Check the implementation and fix whichever is wrong, then update the JSDoc and the table in docs/timeutil.md to match.",medium
+"last reply asked a question: no
+message: Qual o parâmetro do `GridSearchCV` que define o número de folds? E qual o valor padrão?",low
+"last reply asked a question: no
+message: theres a god class OrderManager with 9k lines. i want it broken up but 200 other files touch it. how do we do this w/o a 3 week freeze",high
+"last reply asked a question: no
+message: Module not found: Can't resolve '@/lib/formatCurrency'
+  Import trace: ./components/PriceTag.tsx
+
+I renamed that file last week, update all the imports please.",medium
+"last reply asked a question: no
+message: Prezado, os clientes reclamam que as notificações chegam duplicadas no iPhone, às vezes três vezes seguidas, e em outros casos não chegam. Não sei explicar a causa e a equipe também não. Poderia investigar todo o caminho da notificação, desde o servidor até a tela do telefone, e corrigir o que estiver errado?",high
+"last reply asked a question: no
+message: Warning: Can't perform a React state update on an unmounted component.
+    at SearchBox (components/SearchBox.jsx:12)
+
+I have a fetch inside useEffect there. Can you add proper cleanup using AbortController?",medium
+"last reply asked a question: no
+message: Renomeie a função `calc_auc_roc` para `compute_roc_auc` em metrics/evaluation.py. Só o arquivo atual, os imports eu ajusto depois.",low
+"last reply asked a question: no
+message: muda o test_size de 0.2 pra 0.3 no treino.py por favor",low
+"last reply asked a question: no
+message: In src/routes/orders.ts the GET /orders/:id handler returns 200 with null when the order doesn't exist. Make it return 404 with `{ error: ""order_not_found"" }` and add a Jest test in tests/orders.test.ts covering it.",medium
+"last reply asked a question: yes
+message: No, please do not delete the old results folder. Just leave it as it is.",low
+"last reply asked a question: no
+message: to migrando um servlet antigo pra spring boot. o arquivo eh src/main/java/legacy/LoginServlet.java, converte pra um @RestController mantendo a mesma logica de validacao",medium
+"last reply asked a question: no
+message: Atualize o aplicativo para a versão mais recente do Android e do iOS, corrigindo tudo o que quebrar no caminho, por favor.",high
+"last reply asked a question: no
+message: The /health endpoint in main.py should also report whether Redis is reachable. Ping it with a 500 ms timeout and return 503 with `{""status"": ""degraded"", ""redis"": ""down""}` if it fails.",medium
+"last reply asked a question: no
+message: race condition in the coupon redeem endpoint, ppl are using one code many times. reproduce it, fix it properly (not just a lock that breaks at scale), add tests",high
+"last reply asked a question: no
+message: audit all our sql queries for injection. we have raw string concat in like 40 places across api/ and workers/. fix them w parameterized queries without breaking the reporting module, it does weird dynamic column stuff",high
+"last reply asked a question: yes
+message: não pode manter o nome antigo",low
+"last reply asked a question: no
+message: oq o parametro stratify faz no train_test_split? responde curto pfv",low
+"last reply asked a question: no
+message: useEffect has a missing dependency: 'fetchUser'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  hooks/useProfile.ts:28
+
+Fix this properly, not with an eslint-disable.",medium
+"last reply asked a question: no
+message: No notebook de treino, o `learning_rate` do LGBMClassifier em train_lgbm.py está 0.1. Mude para 0.05, só isso.",low
+"last reply asked a question: no
+message: What is the command to create a new virtual environment called 'ml_env' with Python? I would be most grateful for a quick reminder.",low
+"last reply asked a question: no
+message: Add inline comments to the regex-heavy function `extract_invoice_ids()` in `parsers/invoice.py`. Explain each group, but don't touch the logic or reformat the file.",medium
+"last reply asked a question: no
+message: inherited a 15yr old java monolith, ~2M loc, ant builds, no docs. need a plan to figure out the module boundaries before we try splitting anything. start by mapping the package deps and tell me where the worst cycles are",high
+"last reply asked a question: no
+message: walk me thru how auth actually works in this repo. theres three different session mechanisms and i think two of them are dead but im not sure",high
+"last reply asked a question: no
+message: Cannot resolve symbol 'UsuarioDAO' in 1.438 files
+
+renomeamos o pacote base e o IDE ficou perdido, mas também tem reflection e XML do Spring referenciando as classes por string. Faz o rename seguro em tudo.",high
+"last reply asked a question: no
+message: Fix the typos and inconsistent terminology ('workspace' vs 'project') in docs/getting-started.md. Use 'workspace' everywhere, since that's what the UI strings in `src/i18n/en.json` use.",medium
+"last reply asked a question: no
+message: Gostaria de pedir que o senhor inventasse uma arquitetura de rede neural para prever falhas em turbinas eólicas usando poucos dados rotulados e muita telemetria não rotulada, justificasse cada escolha de projeto com base na literatura e comparasse com pelo menos três linhas de base fortes.",max
+"last reply asked a question: no
+message: 429 Too Many Requests - Retry-After: 60
+
+Escreve a documentação da função chamar_api_clima explicando a política de retry que implementamos.",medium
+"last reply asked a question: yes
+message: yes, go ahead and use the existing `pydantic` v2 model instead of the dict",medium
+"last reply asked a question: no
+message: Gostaria de saber se é possível provar, com rigor matemático, que o nosso algoritmo de agrupamento em src/cluster_hier.py sempre converge e que o resultado não depende da ordem das linhas de entrada. Caso não seja verdade, por favor mostre um contraexemplo e proponha uma correção com demonstração.",max
+"last reply asked a question: no
+message: Bom dia. Nosso aplicativo de entregas para iPhone e Android está fechando sozinho quando o cliente tenta pagar com cartão, mas só acontece com alguns usuários e não conseguimos reproduzir aqui. Poderia, por gentileza, investigar o código do fluxo de pagamento, levantar as hipóteses mais prováveis e corrigir o problema? Se não for possível ter certeza da causa, peço que ao menos adicione registros que nos ajudem a descobrir.",high
+"last reply asked a question: no
+message: renomeia a variavel df2 pra df_clientes no notebook limpeza.ipynb",low
+"last reply asked a question: no
+message: Write a Python script that reads logs/access.log (nginx combined format) and prints the top 10 endpoints by p95 response time. Use only the standard library.",medium
+"last reply asked a question: no
+message: We need to replace Realm in the Android and iOS apps with SQLite (Room and GRDB respectively) without forcing users to re-download data. Design the on-device migration: detect the old .realm file, stream objects into the new store in batches, survive being killed mid-migration, report progress, and handle the 2% of users with under 200MB free storage. Include the test matrix.",xhigh

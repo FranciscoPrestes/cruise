@@ -36,3 +36,9 @@ At inference a judge only sees the prompt text. At labelling time we also know w
 ## What the numbers mean
 
 `haiku_baseline.py` is the honest comparison: the same held-out prompts, the same labels, the judge Cruise would use today. `score_laya.py --save` scores a Laya server and keeps its probabilities, and `compare.py` puts Haiku, Laya and "always `medium`" on one ruler (exact, easy found, hard found, false alarms, mean level and a cost where a level too low counts three times a level too high). On the data this was built on, with all five levels, both judges get about half of the noisy labels right (50% against 37% for always `medium`); Haiku also finds about half of the hard prompts, Laya about one in ten, because `xhigh` and `max` are rare in anyone's sessions (59 and 10 prompts out of 2,796 here). See the README for the table.
+
+## The invented set in `data/`
+
+`make_synthetic.py` asks a Claude model for prompts it **makes up** (about 1,550 in English and Brazilian Portuguese, five writing styles, twelve topics, each written to need one of the five efforts) and writes `data/synthetic-train.csv` and `data/synthetic-eval.csv`. Nothing in them comes from anyone's sessions, so, unlike everything the pipeline above produces, they can be shared. It costs about US$ 3 on your own login.
+
+It does **not** make a good judge: trained on these rows only, Laya scored 30% exact on 619 real held-out prompts (Haiku with examples: 52%, always `medium`: 37%) and asked for `high` or more on 58% of prompts that did not need it, because invented hard prompts sound more obviously hard than real ones. The training side is already cut to a realistic mix (mostly easy; without that the false alarms were 53% at best guess). Use the set to try the pipeline end to end, or as extra rows next to your own sessions (untested), not on its own.

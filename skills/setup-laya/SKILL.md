@@ -81,6 +81,8 @@ Untrained Laya is weak. Trained on the person's own sessions, with all five leve
 2. **Memory.** Do not train with the defaults on a laptop in use: a batch of 8 with long texts filled a 34 GB Mac's memory and swap. Use the lean settings below, at low priority, and watch `sysctl vm.swapusage`; stop if swap grows.
 3. **Honesty about the result.** The labels are a model's opinion of the effort a prompt needs, not a measurement of answer quality. Say what the held-out numbers show and that real savings are only known after a few days of `/cruise`.
 
+There is also an invented set in `train/data/` (made by `train/make_synthetic.py`) that carries none of the person's text. Be clear that trained on it alone Laya is worse than doing nothing on real prompts (30% exact against 37%, and `high` or more asked for on 58% of prompts that did not need it): offer it only to try the pipeline, never as the judge.
+
 Steps: `extract_prompts.py`, `label_prompts.py` (five levels), `build_dataset.py`, `haiku_baseline.py --examples` (the bar to reach); repeat the rare `xhigh` and `max` rows three times in the training CSV; then:
 
 ```bash
