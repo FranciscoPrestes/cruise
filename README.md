@@ -43,16 +43,31 @@ The animation above is the whole plugin, one stage at a time:
 
 ## Install
 
-At the Claude Code prompt:
+Cruise is not in Anthropic's official plugin directory. This repository is its own plugin marketplace, so the install commands point at it.
+
+**The easy way: let Claude Code do it.** Open Claude Code and paste this:
+
+```text
+Install Cruise from https://github.com/FranciscoPrestes/cruise and help me configure it.
+```
+
+Claude Code reads [`INSTALL.md`](INSTALL.md) in this repository, installs the plugin, and then asks you a few short questions (context warnings, progress band, effort steering and which judge) before saving your answers.
+
+**By hand.** At the Claude Code prompt:
 
 ```text
 /plugin marketplace add FranciscoPrestes/cruise
 /plugin install cruise@prestes
 ```
 
-Then run `/reload-plugins` or open a new session.
+or from a terminal:
 
-The installer may say some options are "not yet set". That is fine: every option has a default. Change any of them with `/plugin configure cruise@prestes`.
+```bash
+claude plugin marketplace add FranciscoPrestes/cruise
+claude plugin install cruise@prestes
+```
+
+Then run `/reload-plugins` or open a new session. The installer may say some options are "not yet set". That is fine: every option has a default. To change them later, run `/cruise:configure` (a short conversation) or `/plugin configure cruise@prestes`.
 
 Check it works: `/cruise` prints what Cruise is doing, and sending a request of 25 characters or more makes the band appear.
 
@@ -204,6 +219,7 @@ On the effortless prompts the trained model never saw: English 67% right, 8 of 7
 | --- | --- |
 | `/handoff` | Saves the state of the work (goal, what is done, next steps, pending decisions) to `~/.local/state/handoffs/<folder>/` so a later session can resume. Does not continue the task |
 | `/pickup` | In a new session, reads the latest handoff for that folder, checks folder and branch, and resumes from the first next step |
+| `/cruise:configure` | A short conversation that sets Cruise up: context warnings, progress band, effort steering and which judge. Saves the answers for you |
 | `/cruise:setup-laya` | Installs and configures Laya on your machine, step by step, asking before each download |
 
 Recommended flow when the context warning appears: finish the step, `/handoff`, `/clear` (or open a new session in the same folder), `/pickup`. If you already have your own skills called `handoff` or `pickup`, the names collide: use the plugin's by its full name (`/cruise:handoff`) or remove yours.
