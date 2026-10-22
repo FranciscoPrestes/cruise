@@ -53,5 +53,4 @@ Why the next step is the one it is: the hypothesis being tested, what we expect 
 ```
 
 2. Save the file to `~/.local/state/handoffs/<folder-slug>/<YYYY-MM-DD-HHMM>.md`, where the slug is the working directory path with `/` replaced by `-`. Create the folder if it does not exist.
-3. If the ai-memory tool `memory_handoff_begin` is available, also register the handoff there, with the same content.
-4. Reply with: the file path, whether it also went to ai-memory (yes or no), and the instruction: clear the session (or open a new one in the same folder) and type `/pickup`.
+3. Reply with: the file path and the instruction: clear the session (or open a new one in the same folder) and type `/pickup`.
