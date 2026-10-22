@@ -21,12 +21,12 @@ At the Claude Code prompt:
 
 ```text
 /plugin marketplace add https://git.example.invalid/group/cruise.git
-/plugin install cruise@cruise
+/plugin install cruise@nt
 ```
 
 Then run `/reload-plugins` or open a new session. The repository is visible to everyone logged in to the internal GitLab, and you need Git configured to clone from `git.example.invalid` (SSH key or HTTPS credential).
 
-The installer may say some options are "not yet set". That is fine: every option has a default. Change any of them with `/plugin configure cruise@cruise`.
+The installer may say some options are "not yet set". That is fine: every option has a default. Change any of them with `/plugin configure cruise@nt`.
 
 Check it works: `/cruise` prints what Cruise is doing, and sending a request of 25 characters or more makes the band appear.
 
@@ -102,7 +102,7 @@ Run the cruise:setup-laya skill. Tell me what it will download and how much disk
 If the plugin is not installed yet, paste this instead and it will install the plugin first:
 
 ```text
-Install the Cruise plugin: run `claude plugin marketplace add https://git.example.invalid/group/cruise.git` and then `claude plugin install cruise@cruise`. Then run the cruise:setup-laya skill: tell me what it will download and how much disk and memory it needs, wait for my OK, and then install and configure everything.
+Install the Cruise plugin: run `claude plugin marketplace add https://git.example.invalid/group/cruise.git` and then `claude plugin install cruise@nt`. Then run the cruise:setup-laya skill: tell me what it will download and how much disk and memory it needs, wait for my OK, and then install and configure everything.
 ```
 
 **What to expect (measured on a Mac with 10 cores and 34 GB of memory):**
@@ -186,7 +186,7 @@ Recommended flow when the context warning appears: finish the step, `/handoff`, 
 
 ```text
 /plugin marketplace update cruise
-/plugin uninstall cruise@cruise
+/plugin uninstall cruise@nt
 ```
 
 ## Known limitations
