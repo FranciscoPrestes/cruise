@@ -1,6 +1,6 @@
 {
   "name": "cruise",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Cruise control for Claude Code: watches the context, shows where you are and (optionally) picks the reasoning effort for each prompt",
   "author": {
     "name": "Francisco Prestes"
@@ -35,8 +35,8 @@
     "progress": {
       "type": "boolean",
       "title": "Progress band",
-      "description": "Show the band above the prompt with the current request, the plan step and background work.",
-      "default": true
+      "description": "Show a two-line band above the prompt: the current request, then the plan step, the effort pick and background work. Off by default, since it takes screen space.",
+      "default": false
     },
     "minAskChars": {
       "type": "number",

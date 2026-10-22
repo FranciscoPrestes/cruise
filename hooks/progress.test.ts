@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 for (const surface of ['terminal', 'desktop'] as const) {
-  test(`shows request and step in the band (${surface})`, async ($, on) => {
+  test(`shows request and step in the band (${surface})`, { options: { progress: true } }, async ($, on) => {
     on('clock.now', async () => ({ value: 1_000 }) as never)
     on('prompt.submit', async () => ({ text: 'ok' }) as never)
     on('tool.call', async () => ({ result: {} }) as never)
@@ -11,12 +11,12 @@ for (const surface of ['terminal', 'desktop'] as const) {
       todos: [{ content: 'Read', activeForm: 'Reading the backend', status: 'in_progress' }],
     } as never)
     const ui = await $.ui.mount({ plugin: 'cruise', surface, component: 'AbovePrompt', props: { bodyColumns: 120 } as never })
-    expect(await ui.findAll({ text: /Request/ })).not.toHaveLength(0)
-    expect(await ui.findAll({ text: /Step 1 of 1: Reading the backend/ })).not.toHaveLength(0)
+    expect(await ui.findAll({ text: /❯/ })).not.toHaveLength(0)
+    expect(await ui.findAll({ text: /Reading the backend/ })).not.toHaveLength(0)
   })
 }
 
-test('a subagent task list does not overwrite the main plan', async ($, on) => {
+test('a subagent task list does not overwrite the main plan', { options: { progress: true } }, async ($, on) => {
   on('clock.now', async () => ({ value: 1_000 }) as never)
   on('prompt.submit', async () => ({ text: 'ok' }) as never)
   on('tool.call', async () => ({ result: {} }) as never)
@@ -31,14 +31,14 @@ test('a subagent task list does not overwrite the main plan', async ($, on) => {
 const mountBand = ($: Parameters<Parameters<typeof test>[1]>[0]) =>
   $.ui.mount({ plugin: 'cruise', surface: 'terminal', component: 'AbovePrompt', props: { bodyColumns: 120 } as never })
 
-test('a shorter request counts when the minimum length is lowered', { options: { minAskChars: 10 } }, async ($, on) => {
+test('a shorter request counts when the minimum length is lowered', { options: { progress: true, minAskChars: 10 } }, async ($, on) => {
   on('clock.now', async () => ({ value: 1_000 }) as never)
   on('prompt.submit', async () => ({ text: 'ok' }) as never)
   await $.prompt.submit({ text: 'fix the login bug' })
   expect(await (await mountBand($)).findAll({ text: /fix the login bug/ })).not.toHaveLength(0)
 })
 
-test('a short reply does not replace the request', async ($, on) => {
+test('a short reply does not replace the request', { options: { progress: true } }, async ($, on) => {
   on('clock.now', async () => ({ value: 1_000 }) as never)
   on('prompt.submit', async () => ({ text: 'ok' }) as never)
   await $.prompt.submit({ text: 'integrate billing into the planning app using the existing connection' })
@@ -46,23 +46,23 @@ test('a short reply does not replace the request', async ($, on) => {
   expect(await (await mountBand($)).findAll({ text: /integrate billing/ })).not.toHaveLength(0)
 })
 
-test('background work from the last Stop is shown', async ($, on) => {
+test('background work from the last Stop is shown', { options: { progress: true } }, async ($, on) => {
   on('clock.now', async () => ({ value: 1_000 }) as never)
   on('prompt.submit', async () => ({ text: 'ok' }) as never)
   on('classic.Stop', async () => ({}) as never)
   await $.prompt.submit({ text: 'integrate billing into the planning app using the existing connection' })
   await $.classic.Stop({ stop_hook_active: false, background_tasks: [{ id: '1', type: 'shell', status: 'running', description: 'dev server' }], session_crons: [] } as never)
-  expect(await (await mountBand($)).findAll({ text: /Running in background: 1 command/ })).not.toHaveLength(0)
+  expect(await (await mountBand($)).findAll({ text: /⚙ 1 command/ })).not.toHaveLength(0)
 })
 
-test('TaskCreate and TaskUpdate drive the step shown', async ($, on) => {
+test('TaskCreate and TaskUpdate drive the step shown', { options: { progress: true } }, async ($, on) => {
   on('clock.now', async () => ({ value: 1_000 }) as never)
   on('prompt.submit', async () => ({ text: 'ok' }) as never)
   on('tool.call', async (_$, e) => ({ result: e.tool === 'TaskCreate' ? { task: { id: '7', subject: 'Write tests' } } : {} }) as never)
   await $.prompt.submit({ text: 'integrate billing into the planning app using the existing connection' })
   await $.tool.call({ tool: 'TaskCreate', subject: 'Write tests', description: 'd' } as never)
   await $.tool.call({ tool: 'TaskUpdate', taskId: '7', status: 'in_progress', activeForm: 'Writing tests' } as never)
-  expect(await (await mountBand($)).findAll({ text: /Step 1 of 1: Writing tests/ })).not.toHaveLength(0)
+  expect(await (await mountBand($)).findAll({ text: /Writing tests/ })).not.toHaveLength(0)
 })
 
 const askAndMount = async ($: Parameters<Parameters<typeof test>[1]>[0], on: Parameters<Parameters<typeof test>[1]>[1]) => {
@@ -71,14 +71,14 @@ const askAndMount = async ($: Parameters<Parameters<typeof test>[1]>[0], on: Par
   await $.prompt.submit({ text: 'integrate billing into the planning app using the existing connection' })
 }
 
-test('a background shell appears as soon as it starts', async ($, on) => {
+test('a background shell appears as soon as it starts', { options: { progress: true } }, async ($, on) => {
   on('tool.call', async () => ({ result: { backgroundTaskId: 'b1', stdout: '', stderr: '', interrupted: false } }) as never)
   await askAndMount($, on)
   await $.tool.call({ tool: 'Bash', command: 'npm run dev', run_in_background: true } as never)
-  expect(await (await mountBand($)).findAll({ text: /Running in background: 1 command/ })).not.toHaveLength(0)
+  expect(await (await mountBand($)).findAll({ text: /⚙ 1 command/ })).not.toHaveLength(0)
 })
 
-test('a stopped task leaves the band immediately', async ($, on) => {
+test('a stopped task leaves the band immediately', { options: { progress: true } }, async ($, on) => {
   on('tool.call', async (_$, e) => ({ result: e.tool === 'Bash' ? { backgroundTaskId: 'b1' } : {} }) as never)
   await askAndMount($, on)
   await $.tool.call({ tool: 'Bash', command: 'npm run dev', run_in_background: true } as never)
@@ -86,7 +86,7 @@ test('a stopped task leaves the band immediately', async ($, on) => {
   expect(await (await mountBand($)).findAll({ text: /Running in background/ })).toHaveLength(0)
 })
 
-test('a monitor and a schedule are counted too', async ($, on) => {
+test('a monitor and a schedule are counted too', { options: { progress: true } }, async ($, on) => {
   on('tool.call', async (_$, e) => ({ result: e.tool === 'Monitor' ? { taskId: 'm1' } : { id: 'c1' } }) as never)
   await askAndMount($, on)
   await $.tool.call({ tool: 'Monitor', description: 'd', timeout_ms: 1000, command: 'tail -f x' } as never)
@@ -94,7 +94,7 @@ test('a monitor and a schedule are counted too', async ($, on) => {
   expect(await (await mountBand($)).findAll({ text: /1 monitor, 1 schedule/ })).not.toHaveLength(0)
 })
 
-test('a task that ends on its own leaves the band when its notification arrives', async ($, on) => {
+test('a task that ends on its own leaves the band when its notification arrives', { options: { progress: true } }, async ($, on) => {
   on('tool.call', async () => ({ result: { backgroundTaskId: 'b1' } }) as never)
   await askAndMount($, on)
   await $.tool.call({ tool: 'Bash', command: 'npm run dev', run_in_background: true } as never)
@@ -103,7 +103,7 @@ test('a task that ends on its own leaves the band when its notification arrives'
   expect(await (await mountBand($)).findAll({ text: /Running in background/ })).toHaveLength(0)
 })
 
-test('a workflow is counted and leaves when its notification arrives', async ($, on) => {
+test('a workflow is counted and leaves when its notification arrives', { options: { progress: true } }, async ($, on) => {
   on('tool.call', async () => ({ result: { status: 'async_launched', taskId: 'w1' } }) as never)
   await askAndMount($, on)
   await $.tool.call({ tool: 'Workflow', name: 'review' } as never)
@@ -113,21 +113,21 @@ test('a workflow is counted and leaves when its notification arrives', async ($,
   expect(await (await mountBand($)).findAll({ text: /Running in background/ })).toHaveLength(0)
 })
 
-test('a command sent to the background with Ctrl+B is followed too', async ($, on) => {
+test('a command sent to the background with Ctrl+B is followed too', { options: { progress: true } }, async ($, on) => {
   on('tool.call', async () => ({ result: { backgroundTaskId: 'b9', backgroundedByUser: true, stdout: '', stderr: '', interrupted: false } }) as never)
   await askAndMount($, on)
   await $.tool.call({ tool: 'Bash', command: 'sleep 600' } as never)
-  expect(await (await mountBand($)).findAll({ text: /Running in background: 1 command/ })).not.toHaveLength(0)
+  expect(await (await mountBand($)).findAll({ text: /⚙ 1 command/ })).not.toHaveLength(0)
 })
 
-test('a background shell started by another tool is followed too', async ($, on) => {
+test('a background shell started by another tool is followed too', { options: { progress: true } }, async ($, on) => {
   on('tool.call', async () => ({ result: { backgroundTaskId: 'p1' } }) as never)
   await askAndMount($, on)
   await $.tool.call({ tool: 'PowerShell', command: 'Start-Sleep 600' } as never)
-  expect(await (await mountBand($)).findAll({ text: /Running in background: 1 command/ })).not.toHaveLength(0)
+  expect(await (await mountBand($)).findAll({ text: /⚙ 1 command/ })).not.toHaveLength(0)
 })
 
-test('the engine\'s own list at Stop corrects anything the band missed', async ($, on) => {
+test('the engine\'s own list at Stop corrects anything the band missed', { options: { progress: true } }, async ($, on) => {
   on('tool.call', async () => ({ result: { backgroundTaskId: 'gone' } }) as never)
   on('classic.Stop', async () => ({}) as never)
   await askAndMount($, on)
@@ -138,23 +138,23 @@ test('the engine\'s own list at Stop corrects anything the band missed', async (
   expect(await band.findAll({ text: /command/ })).toHaveLength(0)
 })
 
-test('the "x min ago" label moves on by itself as the minutes pass', async ($, on) => {
+test('the "x min ago" label moves on by itself as the minutes pass', { options: { progress: true } }, async ($, on) => {
   const clock = mock.clock(on)
   on('prompt.submit', async () => ({ text: 'ok' }) as never)
   on('session.start', async () => ({ cwd: '/tmp' }) as never)
   await $.session.start({ source: 'startup', cwd: '/tmp' } as never)
   await $.prompt.submit({ text: 'integrate billing into the planning app using the existing connection' })
   const band = await mountBand($) // stays mounted: nothing remounts it, so only the tick can redraw it
-  expect(await band.findAll({ text: /Request \(now\)/ })).not.toHaveLength(0)
+  expect(await band.findAll({ text: /· now/ })).not.toHaveLength(0)
   await clock.advance(5 * 60_000)
-  expect(await band.findAll({ text: /Request \(5 min ago\)/ })).not.toHaveLength(0)
+  expect(await band.findAll({ text: /· 5 min ago/ })).not.toHaveLength(0)
 })
 
-test('a task created but not started shows its subject as the step', async ($, on) => {
+test('a task created but not started shows its subject as the step', { options: { progress: true } }, async ($, on) => {
   on('tool.call', async (_$, e) => ({ result: e.tool === 'TaskCreate' ? { task: { id: '3', subject: 'Draft the report' } } : {} }) as never)
   await askAndMount($, on)
   await $.tool.call({ tool: 'TaskCreate', subject: 'Draft the report', description: 'd' } as never)
-  expect(await (await mountBand($)).findAll({ text: /Step 1 of 1: Draft the report/ })).not.toHaveLength(0)
+  expect(await (await mountBand($)).findAll({ text: /Draft the report/ })).not.toHaveLength(0)
 })
 
 test('the progress band can be switched off in the settings', { options: { progress: false } }, async ($, on) => {
@@ -164,7 +164,7 @@ test('the progress band can be switched off in the settings', { options: { progr
   // With the band off nothing draws it: the mount finds nothing to render, or renders without the request line.
   let drawn = false
   try {
-    drawn = (await (await mountBand($)).findAll({ text: /Request/ })).length > 0
+    drawn = (await (await mountBand($)).findAll({ text: /❯/ })).length > 0
   } catch {
     drawn = false
   }

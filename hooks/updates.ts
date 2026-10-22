@@ -90,9 +90,9 @@ export async function checkForUpdate($: EngineInterface, mode: UpdateMode): Prom
 
 // The update line of the /cruise panel.
 export async function updateLine($: EngineInterface, mode: UpdateMode): Promise<string> {
-  if (mode === 'off') return `Updates: automatic check off (setting "updates"). Type /cruise:update to check by hand.`
+  if (mode === 'off') return 'automatic check off (setting "updates") · /cruise:update checks by hand'
   const saved = (await $.store.get(KEY).catch(() => undefined)) as UpdateRecord | undefined
-  const how = mode === 'auto' ? 'installs them by itself' : 'asks before installing'
-  if (saved?.latest && isNewer(saved.latest, VERSION)) return `Updates: version ${saved.latest} is available (you have ${VERSION}). Type /cruise:update.`
-  return `Updates: you have ${VERSION}${saved?.latest ? ', the latest' : ''}. Checks once a day and ${how}. Type /cruise:update to check now.`
+  if (saved?.latest && isNewer(saved.latest, VERSION)) return `${saved.latest} is available (you have ${VERSION}) · type /cruise:update`
+  const how = mode === 'auto' ? 'installs by itself' : 'asks first'
+  return `${VERSION}${saved?.latest ? ', the latest' : ''} · checks daily, ${how} · /cruise:update`
 }

@@ -37,6 +37,15 @@ export function planSummary(plan: Plan): string | null {
   return `Step ${n} of ${steps.length}: ${current?.title ?? ''}`
 }
 
+// The same facts as planSummary, as parts the band can colour: step number, total, title and how many are done.
+export function planProgress(plan: Plan): { n: number; total: number; done: number; title: string; complete: boolean } | null {
+  const steps = Object.values(plan)
+  if (steps.length === 0) return null
+  const done = steps.filter(s => s.status === 'completed').length
+  const current = steps.find(s => s.status === 'in_progress') ?? steps.find(s => s.status === 'pending')
+  return { n: current ? steps.indexOf(current) + 1 : steps.length, total: steps.length, done, title: current?.title ?? '', complete: done === steps.length }
+}
+
 const LABELS: Readonly<Record<string, [string, string]>> = {
   subagent: ['agent', 'agents'],
   shell: ['command', 'commands'],

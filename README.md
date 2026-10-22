@@ -24,7 +24,7 @@ Cruise is a mod for Claude Code (its commands call mods "plugins") with three jo
 | | What it does | Default |
 | --- | --- | --- |
 | **Context** | Warns at 60% and 80% of the context window and points to `/handoff`, before quality drops | on |
-| **Progress** | A band above the prompt: your current request, the plan step, what runs in the background | on |
+| **Progress** | Two lines above the prompt: your latest request, then the plan step, the effort pick and what runs in the background | **off** (it takes screen space) |
 | **Effort** | A small judge reads each prompt and picks the lowest reasoning effort that still does the job, among `low`, `medium`, `high`, `xhigh`, `max` | on, judged by Haiku on your own login |
 
 ```text
@@ -61,7 +61,7 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 | --- | --- | --- |
 | `context` | on | Context warnings |
 | `warnAt` / `urgentAt` / `resetBelow` | 60 / 80 / 40 | First warning, urgent warning, and where warnings start over (%) |
-| `progress` | on | The progress band |
+| `progress` | off | The two-line band above the prompt |
 | `minAskChars` | 25 | Shorter messages ("go ahead") do not replace the request shown |
 | `effort` | `haiku` | The judge: `off`, `haiku`, `jev` or `laya` |
 | `steer` | `both` | `both`: the judge may raise or lower your app's effort. `down`: only lower it |

@@ -210,23 +210,27 @@ export async function afterRequest(
 }
 
 // The band's effort line (the band lives in another file and cannot read this file's state itself).
-export async function effortBand($: EngineInterface): Promise<string | null> {
-  return effortLine(await read($, effortState))
+// The pieces of the effort line, for the band to colour.
+export async function effortParts($: EngineInterface): Promise<{ pick: string; app: string | null; why: string | null } | { paused: string } | null> {
+  const s = await read($, effortState)
+  if (s.paused) return { paused: s.paused }
+  if (!s.pick) return null
+  return { pick: s.pick, app: s.appSeen && s.appSeen !== s.pick ? s.appSeen : null, why: s.why ?? null }
 }
 
-// The effort part of the /cruise panel.
-export async function report($: EngineInterface, options: PluginOptions): Promise<string> {
+// The effort part of the /cruise panel: a headline and two detail lines, each starting with `cont` spaces of indent.
+export async function report($: EngineInterface, options: PluginOptions, cont = 14): Promise<string> {
   const judge = judgeFrom(options)
   const s = await read($, effortState)
-  if (judge.mode === 'off') return 'Effort steering: off (setting "effort")'
-  const picks = Object.entries(s.picks).map(([k, n]) => `${k} ${n}`).join(', ') || 'none yet'
-  const way = judge.steer === 'down' ? 'only lower than your app\'s effort' : `up or down from your app's effort (up to ${judge.reach})`
+  if (judge.mode === 'off') return 'off · turn on with /cruise:configure'
+  const picks = Object.entries(s.picks).map(([k, n]) => `${k} ${n}`).join(' · ') || 'nothing picked yet'
+  const way = judge.steer === 'down' ? "only lower than your app's effort" : `moves your app's effort up or down (up to ${judge.reach})`
+  const pad = ' '.repeat(cont)
+  const now = s.pick ? `now ⚡ ${s.pick}${s.appSeen && s.appSeen !== s.pick ? ` (app ${s.appSeen})` : ''}${s.why ? ` · ${s.why}` : ''}` : 'waiting for your first prompt'
   return [
-    `Effort steering: judge ${judge.mode}${judge.model ? ` (${judge.model})` : ''}, ${way}${s.paused ? `  ·  PAUSED: ${s.paused}` : ''}`,
-    `  App effort: ${s.appSeen ?? 'not seen yet'}  ·  current pick: ${s.pick ?? 'none yet'}${s.why ? ` (${s.why})` : ''}`,
-    `  Verdicts: ${s.judged}  ·  follow-ups that kept the pick: ${s.kept}  ·  judge failures: ${s.failed}`,
-    `  Picked: ${picks}`,
-    `  Requests sent at a different effort than the app's: ${s.steered}`,
-    `  Judge tokens: ${s.judgeTokens}${judge.mode === 'haiku' ? ' (billed to your Claude account)' : ''}`,
+    `${judge.mode}${judge.model ? ` (${judge.model})` : ''} judge · ${way}${s.paused ? `  ·  ⏸ PAUSED: ${s.paused}` : ''}`,
+    `${pad}${now}`,
+    `${pad}${s.judged} judged · ${s.steered} steered · judge failures: ${s.failed} · judge tokens: ${s.judgeTokens}`,
+    `${pad}${picks}`,
   ].join('\n')
 }

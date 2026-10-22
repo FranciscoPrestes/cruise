@@ -17,37 +17,38 @@ export function gauge(percent: number, limits: Thresholds): string {
 }
 
 export const HELP = [
-  'Change a setting:  /cruise:configure  (a short conversation)  or  /plugin configure cruise@prestes',
-  '  context        true | false             context warnings and /handoff reminders',
-  '  warnAt/urgentAt  numbers (60 / 80)      where the two warnings fire',
-  '  progress       true | false             the band above the prompt',
-  '  effort         haiku | jev | laya | off   who judges the effort',
-  '  steer          both | down              both = up or down from your app\'s effort, down = only lower',
-  '  topLevel       high | xhigh | max       the highest effort the judge may pick (max by default)',
-  '  judgeModel     a model or checkpoint name   the judge\'s model (Haiku by default)',
-  '  updates        check | auto | off       daily update check (check = ask before installing)',
-  'Update now: /cruise:update   ·   Hand off a long session: /handoff, then /pickup',
+  'Settings: context · warnAt/urgentAt · progress · effort · steer · topLevel · judgeModel · updates',
+  'Change any: /cruise:configure (a short conversation) or /plugin configure cruise@prestes',
+  'Update now: /cruise:update   ·   Long session: /handoff, then /pickup',
 ].join('\n')
 
-async function contextLine($: EngineInterface, options: PluginOptions): Promise<string> {
-  if (options.context === false) return 'Context warnings: off (setting "context")'
+const LABEL_WIDTH = 12
+const row = (dot: string, label: string, text: string): string => `${dot} ${label.padEnd(LABEL_WIDTH - 2)}${text}`
+const RULE = '─'.repeat(64)
+
+async function contextRow($: EngineInterface, options: PluginOptions): Promise<string> {
+  if (options.context === false) return row('⚪', 'Context', 'off · turn on with /cruise:configure')
   const limits = contextLimits(options)
   const percent = await $.session.usage().then(u => u.context.percent, () => undefined)
-  const now = percent === undefined ? '' : `${gauge(percent, limits)}  ·  `
-  return `Context warnings: ${now}warns at ${limits.warnAt}% and ${limits.urgentAt}%`
+  const warns = `warns at ${limits.warnAt}% and ${limits.urgentAt}%`
+  if (percent === undefined) return row('🟢', 'Context', warns)
+  const [dot = '🟢', ...bar] = gauge(percent, limits).split(' ')
+  return row(dot, 'Context', `${bar.join(' ')}  ·  ${warns}`)
 }
 
 export async function panel($: EngineInterface, options: PluginOptions): Promise<string> {
-  const progress = options.progress === false ? 'Progress band: off (setting "progress")' : 'Progress band: on, above the prompt'
-  const effort = judgeMode(options) === 'off' ? 'Effort steering: off (setting "effort")' : await report($, options)
+  const progress = options.progress === true ? row('🟢', 'Progress', 'two lines above the prompt: request, step, effort, background') : row('⚪', 'Progress', 'off · turn on with /cruise:configure')
+  const mode = judgeMode(options)
+  const effort = row(mode === 'off' ? '⚪' : '🟢', 'Effort', await report($, options, LABEL_WIDTH + 1))
+  const updates = await updateLine($, updateMode(options))
   return [
-    `Cruise ${VERSION}`,
-    '',
-    await contextLine($, options),
+    `✈  Cruise ${VERSION}  ·  cruise control for Claude Code`,
+    RULE,
+    await contextRow($, options),
     progress,
     effort,
-    await updateLine($, updateMode(options)),
-    '',
+    row(updates.includes('available') ? '🟡' : '🟢', 'Updates', updates),
+    RULE,
     HELP,
   ].join('\n')
 }

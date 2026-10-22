@@ -12,7 +12,7 @@ import { welcome } from './welcome'
 // so the events several features share are owned here, and each feature's function is called from them.
 export const register: Register = (on, options) => {
   const wantContext = options.context !== false
-  const wantProgress = options.progress !== false
+  const wantProgress = options.progress === true
   const wantEffort = judgeMode(options) !== 'off'
   const limits = contextLimits(options)
   const judge = judgeFrom(options)

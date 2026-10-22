@@ -174,15 +174,15 @@ test('/cruise reports the judge, the pick and the counters', { options: { effort
   await $.prompt.submit({ text: ASK })
   await run($)
   const text = JSON.stringify(await $.command.run({ command: 'cruise', args: '' } as never))
-  expect(text).toContain('judge haiku')
-  expect(text).toContain('current pick: low')
-  expect(text).toContain('Verdicts: 1')
+  expect(text).toContain('haiku judge')
+  expect(text).toContain('now ⚡ low')
+  expect(text).toContain('1 judged')
 })
 
 test('/cruise says plainly when effort steering is off', { options: { effort: 'off' } }, async ($, on) => {
   stubs(on)
   const text = JSON.stringify(await $.command.run({ command: 'cruise', args: '' } as never))
-  expect(text).toContain('Effort steering: off')
+  expect(text).toContain('Effort    off')
 })
 
 test('an unreachable laya server (connection refused) never holds the request back', { options: { effort: 'laya' } }, async ($, on) => {
