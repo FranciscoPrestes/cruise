@@ -4,12 +4,12 @@ const ASK = 'change the color of the save button on the settings page to blue'
 const verdict = (effort: string, sure = 0.9) => ({ isAnswered: true, text: JSON.stringify({ effort, sure, why: 'test' }), usage: { input_tokens: 100, output_tokens: 20 } })
 const usage = (read: number, wrote: number) => ({ input_tokens: 2, output_tokens: 70, cache_read_input_tokens: read, cache_creation_input_tokens: wrote })
 
-type Setup = { sent: unknown[]; judged: string[]; toasts: string[]; calls: { url?: string; auth?: string; body?: string }[]; clock: { advance: (ms: number) => Promise<void> } }
+type Setup = { sent: unknown[]; judged: string[]; models: string[]; toasts: string[]; calls: { url?: string; auth?: string; body?: string }[]; clock: { advance: (ms: number) => Promise<void> } }
 
 // Everything beneath the plugin is a stub; the plugin's own hooks run for real.
 function stubs(on: any, opts: { replies?: unknown[]; reply?: unknown; steps?: ReturnType<typeof usage>[]; fetchBody?: string; throwJudge?: boolean } = {}): Setup {
   const clock = mock.clock(on)
-  const out: Setup = { sent: [], judged: [], toasts: [], calls: [], clock }
+  const out: Setup = { sent: [], judged: [], models: [], toasts: [], calls: [], clock }
   let asked = 0
   let step = 0
   on('prompt.submit', async () => ({ text: 'ok' }) as never)
@@ -17,7 +17,7 @@ function stubs(on: any, opts: { replies?: unknown[]; reply?: unknown; steps?: Re
   on('ui.toast', async (_$: unknown, e: { text: string }) => { out.toasts.push(e.text); return { value: undefined } as never })
   on('ui.status', async () => ({ value: undefined }) as never)
   on('session.usage', async () => ({ value: { startedAt: 0, context: { window: 1, tokens: 0, percent: 10 } } }) as never)
-  on('model.complete', async (_$: unknown, e: { prompt: string }) => { out.judged.push(e.prompt); if (opts.throwJudge) throw new Error('boom'); const r = opts.replies ? opts.replies[asked] : opts.reply; asked += 1; return { value: r ?? verdict('low') } as never })
+  on('model.complete', async (_$: unknown, e: { prompt: string; model: string }) => { out.judged.push(e.prompt); out.models.push(e.model); if (opts.throwJudge) throw new Error('boom'); const r = opts.replies ? opts.replies[asked] : opts.reply; asked += 1; return { value: r ?? verdict('low') } as never })
   on('http.fetch', async (_$: unknown, e: { url: string; init?: { headers?: Record<string, string>; body?: string } }) => {
     out.calls.push({ url: e.url, auth: e.init?.headers?.authorization, body: e.init?.body })
     if (opts.throwJudge) throw new Error('connection refused')
@@ -37,7 +37,7 @@ async function run($: any, e: { model?: string; effort?: unknown; index?: number
   for await (const _chunk of $.turn.step({ turnId: 't', index: e.index ?? 0, model: e.model ?? 'claude-opus-5-5', effort: 'effort' in e ? e.effort : 'high', messageCount: 5, agentId: e.agentId } as never)) void _chunk
 }
 
-test('off by default: the app effort goes out untouched and no judge is asked', async ($, on) => {
+test('effort off: the app effort goes out untouched and no judge is asked', { options: { effort: 'off' } }, async ($, on) => {
   const s = stubs(on)
   await $.prompt.submit({ text: ASK })
   await run($)
@@ -72,7 +72,7 @@ test('the judge is asked once per prompt, not once per request of the turn', { o
   expect(s.sent).toEqual(['low', 'low', 'low'])
 })
 
-test('never above the effort the app set: a verdict above it is refused and the request is untouched', { options: { effort: 'haiku' } }, async ($, on) => {
+test('steer down: never above the effort the app set; a verdict above it is refused and the request is untouched', { options: { effort: 'haiku', steer: 'down' } }, async ($, on) => {
   const s = stubs(on, { reply: verdict('xhigh') })
   await $.prompt.submit({ text: ASK })
   await run($)
@@ -179,10 +179,10 @@ test('/cruise reports the judge, the pick and the counters', { options: { effort
   expect(text).toContain('Verdicts: 1')
 })
 
-test('/cruise says plainly when effort steering is off', async ($, on) => {
+test('/cruise says plainly when effort steering is off', { options: { effort: 'off' } }, async ($, on) => {
   stubs(on)
   const text = JSON.stringify(await $.command.run({ command: 'cruise', args: '' } as never))
-  expect(text).toContain('effort steering is off')
+  expect(text).toContain('Effort steering: off')
 })
 
 test('an unreachable laya server (connection refused) never holds the request back', { options: { effort: 'laya' } }, async ($, on) => {
@@ -192,7 +192,7 @@ test('an unreachable laya server (connection refused) never holds the request ba
   expect(s.sent).toEqual(['high'])
 })
 
-test('if the person lowers the app effort mid-work, the pick never goes above it', { options: { effort: 'haiku' } }, async ($, on) => {
+test('steer down: if the person lowers the app effort mid-work, the pick never goes above it', { options: { effort: 'haiku', steer: 'down' } }, async ($, on) => {
   const s = stubs(on, { reply: verdict('high') })
   await $.prompt.submit({ text: 'investigate why the nightly export job corrupts rows when two workers overlap' })
   await run($, { effort: 'high' })
@@ -259,4 +259,56 @@ test('laya: a plausible "high" keeps the app effort even when "low" leads', { op
   await $.prompt.submit({ text: ASK })
   await run($)
   expect(s.sent).toEqual(['high'])
+})
+
+test('the Haiku judge is on by default', async ($, on) => {
+  const s = stubs(on)
+  await $.prompt.submit({ text: ASK })
+  await run($)
+  expect(s.judged).toHaveLength(1)
+})
+
+test('both ways: on a medium app a hard prompt is lifted to high', { options: { effort: 'haiku' } }, async ($, on) => {
+  const s = stubs(on, { reply: verdict('high') })
+  await $.prompt.submit({ text: 'investigate why the nightly export job corrupts rows when two workers overlap' })
+  await run($, { effort: 'medium' })
+  expect(s.sent).toEqual(['high'])
+  expect(s.judged[0]).toContain('Level the app uses by default: medium')
+  expect(s.judged[0]).toContain('Highest level allowed: high')
+})
+
+test('both ways: a simple prompt on a medium app goes down to low', { options: { effort: 'haiku' } }, async ($, on) => {
+  const s = stubs(on, { reply: verdict('low') })
+  await $.prompt.submit({ text: ASK })
+  await run($, { effort: 'medium' })
+  expect(s.sent).toEqual(['low'])
+})
+
+test('both ways: the top level setting decides how high a hard prompt may go', { options: { effort: 'haiku', topLevel: 'max' } }, async ($, on) => {
+  const s = stubs(on, { reply: verdict('max') })
+  await $.prompt.submit({ text: 'rewrite the whole billing engine and migrate every customer' })
+  await run($, { effort: 'medium' })
+  expect(s.sent).toEqual(['max'])
+})
+
+test('both ways: a verdict above the top level is refused and the app effort goes out', { options: { effort: 'haiku' } }, async ($, on) => {
+  const s = stubs(on, { reply: verdict('xhigh') })
+  await $.prompt.submit({ text: 'rewrite the whole billing engine and migrate every customer' })
+  await run($, { effort: 'medium' })
+  expect(s.sent).toEqual(['medium'])
+})
+
+test('jev, both ways: its highest label lifts a medium app to the top level', { options: { effort: 'jev', topLevel: 'xhigh' } }, async ($, on) => {
+  const body = JSON.stringify({ answers: { effort: { choice: 'high', confidence: 0.9 } } })
+  const s = stubs(on, { fetchBody: body })
+  await $.prompt.submit({ text: 'investigate why the nightly export job corrupts rows when two workers overlap' })
+  await run($, { effort: 'medium' })
+  expect(s.sent).toEqual(['xhigh'])
+})
+
+test('a judge model of your own replaces the default Haiku', { options: { effort: 'haiku', judgeModel: 'claude-haiku-4-5' } }, async ($, on) => {
+  const s = stubs(on)
+  await $.prompt.submit({ text: ASK })
+  await run($)
+  expect(s.models).toEqual(['claude-haiku-4-5'])
 })

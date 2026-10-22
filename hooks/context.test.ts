@@ -3,10 +3,10 @@ import { expect, test } from 'claude-code/testing'
 const usage = (percent: number | undefined) =>
   ({ value: { startedAt: 0, context: { window: 200000, tokens: 0, percent } } }) as never
 
-test('after a turn above 75% it shows the status line with /handoff', async ($, on) => {
+test('after a turn above 60% it shows the status line with /handoff', async ($, on) => {
   const statuses: (string | undefined)[] = []
   const toasts: string[] = []
-  on('session.usage', async () => usage(78))
+  on('session.usage', async () => usage(65))
   on('ui.status', async (_$, e) => { statuses.push(e.text); return { value: undefined } as never })
   on('ui.toast', async (_$, e) => { toasts.push(e.text); return { value: undefined } as never })
   on('turn.complete', async () => ({ text: '' }))
@@ -15,9 +15,9 @@ test('after a turn above 75% it shows the status line with /handoff', async ($, 
   expect(toasts).toHaveLength(1)
 })
 
-test('mid-turn: a tool call above 75% already warns', async ($, on) => {
+test('mid-turn: a tool call above 60% already warns', async ($, on) => {
   const toasts: string[] = []
-  on('session.usage', async () => usage(80))
+  on('session.usage', async () => usage(65))
   on('ui.status', async () => ({ value: undefined }) as never)
   on('ui.toast', async (_$, e) => { toasts.push(e.text); return { value: undefined } as never })
   on('tool.call', async () => ({ result: {} }) as never)
@@ -27,7 +27,7 @@ test('mid-turn: a tool call above 75% already warns', async ($, on) => {
 
 test('warns once per band, not on every call', async ($, on) => {
   const toasts: string[] = []
-  on('session.usage', async () => usage(80))
+  on('session.usage', async () => usage(65))
   on('ui.status', async () => ({ value: undefined }) as never)
   on('ui.toast', async (_$, e) => { toasts.push(e.text); return { value: undefined } as never })
   on('tool.call', async () => ({ result: {} }) as never)
@@ -36,9 +36,9 @@ test('warns once per band, not on every call', async ($, on) => {
   expect(toasts).toHaveLength(1)
 })
 
-test('at 90% it also sends a system notification', async ($, on) => {
+test('at 80% it also sends a system notification', async ($, on) => {
   const notified: string[] = []
-  on('session.usage', async () => usage(92))
+  on('session.usage', async () => usage(85))
   on('ui.status', async () => ({ value: undefined }) as never)
   on('ui.toast', async () => ({ value: undefined }) as never)
   on('ui.notify', async (_$, e) => { notified.push(e.message); return { value: undefined } as never })
@@ -66,7 +66,7 @@ test('custom thresholds from settings are honored', { options: { warnAt: 50, urg
 
 test('before a model request it already warns, even with no tool call in the step', async ($, on) => {
   const toasts: string[] = []
-  on('session.usage', async () => usage(85))
+  on('session.usage', async () => usage(70))
   on('ui.status', async () => ({ value: undefined }) as never)
   on('ui.toast', async (_$, e) => { toasts.push(e.text); return { value: undefined } as never })
   on('turn.step', async function* (_$, _e, _next) {
@@ -84,8 +84,8 @@ test('before a model request it already warns, even with no tool call in the ste
 test('a response that jumps past the threshold is flagged as soon as it completes', async ($, on) => {
   const toasts: string[] = []
   let calls = 0
-  // 50% before the request, 85% once the response is complete.
-  on('session.usage', async () => usage(++calls === 1 ? 50 : 85))
+  // 40% before the request, 70% once the response is complete.
+  on('session.usage', async () => usage(++calls === 1 ? 40 : 70))
   on('ui.status', async () => ({ value: undefined }) as never)
   on('ui.toast', async (_$, e) => { toasts.push(e.text); return { value: undefined } as never })
   on('turn.step', async function* (_$, _e, _next) {

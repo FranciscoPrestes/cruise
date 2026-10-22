@@ -4,7 +4,7 @@ import type { Level } from '../types'
 
 export type Thresholds = { warnAt: number; urgentAt: number; resetBelow: number }
 
-export const DEFAULTS: Thresholds = { warnAt: 75, urgentAt: 90, resetBelow: 50 }
+export const DEFAULTS: Thresholds = { warnAt: 60, urgentAt: 80, resetBelow: 40 }
 
 const num = (value: unknown, fallback: number) => (typeof value === 'number' && Number.isFinite(value) ? value : fallback)
 

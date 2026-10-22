@@ -1,9 +1,12 @@
 import type { Register } from 'claude-code'
 
 import { checkContext, contextLimits } from './context'
-import { afterRequest, effortFor, judgeFrom, judgeMode, notePrompt, report } from './effort'
+import { afterRequest, effortFor, judgeFrom, judgeMode, notePrompt } from './effort'
 import { DEFAULT_MIN_ASK_CHARS } from './helpers'
+import { panel } from './panel'
 import { noteAsk, registerProgress, startProgress, trackShell } from './progress'
+import { checkForUpdate, updateMode } from './updates'
+import { welcome } from './welcome'
 
 // Each feature can be switched off in the plugin's settings. The engine allows one unfiltered hook per event,
 // so the events several features share are owned here, and each feature's function is called from them.
@@ -17,11 +20,13 @@ export const register: Register = (on, options) => {
 
   on('session.start', async ($, e, next) => {
     if (wantProgress) startProgress($)
-    await $.command.register({ name: 'cruise', description: 'Show what Cruise is doing: context, progress and effort steering' })
+    void welcome($, options)
+    void checkForUpdate($, updateMode(options))
+    await $.command.register({ name: 'cruise', description: 'The Cruise panel: what is on, what it is doing, and how to change it' })
     return next(e)
   })
 
-  on('command.run', { command: 'cruise' }, async $ => ({ text: await report($, options) }))
+  on('command.run', { command: 'cruise' }, async $ => ({ text: await panel($, options) }))
 
   on('prompt.submit', async ($, e, next) => {
     if (wantProgress) await noteAsk($, e, minAskChars)

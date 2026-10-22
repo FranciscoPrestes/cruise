@@ -13,7 +13,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/cruise-bench-dark.svg">
-    <img src="assets/cruise-bench-light.svg" alt="An isometric bench showing how Cruise works: messages pass under a small judge, which sets an effort fader that never passes the ceiling; a context gauge lights its 75% and 90% warnings and raises a /handoff tag." width="860">
+    <img src="assets/cruise-bench-light.svg" alt="An isometric bench showing how Cruise works: messages pass under a small judge, which moves an effort fader up or down from your app's setting, never past a top stop; a context gauge lights its 60% and 80% warnings and raises a /handoff tag." width="860">
   </picture>
 </p>
 
@@ -21,14 +21,14 @@ One plugin, three jobs, each of which you can switch off:
 
 | | What it does | On by default |
 | --- | --- | --- |
-| **Context** | Warns when the context passes 75% and 90% and points you to `/handoff`, before quality drops | yes |
+| **Context** | Warns when the context passes 60% and 80% and points you to `/handoff`, before quality drops | yes |
 | **Progress** | A band above the prompt with your current request, the plan step and what runs in the background | yes |
-| **Effort** | A small judge picks the reasoning effort for each prompt, so a button-colour change does not run at `high` | **no**, you choose a judge |
+| **Effort** | A small judge picks the reasoning effort for each prompt: lower for a button-colour change, higher for a hard job | yes, judged by Haiku on your own login |
 
 ```text
 Request (12 min ago): change the colour of the save button on the settings page to blue
 Step 3 of 5: Writing the integration tests
-Effort low (app: high) · tiny edit
+Effort low (app: medium) · tiny edit
 Running in background: 2 agents, 1 command
 ```
 
@@ -38,8 +38,8 @@ The animation above is the whole plugin, one stage at a time:
 
 1. **You send a message.** It is the only thing Cruise looks at.
 2. **A small judge reads that message**, never your conversation: just the text, whether the last reply ended with a question, and the effort now in use. The judge is `haiku` (your own Claude login), `jev` (a hosted API) or `laya` (a model on your machine).
-3. **It sets the effort the job needs.** A typo fix goes to `low`, a normal edit to `medium`, a repository-wide review stays at `high`. Cruise only ever steers **down** from the effort you set in the app: the ceiling stop is your own setting, and a judge that fails or is unsure leaves it alone.
-4. **It watches the context.** At 75% and 90% it warns you and points to `/handoff`, so a long session ends with a clean hand-off rather than a quiet loss of quality. A progress band above the prompt keeps the current request and plan step in view.
+3. **It sets the effort the job needs.** A typo fix goes down to `low`, a normal edit stays at `medium`, a repository-wide review goes up to `high`. The effort you set in the app is the starting point (often `medium`), and the judge may move it either way; a judge that fails or is unsure leaves your setting alone.
+4. **It watches the context.** At 60% and 80% it warns you and points to `/handoff`, so a long session ends with a clean hand-off rather than a quiet loss of quality. A progress band above the prompt keeps the current request and plan step in view.
 
 ## Install
 
@@ -76,13 +76,16 @@ Check it works: `/cruise` prints what Cruise is doing, and sending a request of 
 | Setting | Default | What it does |
 | --- | --- | --- |
 | `context` | on | Context warnings |
-| `warnAt` / `urgentAt` / `resetBelow` | 75 / 90 / 50 | Context % of the first warning, the urgent one, and where warnings start over |
+| `warnAt` / `urgentAt` / `resetBelow` | 60 / 80 / 40 | Context % of the first warning, the urgent one, and where warnings start over |
 | `progress` | on | The progress band |
 | `minAskChars` | 25 | Messages shorter than this ("go ahead") do not replace the request shown |
-| `effort` | **off** | `off`, `haiku`, `jev` or `laya`: see below |
+| `effort` | **haiku** | `off`, `haiku`, `jev` or `laya`: see below |
+| `steer` | both | `both`: the judge may raise or lower the effort from your app's. `down`: only lower it |
+| `topLevel` | high | The highest effort the judge may pick: `high`, `xhigh` or `max` (the last two cost more, and not every model takes them) |
 | `judgeUrl` | empty | Where a `jev` or `laya` judge listens. Empty means the hosted Jev, or `http://127.0.0.1:18787/v1/systemone` for Laya |
 | `judgeKey` | empty | TypeSafe key for `jev`. Kept in Claude Code's secure storage. Laya needs none |
-| `judgeModel` | empty | Which checkpoint to ask for. Empty lets the server choose. Set it to `multilingual`, or to a checkpoint you trained |
+| `judgeModel` | empty | The judge's model. Empty: Haiku 5.5 for `haiku`, the server's choice for `jev` and `laya` (set it to `multilingual`, or to a checkpoint you trained) |
+| `updates` | check | `check`: look on GitHub once a day and tell you when there is a new version, you decide when to install (`/cruise:update`). `auto`: install it for you. `off`: never look |
 
 ## Effort steering
 
@@ -90,8 +93,8 @@ Check it works: `/cruise` prints what Cruise is doing, and sending a request of 
 
 For each prompt you type, a small judge reads the message and picks the lowest effort that still does the job. Cruise then sends the model requests of that work at that effort.
 
-- **It only goes down.** The effort you set in the app is the ceiling. Cruise never sends a higher one, so it can never cost more than your own setting (apart from the judge itself), and it never sends a level the model does not accept.
-- **You stay in charge.** If you change the effort in the app, the new value becomes the ceiling immediately.
+- **It moves the effort up or down.** The effort you set in the app is the starting point. A quick fix goes lower; a hard job goes higher, up to the `topLevel` setting (`high` by default; `xhigh` and `max` cost more and not every model takes them). If you would rather it never spent more than your own setting, set `steer` to `down`.
+- **You stay in charge.** If you change the effort in the app, the new value becomes the starting point immediately. Every behaviour has a switch: see Settings.
 - **It stops by itself if the prompt cache is ever rewritten** after an effort change. It says so once and leaves your effort alone for the rest of the session.
 - **A failing, slow or unreachable judge never holds a prompt.** The request goes out at your own effort.
 - **Only the models where this was measured** are steered: the Opus, Sonnet and Fable 5 families. Haiku takes no effort setting and is left alone. Subagents are left alone.
@@ -126,6 +129,7 @@ Be honest with the numbers, because this depends on how you work:
 
 - The effortless project (the idea this builds on) measured, on 4 easy coding tasks run through the API, 21% less cost than Opus at medium, 29% less than high and 42% less than xhigh. On Sonnet it came out even against medium and saved 10% against high and 35% against xhigh. These are their numbers: few tasks, mostly easy ones, and plan usage was not measured. We have not reproduced them.
 - **If you already work at `medium`, expect little or nothing on Sonnet and a modest saving on Opus.** If you work at `high` or `xhigh`, there is much more to save.
+- **Raising the effort costs tokens.** With `steer: both` a hard prompt can run at `high` (or higher) even when your app is on `medium`: that is the point, and it is where the extra quality comes from. If you want pure savings, set `steer` to `down`.
 - **With the `haiku` judge the saving is smaller than those figures.** Haiku is very cheap, effortless puts it at roughly $0.001 to $0.002 per prompt, but it is not free, and that figure was not included in their numbers. On easy prompts it is a small part of the cost; if you send many tiny prompts it adds up. `jev` costs a key; `laya` costs only local resources.
 - **A judge that is wrong is the real cost.** An effort that is too low can mean a worse answer or more retries. Judge accuracy, from the effortless project's labelled prompts: Haiku 93%, Jev 99% (their figures). Laya without training, measured here on the same prompts (below): 75% in English and 60% to 65% in Portuguese.
 - Run `/cruise` after a day of real work: it shows how many prompts were judged, how many requests were sent at a lower effort than yours, and the judge's tokens. Decide with your own numbers.
@@ -210,8 +214,13 @@ On the effortless prompts the trained model never saw: English 67% right, 8 of 7
 
 ## Context warnings and the progress band
 
-- **Context.** Warns once per band at 75% (a notice) and 90% (a notice and a system notification), and shows `Context 82% · type /handoff` in the status line. Bands start over if the context drops below 50% (after a compaction). The check runs before every model request, the moment each response completes, after every tool call and when a turn ends. A reply that by itself crosses a threshold is flagged the moment it completes, not before: its size is only known once it exists.
+- **Context.** Warns once per band at 60% (a notice) and 80% (a notice and a system notification), and shows `Context 82% · type /handoff` in the status line. Bands start over if the context drops below 40% (after a compaction). The check runs before every model request, the moment each response completes, after every tool call and when a turn ends. A reply that by itself crosses a threshold is flagged the moment it completes, not before: its size is only known once it exists.
 - **Progress.** The current request, `Step N of M` from Claude's task list (a subagent's list is ignored), the effort pick when steering is on, and what runs in the background: subagents, commands, monitors, workflows and schedules, followed as they start and end, and reset to Claude Code's own list at the end of every turn. The "x min ago" label refreshes by itself every minute.
+
+## The panel and updates
+
+- **`/cruise`** opens the panel: what is on, the context gauge, what the judge is choosing right now, the update status and the list of settings you can change.
+- **Updates.** Once a day Cruise reads the version published on GitHub and, if there is a newer one, tells you: `Cruise 1.4.0 is available (you have 1.3.0). Type /cruise:update to install it.` Installing is always your call, unless you set `updates` to `auto`. `/cruise:update` checks right now and installs on your yes. Set `updates` to `off` and nothing is ever checked.
 
 ## Bundled skills
 
@@ -219,6 +228,7 @@ On the effortless prompts the trained model never saw: English 67% right, 8 of 7
 | --- | --- |
 | `/handoff` | Saves the state of the work (goal, what is done, next steps, pending decisions) to `~/.local/state/handoffs/<folder>/` so a later session can resume. Does not continue the task |
 | `/pickup` | In a new session, reads the latest handoff for that folder, checks folder and branch, and resumes from the first next step |
+| `/cruise:update` | Checks GitHub for a newer version of Cruise and installs it when you agree; also offers to turn the daily automatic check on, off, or to install by itself |
 | `/cruise:configure` | A short conversation that sets Cruise up: context warnings, progress band, effort steering and which judge. Saves the answers for you |
 | `/cruise:setup-laya` | Installs and configures Laya on your machine, step by step, asking before each download |
 
@@ -227,8 +237,8 @@ Recommended flow when the context warning appears: finish the step, `/handoff`, 
 ## Update and remove
 
 ```text
-/plugin marketplace update cruise
-/plugin uninstall cruise@prestes
+/cruise:update                      # check for a new version and install it
+/plugin uninstall cruise@prestes    # remove
 ```
 
 ## Known limitations
@@ -245,6 +255,7 @@ Recommended flow when the context warning appears: finish the step, `/handoff`, 
 claude plugin validate .      # manifest, marketplace and hooks
 claude plugin test .          # 86 tests
 claude --plugin-dir .         # run the plugin straight from this folder
+node scripts/check-version.mjs # the version in hooks/version.ts must equal plugin.json (the update check reads it)
 python3 eval/judge_eval.py --url <judge url> --mode laya   # score a judge on the labelled prompts
 # train/ turns your own sessions into a training set for Laya: see train/README.md
 ```

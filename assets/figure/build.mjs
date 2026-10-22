@@ -195,6 +195,7 @@ function throttleBase() {
     out.push(S(k.cylinder(SLOT_X + 20, y, 3.4, 6, 2.2, P, 20), { tone: "mid" }));
     out.push(L(k.ring(SLOT_X + 20, y, 2.1, 8.2, P, 16), { tone: "lo" }));
     out.push(T([SLOT_X + 26, y + 1.3], 6, name === "medium" ? "MED" : name.toUpperCase(), { size: 4.6, tone: "hi" }));
+    if (name === "medium") out.push(T([THR.x + 2.5, y + 1.3], 6, "APP", { size: 4.2, tone: "mid" }));
   }
   out.push(T([THR.x + 4, THR.y + THR.d - 3], 6, "EFFORT", { size: 4.6, tone: "mid" }));
   out.push(D([[THR.x + 5, THR.y + 5], [THR.x + THR.w - 5, THR.y + 5], [THR.x + 5, THR.y + THR.d - 5], [THR.x + THR.w - 5, THR.y + THR.d - 5]].map(([x, y]) => at([x, y, 6])), { size: 0.5 }));
@@ -204,7 +205,7 @@ put(key(34, -14, 0), throttleBase());
 function lamps() {
   const out = [];
   const ring = (y, r, z) => k.onTop(k.circleRing(SLOT_X + 20, y, r, 22), z, P, true);
-  const hold = { low: [[2.9, 8.0]], medium: [[8.0, 12.6]], high: [[12.6, 18.4]] };
+  const hold = { low: [[2.9, 8.0]], medium: [[0, 2.6], [8.0, 12.6]], high: [[12.6, 18.4]] };
   for (const [name, y] of Object.entries(POS)) {
     const fill = `var(--cr-lamp-${LAMPS[name]})`;
     const tr = track(0, hold[name].flatMap(([a, b]) => [[a, a + 0.25, 1], [b, b + 0.3, 0]]));
@@ -218,7 +219,7 @@ const STOP = { x: SLOT_X - 7, y: -43, w: 12, d: 8, r: 1.8 };
 function ceiling() {
   const out = [S(k.slabOf(STOP, 6, 10, P, 3, 0.6), { tone: "hi", lit: true })];
   out.push(L(k.lineOnTop([STOP.x + 3, STOP.y + 4], [STOP.x + STOP.w - 3, STOP.y + 4], 16, P), { tone: "red" }));
-  out.push(T([SLOT_X + 8, -37], 6, "CEILING", { size: 4.6, tone: "hi" }, "y"));
+  out.push(T([SLOT_X + 8, -37], 6, "TOP", { size: 4.6, tone: "hi" }, "y"));
   out.push(D([at([STOP.x + 3, STOP.y + 1.8, 16]), at([STOP.x + STOP.w - 3, STOP.y + 1.8, 16])], { size: 0.45 }));
   return out.join("");
 }
@@ -235,7 +236,7 @@ function carriage() {
   return out.join("");
 }
 const slideY = (y) => screenDelta(0, y, 0);
-const carriageTrack = track(slideY(POS.high), [
+const carriageTrack = track(slideY(POS.medium), [
   [2.7, 3.7, slideY(POS.low)],
   [7.5, 8.5, slideY(POS.medium)],
   [12.4, 13.3, slideY(POS.high)],
@@ -248,7 +249,7 @@ const CELLS = 10;
 const CELL = { x: 108, y: -54, w: 20, d: 20, r: 4 };
 const CELL_Z0 = 9;
 const CELL_PITCH = 7.2;
-const cellOn = (i) => 1.0 + (i + 1) * 1.55; // seconds at which cell i lights
+const cellOn = (i) => (i <= 5 ? 1.5 + i * 2.2 : 12.5 + (i - 5) * 1.25); // seconds at which cell i lights: 60% (cell 5) lands as step 4 begins
 function gaugeBase() {
   const out = [S(k.slabOf(GB, 0, 6, P, 5, 0.8), { tone: "mid" })];
   out.push(L(k.planOutline(k.insetPlan(GB, 3), 6, P, 4), { tone: "faint" }));
@@ -270,7 +271,7 @@ function cells() {
     out.push(L(k.planOutline(k.insetPlan(CELL, 2.4), z + 5.6, P, 3), { tone: "faint" }));
     const on = track(0, [[cellOn(i), cellOn(i) + 0.3, 1], [18.2, 18.8, 0]]);
     const lit = k.slabOf(CELL, z, 5.6, P, 4, 0.3);
-    const tint = i === 7 ? "var(--cr-amber)" : i >= 8 ? "var(--cr-lamp-red)" : "var(--cr-lamp-blue)";
+    const tint = i === 5 || i === 6 ? "var(--cr-amber)" : i >= 7 ? "var(--cr-lamp-red)" : "var(--cr-lamp-blue)";
     out.push(fading(on, S(lit, { tone: "hi", lit: true }) + `<path d="${lit.top}" style="fill:${tint};stroke:none" opacity=".8"/>`));
   }
   return out.join("");
@@ -279,15 +280,15 @@ put(key(118, -44, 1), cells());
 function marks() {
   const out = [];
   const tabZ = (frac) => CELL_Z0 + CELLS * CELL_PITCH * frac - 1.2;
-  // 75% hangs on the right of the stack, 90% on the front, so the two never overlap on screen
+  // 60% hangs on the right of the stack, 80% on the front, so the two never overlap on screen
   const right = { x: CELL.x + CELL.w + 3, y: CELL.y + 2, w: 12, d: 15, r: 1.6 };
-  out.push(S(k.slabOf(right, tabZ(0.75), 2.2, P, 3, 0.3), { tone: "hi" }));
-  out.push(L(k.lineOnTop([CELL.x + CELL.w, CELL.y + 9.5], [right.x, CELL.y + 9.5], tabZ(0.75) + 2.2, P), { tone: "mid" }));
-  out.push(T([right.x + 1.4, CELL.y + 11.6], tabZ(0.75) + 2.2, "75%", { size: 4.4, tone: "hi" }));
+  out.push(S(k.slabOf(right, tabZ(0.6), 2.2, P, 3, 0.3), { tone: "hi" }));
+  out.push(L(k.lineOnTop([CELL.x + CELL.w, CELL.y + 9.5], [right.x, CELL.y + 9.5], tabZ(0.6) + 2.2, P), { tone: "mid" }));
+  out.push(T([right.x + 1.4, CELL.y + 11.6], tabZ(0.6) + 2.2, "60%", { size: 4.4, tone: "hi" }));
   const front = { x: CELL.x + 2, y: CELL.y + CELL.d + 3, w: 16, d: 12, r: 1.6 };
-  out.push(S(k.slabOf(front, tabZ(0.9), 2.2, P, 3, 0.3), { tone: "hi" }));
-  out.push(L(k.lineOnTop([CELL.x + 10, CELL.y + CELL.d], [CELL.x + 10, front.y], tabZ(0.9) + 2.2, P), { tone: "red" }));
-  out.push(T([front.x + 2, front.y + 8], tabZ(0.9) + 2.2, "90%", { size: 4.4, tone: "hi" }));
+  out.push(S(k.slabOf(front, tabZ(0.8), 2.2, P, 3, 0.3), { tone: "hi" }));
+  out.push(L(k.lineOnTop([CELL.x + 10, CELL.y + CELL.d], [CELL.x + 10, front.y], tabZ(0.8) + 2.2, P), { tone: "red" }));
+  out.push(T([front.x + 2, front.y + 8], tabZ(0.8) + 2.2, "80%", { size: 4.4, tone: "hi" }));
   return out.join("");
 }
 put(key(118, -44, 2), marks());
@@ -297,8 +298,8 @@ function bell() {
   const cx = CELL.x + CELL.w / 2;
   const cy = CELL.y + CELL.d / 2;
   const lamp = k.onTop(k.circleRing(cx, cy, 5, 24), top + 3, P, true);
-  const amber = track(0, [[cellOn(7), cellOn(7) + 0.3, 1], [18.2, 18.8, 0]]);
-  const red = track(0, [[cellOn(8), cellOn(8) + 0.3, 1], [18.2, 18.8, 0]]);
+  const amber = track(0, [[cellOn(5), cellOn(5) + 0.3, 1], [18.2, 18.8, 0]]);
+  const red = track(0, [[cellOn(7), cellOn(7) + 0.3, 1], [18.2, 18.8, 0]]);
   out.push(fading(amber, `<path d="${lamp}" style="fill:var(--cr-amber);filter:blur(3px)" opacity=".9"/><path d="${lamp}" style="fill:var(--cr-amber)"/>`));
   out.push(fading(red, `<path d="${lamp}" style="fill:var(--cr-lamp-red);filter:blur(3.5px)" opacity=".95"/><path d="${lamp}" style="fill:var(--cr-lamp-red)"/>`));
   out.push(L(k.ring(cx, cy, 5, top + 3, P, 24), { tone: "hi" }));
@@ -314,8 +315,8 @@ function tag() {
   out.push(T([TAG.x + TAG.w / 2, TAG.y + 9.6], 3, "/handoff", { size: 5.2, tone: "hi", anchor: "middle" }));
   return out.join("");
 }
-const tagRise = track(screenDelta(0, 0, -16), [[cellOn(8), cellOn(8) + 0.8, screenDelta(0, 0, 14)], [18.2, 18.8, screenDelta(0, 0, -16)]]);
-const tagVis = track(0, [[cellOn(8), cellOn(8) + 0.3, 1], [18.2, 18.7, 0]]);
+const tagRise = track(screenDelta(0, 0, -16), [[cellOn(7), cellOn(7) + 0.8, screenDelta(0, 0, 14)], [18.2, 18.8, screenDelta(0, 0, -16)]]);
+const tagVis = track(0, [[cellOn(7), cellOn(7) + 0.3, 1], [18.2, 18.7, 0]]);
 put(key(141, 1, 0), fading(tagVis, moving(tagRise, tag())));
 
 // Progress strip: the band above the prompt ----------------------------------------------------
@@ -357,8 +358,8 @@ const body = items.sort((a, b) => a.key - b.key).map((i) => i.svg).join("");
 const CAPTIONS = [
   { from: 0.0, to: 1.5, lines: ["1 · You send a message"] },
   { from: 1.5, to: 4.8, lines: ["2 · A tiny judge reads only that", "message, never your conversation"] },
-  { from: 4.8, to: 13.2, lines: ["3 · It sets the effort the job needs,", "never above your ceiling"] },
-  { from: 13.2, to: DUR, lines: ["4 · Context filling up? Cruise warns", "you and points to /handoff"] },
+  { from: 4.8, to: 12.4, lines: ["3 · It sets the effort the job needs:", "lower for a quick fix, higher for a hard one"] },
+  { from: 12.4, to: DUR, lines: ["4 · Context filling up? Cruise warns", "you and points to /handoff"] },
 ];
 const phase = (c) => (c.from === 0
   ? { text: track(1, [[c.to - 0.35, c.to, 0], [DUR - 0.5, DUR, 1]]), dot: track(1, [[c.to - 0.35, c.to, 0.25], [DUR - 0.5, DUR, 1]]) }
@@ -378,7 +379,7 @@ function title() {
 }
 
 const label =
-  "An isometric bench that shows how Cruise works. Messages ride a conveyor under a small judge. The judge sets a three-notch effort fader that can never pass a fixed ceiling stop. A ten-cell context gauge fills up and, at 75% and 90%, lights its warning lamps and raises a /handoff tag. A progress strip tracks the request.";
+  "An isometric bench that shows how Cruise works. Messages ride a conveyor under a small judge. The judge moves a three-notch effort fader up or down from the app's own setting, never past a top stop. A ten-cell context gauge fills up and, at 60% and 80%, lights its warning lamps and raises a /handoff tag. A progress strip tracks the request.";
 
 for (const theme of ["dark", "light"]) {
   const style = `<style>

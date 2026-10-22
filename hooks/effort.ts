@@ -1,6 +1,6 @@
 // Effort steering: a small judge picks the reasoning effort for each prompt, and the pick is applied to the
-// model requests of that work. It only ever goes down from the effort the person set in the app, and it stops
-// by itself if a change ever makes the prompt cache be rewritten.
+// model requests of that work. It moves up or down from the effort the person set in the app (or only down, if
+// they ask), and it stops by itself if a change ever makes the prompt cache be rewritten.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, PluginOptions } from 'claude-code'
 
@@ -15,6 +15,7 @@ import {
   endsOnQuestion,
   isFollowUp,
   isSteerable,
+  allowedTop,
   judgeQuestion,
   judgeSystem,
   layaState,
@@ -22,9 +23,11 @@ import {
   liftHighest,
   parseHaiku,
   parseJev,
+  reachFrom,
   settle,
+  steerFrom,
 } from './effort-rules'
-import type { Usage, Verdict } from './effort-rules'
+import type { Steer, Usage, Verdict } from './effort-rules'
 
 export type JudgeMode = 'off' | 'haiku' | 'jev' | 'laya'
 
@@ -53,18 +56,19 @@ const INITIAL: EffortState = {
 
 export const effortState = atom({ plugin: 'cruise', key: 'effort' } as const, INITIAL)
 
+// On with the Haiku judge unless the person chose otherwise (the setting's own default is `haiku` too).
 export function judgeMode(options: PluginOptions): JudgeMode {
   const mode = options.effort
-  return mode === 'haiku' || mode === 'jev' || mode === 'laya' ? mode : 'off'
+  return mode === 'off' || mode === 'jev' || mode === 'laya' ? mode : 'haiku'
 }
 
-export type Judge = { mode: JudgeMode; url: string; key: string; model: string }
+export type Judge = { mode: JudgeMode; url: string; key: string; model: string; steer: Steer; reach: Effort }
 
 export function judgeFrom(options: PluginOptions): Judge {
   const mode = judgeMode(options)
   const url = typeof options.judgeUrl === 'string' && options.judgeUrl.trim() ? options.judgeUrl.trim() : mode === 'laya' ? LAYA_URL : JEV_URL
   const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
-  return { mode, url, key: text(options.judgeKey), model: text(options.judgeModel) }
+  return { mode, url, key: text(options.judgeKey), model: text(options.judgeModel), steer: steerFrom(options.steer), reach: reachFrom(options.topLevel) }
 }
 
 // A prompt the person typed is judged on the next main-loop request. Commands and system notes are not prompts.
@@ -82,12 +86,12 @@ async function lastReplyAsked($: EngineInterface): Promise<boolean> {
 
 type Judged = { verdict?: Verdict; tokens: number }
 
-async function askHaiku($: EngineInterface, text: string, top: Effort, current: Effort | null, afterQuestion: boolean): Promise<Judged> {
+async function askHaiku($: EngineInterface, judge: Judge, text: string, top: Effort, app: Effort, current: Effort | null, afterQuestion: boolean): Promise<Judged> {
   const levels = levelsUpTo(top)
   const r = await $.model.complete({
-    model: HAIKU_MODEL,
+    model: judge.model || HAIKU_MODEL,
     system: judgeSystem(levels),
-    prompt: judgeQuestion(text, top, current, afterQuestion),
+    prompt: judgeQuestion(text, top, current, afterQuestion, app),
     maxTokens: JUDGE_MAX_TOKENS,
     effort: 'low',
     timeoutMs: HAIKU_TIMEOUT_MS,
@@ -135,9 +139,9 @@ async function askHttp($: EngineInterface, judge: Judge, text: string, top: Effo
   return { verdict: { effort: liftHighest(effort, top), why: parsed.why, sure: parsed.probs ? undefined : parsed.sure }, tokens }
 }
 
-async function ask($: EngineInterface, judge: Judge, text: string, top: Effort, current: Effort | null, afterQuestion: boolean): Promise<Judged> {
+async function ask($: EngineInterface, judge: Judge, text: string, top: Effort, app: Effort, current: Effort | null, afterQuestion: boolean): Promise<Judged> {
   try {
-    return judge.mode === 'haiku' ? await askHaiku($, text, top, current, afterQuestion) : await askHttp($, judge, text, top, current, afterQuestion)
+    return judge.mode === 'haiku' ? await askHaiku($, judge, text, top, app, current, afterQuestion) : await askHttp($, judge, text, top, current, afterQuestion)
   } catch {
     // A judge that fails or is slow never holds the prompt: the request goes out at the app's effort.
     return { tokens: 0 }
@@ -145,7 +149,7 @@ async function ask($: EngineInterface, judge: Judge, text: string, top: Effort, 
 }
 
 // Settles the pending prompt into a pick (once: it is cleared before the judge is asked): a short follow-up keeps the pick, anything else asks the judge.
-async function decide($: EngineInterface, judge: Judge, top: Effort): Promise<void> {
+async function decide($: EngineInterface, judge: Judge, top: Effort, app: Effort): Promise<void> {
   const state = await read($, effortState)
   const pending = state.pending
   if (!pending) return
@@ -155,7 +159,7 @@ async function decide($: EngineInterface, judge: Judge, top: Effort): Promise<vo
     await update($, effortState, s => ({ ...s, kept: s.kept + 1 }))
     return
   }
-  const got = await ask($, judge, pending.text, top, state.pick, pending.afterQuestion)
+  const got = await ask($, judge, pending.text, top, app, state.pick, pending.afterQuestion)
   if (!got.verdict) {
     await update($, effortState, s => ({ ...s, failed: s.failed + 1, judgeTokens: s.judgeTokens + got.tokens }))
     return
@@ -179,10 +183,11 @@ export async function effortFor($: EngineInterface, e: { model: string; effort?:
   const before = await read($, effortState)
   if (before.paused) return undefined
   if (before.appSeen !== app) await update($, effortState, s => ({ ...s, appSeen: app }))
-  await decide($, judge, app)
+  const top = allowedTop(app, judge.steer, judge.reach)
+  await decide($, judge, top, app)
   const { pick } = await read($, effortState)
   if (!pick) return undefined
-  const effort = clampTo(pick, app)
+  const effort = clampTo(pick, top)
   return effort === app ? undefined : effort
 }
 
@@ -211,17 +216,19 @@ export async function effortBand($: EngineInterface): Promise<string | null> {
   return effortLine(await read($, effortState))
 }
 
+// The effort part of the /cruise panel.
 export async function report($: EngineInterface, options: PluginOptions): Promise<string> {
-  const mode = judgeMode(options)
+  const judge = judgeFrom(options)
   const s = await read($, effortState)
-  if (mode === 'off') return 'Cruise effort steering is off (setting "effort").'
+  if (judge.mode === 'off') return 'Effort steering: off (setting "effort")'
   const picks = Object.entries(s.picks).map(([k, n]) => `${k} ${n}`).join(', ') || 'none yet'
+  const way = judge.steer === 'down' ? 'only lower than your app\'s effort' : `up or down from your app's effort (up to ${judge.reach})`
   return [
-    `Cruise effort steering: judge ${mode}${s.paused ? ` (PAUSED: ${s.paused})` : ''}`,
-    `Ceiling (your app setting): ${s.appSeen ?? 'not seen yet'}  ·  current pick: ${s.pick ?? 'none yet'}${s.why ? ` (${s.why})` : ''}`,
-    `Verdicts: ${s.judged}  ·  follow-ups that kept the pick: ${s.kept}  ·  judge failures: ${s.failed}`,
-    `Picked: ${picks}`,
-    `Requests sent at a lower effort than the app's: ${s.steered}`,
-    `Judge tokens: ${s.judgeTokens}${mode === 'haiku' ? ' (billed to your Claude account)' : ''}`,
+    `Effort steering: judge ${judge.mode}${judge.model ? ` (${judge.model})` : ''}, ${way}${s.paused ? `  ·  PAUSED: ${s.paused}` : ''}`,
+    `  App effort: ${s.appSeen ?? 'not seen yet'}  ·  current pick: ${s.pick ?? 'none yet'}${s.why ? ` (${s.why})` : ''}`,
+    `  Verdicts: ${s.judged}  ·  follow-ups that kept the pick: ${s.kept}  ·  judge failures: ${s.failed}`,
+    `  Picked: ${picks}`,
+    `  Requests sent at a different effort than the app's: ${s.steered}`,
+    `  Judge tokens: ${s.judgeTokens}${judge.mode === 'haiku' ? ' (billed to your Claude account)' : ''}`,
   ].join('\n')
 }

@@ -27,8 +27,21 @@ export const isEffort = (value: unknown): value is Effort => EFFORTS.includes(va
 // Only a model that takes an effort setting, and only a family where changing it keeps the cache.
 export const isSteerable = (model: string, appEffort: unknown): appEffort is Effort => isEffort(appEffort) && STEERABLE.test(model)
 
-// The levels the judge may choose: from low up to the effort the person set in the app, never above it.
-// A level the app itself uses is one the model accepts, and Cruise can then never cost more than the person's own choice.
+// How far the judge may move the effort: `both` up and down from the app's effort, `down` only lower.
+export type Steer = 'both' | 'down'
+export const DEFAULT_REACH: Effort = 'high'
+
+export const steerFrom = (value: unknown): Steer => (value === 'down' ? 'down' : 'both')
+export const reachFrom = (value: unknown): Effort => (isEffort(value) ? value : DEFAULT_REACH)
+
+// The highest level the judge may pick. Going down only: the app's own effort. Going both ways: the higher of the app's
+// effort and `reach` (the person's "top level" setting), so a hard prompt can be lifted above a medium default.
+export function allowedTop(app: Effort, steer: Steer, reach: Effort): Effort {
+  if (steer === 'down') return app
+  return EFFORTS.indexOf(reach) > EFFORTS.indexOf(app) ? reach : app
+}
+
+// The levels the judge may choose, from low up to `top`.
 export const levelsUpTo = (top: Effort): readonly Effort[] => EFFORTS.slice(0, EFFORTS.indexOf(top) + 1)
 
 // The Jev and Laya judges offer at most three levels (what a Laya head is trained on). Their highest label means
@@ -49,7 +62,7 @@ export const endsOnQuestion = (reply: string): boolean => reply.trim().slice(-40
 
 export const criteriaFor = (levels: readonly Effort[]): Record<string, string> => Object.fromEntries(levels.map(l => [l, CRITERIA[l]]))
 
-// The band's effort line: the pick, the app's ceiling when different, and a pause notice.
+// The band's effort line: the pick, the app's own effort when different, and a pause notice.
 export function effortLine(state: EffortState): string | null {
   if (state.paused) return 'Effort steering paused: the prompt cache did not survive a change'
   if (!state.pick) return null
@@ -59,7 +72,7 @@ export function effortLine(state: EffortState): string | null {
 
 export function judgeSystem(levels: readonly Effort[]): string {
   const list = levels.map(l => `- ${l}: ${CRITERIA[l]}`).join('\n')
-  return `You choose the reasoning effort an agentic assistant (it reads files, runs tools and edits things, not only code) should use for the user's next message. Pick the lowest effort that will still do the job well; a wrong answer costs more than the saving.
+  return `You choose the reasoning effort an agentic assistant (it reads files, runs tools and edits things, not only code) should use for the user's next message. Pick the effort the job needs: the lowest that will still do it well, and a higher one when the job is hard or a mistake would be costly. A wrong answer costs more than the saving.
 
 Levels you may choose:
 ${list}
@@ -72,9 +85,10 @@ If the person asks for deep thought ("think hard", "be thorough"), pick the high
 Reply with JSON only: {"effort":"<level>","sure":0.0-1.0 how sure you are,"why":"at most 6 words, in the user's language"}`
 }
 
-export function judgeQuestion(text: string, top: Effort, current: Effort | null, afterQuestion: boolean): string {
+export function judgeQuestion(text: string, top: Effort, current: Effort | null, afterQuestion: boolean, app?: Effort): string {
   return [
     `Current level: ${current ?? 'none yet'}`,
+    ...(app ? [`Level the app uses by default: ${app}`] : []),
     `Highest level allowed: ${top}`,
     `The assistant's last reply ended with a question: ${afterQuestion ? 'yes' : 'no'}`,
     '',
