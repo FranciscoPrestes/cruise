@@ -83,19 +83,22 @@ export function judgeQuestion(text: string, top: Effort, current: Effort | null,
   ].join('\n')
 }
 
-export type Verdict = { effort: Effort; sure?: number; why: string }
+// What a Laya head is trained on: train/build_dataset.py writes exactly these two lines for every training row, so
+// the text sent at inference matches the text the head learned from.
+export const layaState = (text: string, afterQuestion: boolean): string =>
+  `last reply asked a question: ${afterQuestion ? 'yes' : 'no'}\nmessage: ${text.slice(0, 2000)}`
+
+export type Verdict = { effort: Effort; sure?: number; why: string; probs?: Readonly<Record<string, number>> }
 
 // Reads {"effort":..., "sure":..., "why":...} out of a reply, or nothing when it holds no allowed level.
+// Haiku sometimes closes the object badly (`"why":"...","}`), which JSON.parse rejects: on real prompts that lost about
+// one verdict in five. So the fields are read one by one, and a malformed tail does not matter.
 export function parseHaiku(text: string, levels: readonly Effort[]): Verdict | undefined {
-  const json = /\{[\s\S]*\}/.exec(text)?.[0]
-  if (!json) return undefined
-  try {
-    const out = JSON.parse(json) as { effort?: unknown; sure?: unknown; why?: unknown }
-    if (!isEffort(out.effort) || !levels.includes(out.effort)) return undefined
-    return { effort: out.effort, sure: typeof out.sure === 'number' ? out.sure : undefined, why: typeof out.why === 'string' ? out.why.slice(0, 60) : '' }
-  } catch {
-    return undefined
-  }
+  const effort = /"effort"\s*:\s*"([a-z]+)"/.exec(text)?.[1]
+  if (!isEffort(effort) || !levels.includes(effort)) return undefined
+  const sure = /"sure"\s*:\s*([0-9]*\.?[0-9]+)/.exec(text)?.[1]
+  const why = /"why"\s*:\s*"([^"]*)/.exec(text)?.[1]
+  return { effort, sure: sure === undefined ? undefined : Number(sure), why: (why ?? '').slice(0, 60) }
 }
 
 // The Jev wire format (also spoken by a Laya server): answers.effort.choice plus a confidence.
@@ -110,10 +113,25 @@ export function parseJev(text: string, levels: readonly Effort[]): Verdict | und
     // A probability, whichever field carries it: `confidence` means different things in Jev and Laya (Laya's is how
     // concentrated the distribution is, so a clear 51% pick reads 0.23 there).
     const sure = answers?.effort?.answer_confidence ?? answers?.effort?.probabilities?.[choice] ?? answers?.effort?.confidence
-    return { effort: choice, sure: typeof sure === 'number' ? sure : undefined, why: typeof sure === 'number' ? `${Math.round(sure * 100)}% sure` : '' }
+    const probs = answers?.effort?.probabilities
+    return { effort: choice, sure: typeof sure === 'number' ? sure : undefined, why: typeof sure === 'number' ? `${Math.round(sure * 100)}% sure` : '', probs }
   } catch {
     return undefined
   }
+}
+
+// How careful the Jev and Laya judges are. A wrong "low" costs more than a missed saving, so the top level is kept as soon
+// as it is plausible, and "low" needs real confidence. Tuned on a Laya trained on our own sessions (see the README): it
+// cut the "too low" errors from 32% to 9% of held-out prompts while still steering about half of them below the top.
+export const TOP_PLAUSIBLE = 0.25
+export const LOW_NEEDS = 0.6
+
+export function cautiousPick(probs: Readonly<Record<string, number>>, levels: readonly Effort[]): Effort {
+  const top = levels[levels.length - 1] ?? 'low'
+  if (levels.length === 1 || (probs[top] ?? 0) >= TOP_PLAUSIBLE) return top
+  const rest = levels.slice(0, -1)
+  const lowest = rest[0] ?? top
+  return rest.length === 1 || (probs[lowest] ?? 0) >= LOW_NEEDS ? lowest : (rest[1] ?? lowest)
 }
 
 // A judge that is unsure of its own answer leaves the current level alone.

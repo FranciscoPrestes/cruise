@@ -9,6 +9,7 @@ import {
   cacheRewritten,
   HTTP_TOP,
   clampTo,
+  cautiousPick,
   criteriaFor,
   effortLine,
   endsOnQuestion,
@@ -16,6 +17,7 @@ import {
   isSteerable,
   judgeQuestion,
   judgeSystem,
+  layaState,
   levelsUpTo,
   liftHighest,
   parseHaiku,
@@ -101,12 +103,15 @@ async function askHttp($: EngineInterface, judge: Judge, text: string, top: Effo
   // Only the next message and two small facts leave the machine: never the conversation.
   const body = JSON.stringify({
     model: judge.model || (judge.mode === 'laya' ? 'jev-1' : 'jev-latest'),
-    state: {
-      task: 'Choose the lowest reasoning effort an agentic assistant needs for the next user message. Judge scope and amount of work. A short follow-up keeps the current effort.',
-      current_effort: current,
-      last_reply_ended_with_question: afterQuestion,
-      next_message: text.slice(0, 2000),
-    },
+    state:
+      judge.mode === 'laya'
+        ? layaState(text, afterQuestion)
+        : {
+            task: 'Choose the lowest reasoning effort an agentic assistant needs for the next user message. Judge scope and amount of work. A short follow-up keeps the current effort.',
+            current_effort: current,
+            last_reply_ended_with_question: afterQuestion,
+            next_message: text.slice(0, 2000),
+          },
     questions: { effort: { type: 'choice', instructions: 'Which effort fits the next message?', criteria: criteriaFor(levels) } },
   })
   const res = await Promise.race([
@@ -123,8 +128,11 @@ async function askHttp($: EngineInterface, judge: Judge, text: string, top: Effo
   } catch {
     // No usage in the reply: counted as 0.
   }
-  const verdict = parseJev(res.text, levels)
-  return { verdict: verdict && { ...verdict, effort: liftHighest(verdict.effort, top) }, tokens }
+  const parsed = parseJev(res.text, levels)
+  if (!parsed) return { tokens }
+  // With the full distribution, decide cautiously (and the pick is final: no separate "unsure" gate). Without it, the answer's own choice.
+  const effort = parsed.probs ? cautiousPick(parsed.probs, levels) : parsed.effort
+  return { verdict: { effort: liftHighest(effort, top), why: parsed.why, sure: parsed.probs ? undefined : parsed.sure }, tokens }
 }
 
 async function ask($: EngineInterface, judge: Judge, text: string, top: Effort, current: Effort | null, afterQuestion: boolean): Promise<Judged> {

@@ -145,7 +145,27 @@ To remove everything: stop the server, delete `~/.local/share/cruise/laya`, remo
 - Laya's `confidence` field is how concentrated its distribution is, not a probability. Cruise reads the probability of the answer instead; a threshold copied from Jev would misfire (it reads 0.23 for a 51% pick). With the probability, the threshold barely changes the result up to 0.4.
 - Training on the effortless examples works mechanically but is not enough on its own. We trained on the 55 non-held-out cases for 12 epochs (about 3.4 minutes on that Mac, a 1.6 GB checkpoint) and tested on the 20 held-out: exact-match accuracy went from 40% to 60%, but the model became overconfident (mean confidence 0.62 to 0.97, calibration error up). Fifty-five examples overfit. A useful Laya needs hundreds of examples, ideally from your own work, in Portuguese, and labelled by a stronger judge. The recipe is in `skills/setup-laya/SKILL.md`.
 
-**Recommendation today:** use `haiku` if you want effort steering now. Treat `laya` as experimental until it has been trained on more examples and re-measured; the local setup works and is safe (it never goes above your effort, and it stops by itself if the cache breaks), but its choices are not yet reliable.
+#### After training on your own sessions
+
+`train/` turns your own Claude Code sessions into a training set (see `train/README.md`): every prompt you typed, labelled low / medium / high in hindsight by a Claude model that also sees how much work the prompt set off. We ran it on 401 sessions of one person: 3,025 prompts, 2,795 labelled by Haiku 5.5 for under US$ 0.30 (and again by Sonnet 5.5 for about US$ 4, to check the labels). We fine-tuned `laya-multilingual` on 2,175 of them and tested on 620 prompts from 71 sessions it never saw (the split is by session, so nothing leaks). The held-out prompts were then scored against the same labels:
+
+| Judge on the 620 held-out prompts | Right | Too low | Too high | Steered below the top level |
+| --- | --- | --- | --- | --- |
+| Haiku 5.5, as `effort: haiku` runs it | 52% | 22% | 25% | |
+| Laya before training | 41% | | | |
+| Laya after training, plain best guess | 53% | 34% | 13% | |
+| **Laya after training, Cruise's cautious rule** | 39% | **9%** | 52% | **51%** |
+
+On the effortless prompts the trained model never saw: English 67% right, 8 of 75 too low (before: 60% and 19); Portuguese 68% right, 7 too low (before: 61% and 21). It answers in about 25 ms, locally, at no cost and with nothing leaving the machine. What this does and does not say:
+
+- **Trained Laya matches Haiku on accuracy; it does not beat it.** About half of the prompts is also all that Haiku gets right, because the labels themselves are noisy: Haiku and Sonnet, labelling the same prompts, agree on only 70% (97% within one level), and Haiku asks for more effort than Sonnet in 730 of the 848 disagreements. These labels are an opinion about the effort a prompt needs, not a measurement of answer quality, which nothing here measures.
+- **The cautious rule is what makes it safe to use.** A wrong "low" costs more than a missed saving, so with a probability for each level Cruise keeps the top level as soon as it has a 25% chance (`TOP_PLAUSIBLE`) and asks for 60% confidence before choosing "low" (`LOW_NEEDS`). On the held-out prompts that cut "too low" from 34% to 9% (5% against Sonnet's labels, 6% against the prompts both models agree on), at the price of steering about half the prompts instead of most. The thresholds were tuned on this one model: re-tune them (`train/score_laya.py`) if you train your own.
+- **Savings are the open question.** Steering half the prompts below your effort saves something only if those prompts were over-served at your effort. Use `/cruise` on real work before drawing conclusions.
+- **Training is cheap but easy to get wrong on a busy laptop.** Fine-tuning with the defaults (batch of 8, up to 1,024 tokens) filled the 34 GB Mac's memory and swap and had to be killed. Training only the head left the model at chance (37%). The settings that worked: `--micro-batch 2 --grad-accum 16 --max-len 256 --encoder-lr 2e-5 --head-lr 2e-4 --epochs 2`, at low priority (`nice -n 15`), about 10 minutes for 2,175 prompts.
+- **The data and the model are private.** They contain your prompts. They live under `~/.local/share/cruise/laya-training` (mode 700), never in this repository, and must not be shared.
+- **A bug the real prompts exposed.** Haiku sometimes closes its answer badly (`"why":"...","}`), and Cruise used to throw such answers away: on real prompts about one verdict in five was lost (the request went out at your own effort, safe but with no saving). The reader now takes the fields one by one.
+
+**Recommendation today:** `haiku` is the simplest way to start. `laya` is worth it if you want effort steering for free, offline and private **and** you are willing to train it on your own sessions first (untrained it is not reliable, least of all in Portuguese). Either way, watch `/cruise` for a few days.
 
 ## Context warnings and the progress band
 
@@ -181,9 +201,10 @@ Recommended flow when the context warning appears: finish the step, `/handoff`, 
 
 ```bash
 claude plugin validate .      # manifest, marketplace and hooks
-claude plugin test .          # 80 tests
+claude plugin test .          # 86 tests
 claude --plugin-dir .         # run the plugin straight from this folder
 python3 eval/judge_eval.py --url <judge url> --mode laya   # score a judge on the labelled prompts
+# train/ turns your own sessions into a training set for Laya: see train/README.md
 ```
 
 Changes go in through a merge request. Raise `version` in `.claude-plugin/plugin.json` when you change behaviour, so the update reaches your colleagues.

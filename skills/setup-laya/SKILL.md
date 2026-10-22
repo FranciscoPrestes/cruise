@@ -68,25 +68,29 @@ Measured with `eval/judge_eval.py` (in this plugin's folder; find it under `~/.c
 | English, `judge-cases.json` | automatic / English / multilingual | 75% / 73% / 60% | 7 / 7 / 19 of 75 |
 | Portuguese, `judge-cases-pt.json` | automatic / English / multilingual | 60% / 65% / 61% | 22 / 9 / 21 of 75 |
 
-For comparison the effortless project reports 93% for Haiku and 99% for Jev on its set. **Without training, Laya is not good enough to trust**, in Portuguese least of all. Say this to the user. Run the evaluation yourself to confirm on their machine:
+For comparison the effortless project reports 93% for Haiku and 99% for Jev on its set. **Without training, Laya is not good enough to trust**, in Portuguese least of all. Say this to the user, and offer the training below. Run the evaluation yourself to confirm on their machine:
 ```bash
 python3 eval/judge_eval.py --url http://127.0.0.1:<PORT>/v1/systemone --mode laya --model multilingual --cases eval/judge-cases-pt.json
 ```
 
-## Training Laya on more examples (optional, ask first)
+## Training Laya on the user's own sessions (optional, ask first)
 
-`laya-train` fine-tunes a checkpoint on a CSV with two columns, `text` and `label`. For Cruise, `text` is the same three lines Cruise sends (current effort, whether the last reply asked a question, the message) and `label` is the cheapest acceptable effort (`low`, `medium` or `high`):
+Untrained Laya is weak; trained on the person's own sessions it matched the Haiku judge on accuracy in our test and, with Cruise's cautious rule, made far fewer "too low" mistakes (see the README). The pipeline is in this plugin's `train/` folder (find it under `~/.claude/plugins/cache/cruise/cruise/*/train/`; read `train/README.md` first). Be explicit with the user about three things before starting:
 
-```text
-text,label
-"current effort: high
-last reply asked a question: no
-message: rename the variable usr to user in auth.ts",low
+1. **Privacy.** It reads every prompt they typed in `~/.claude/projects`. The data and the trained model are written only under `~/.local/share/cruise/laya-training` (mode 700), never into a repository, and must never be shared. The labelling step sends the prompts to Anthropic through the user's own `claude -p` login, as normal use does (about US$ 0.30 for 3,000 prompts with Haiku). Prompts that look like they hold a key or token are dropped.
+2. **Memory.** Do not train with the defaults on a laptop in use: a batch of 8 with long texts filled a 34 GB Mac's memory and swap. Use the lean settings below, at low priority, and watch `sysctl vm.swapusage`; stop if swap grows.
+3. **Honesty about the result.** The labels are a model's opinion of the effort a prompt needs, not a measurement of answer quality. Say what the held-out numbers show and that real savings are only known after a few days of `/cruise`.
+
+Steps: `extract_prompts.py`, `label_prompts.py`, `build_dataset.py`, `haiku_baseline.py` (the bar to reach), then:
+
+```bash
+nice -n 15 "$BASE/venv/bin/laya-train" --data ~/.local/share/cruise/laya-training/train.csv --eval ~/.local/share/cruise/laya-training/eval.csv \
+  --out ~/.local/share/cruise/laya-training/model --base convaiinnovations/laya-multilingual --question-id effort \
+  --instructions "Which reasoning effort fits the next message?" \
+  --epochs 2 --micro-batch 2 --grad-accum 16 --max-len 256 --encoder-lr 2e-5 --head-lr 2e-4
 ```
 
-What was tried: the 55 non-held-out prompts of `judge-cases.json` as training data and the 20 held-out as the test (`laya-train --data train.csv --eval eval.csv --out out --base convaiinnovations/laya --question-id effort --instructions "Which reasoning effort fits the next message?" --epochs 12 --micro-batch 8 --grad-accum 1`). It took about 3.4 minutes on that Mac and produced a 1.6 GB checkpoint. Exact-match accuracy on the 20 held-out went from 40% to 60%, but the model became overconfident (mean confidence 0.62 to 0.97, calibration error up). **55 examples are not enough.** A useful run needs hundreds of examples, in Portuguese as well, from the user's own prompts, labelled by a stronger judge (for example Haiku, then a person's spot check), and always scored on prompts that were not trained on.
-
-To serve a trained checkpoint: set `LAYA_EXTRA_MODELS='{"cruise-effort": "/path/to/out"}'` in `start.sh`, restart, and set `judgeModel` = `cruise-effort`. The trained checkpoint's `confidence` is not a probability either; Cruise reads `answer_confidence`.
+Serve it by adding `LAYA_EXTRA_MODELS='{"cruise-effort": "<HOME>/.local/share/cruise/laya-training/model"}'` to `start.sh`, restart, and set Cruise's `judgeModel` = `cruise-effort`. Score it with `train/score_laya.py` and `eval/judge_eval.py` before trusting it. What we measured: held-out accuracy 41% to 54%, calibration error 0.23 to 0.04, about 25 ms per decision.
 
 ## Remove everything
 

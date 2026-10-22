@@ -231,3 +231,32 @@ test('laya: with no checkpoint named the server routes by language', { options: 
   await run($)
   expect(JSON.parse(s.calls[0]?.body ?? '{}').model).toBe('jev-1')
 })
+
+test('laya gets the exact two-line text its head is trained on', { options: { effort: 'laya' } }, async ($, on) => {
+  const s = stubs(on, { fetchBody: JSON.stringify({ answers: { effort: { choice: 'low', confidence: 0.9 } } }) })
+  await $.prompt.submit({ text: ASK })
+  await run($)
+  expect(JSON.parse(s.calls[0]?.body ?? '{}').state).toBe(`last reply asked a question: no\nmessage: ${ASK}`)
+})
+
+test('jev gets a structured state', { options: { effort: 'jev' } }, async ($, on) => {
+  const s = stubs(on, { fetchBody: JSON.stringify({ answers: { effort: { choice: 'low', confidence: 0.9 } } }) })
+  await $.prompt.submit({ text: ASK })
+  await run($)
+  expect(JSON.parse(s.calls[0]?.body ?? '{}').state.next_message).toBe(ASK)
+})
+
+test('laya: an unsure "low" becomes medium, and a plausible "high" is kept', { options: { effort: 'laya' } }, async ($, on) => {
+  const unsureLow = JSON.stringify({ answers: { effort: { choice: 'low', probabilities: { low: 0.5, medium: 0.42, high: 0.08 } } } })
+  const s = stubs(on, { fetchBody: unsureLow })
+  await $.prompt.submit({ text: ASK })
+  await run($)
+  expect(s.sent).toEqual(['medium'])
+})
+
+test('laya: a plausible "high" keeps the app effort even when "low" leads', { options: { effort: 'laya' } }, async ($, on) => {
+  const s = stubs(on, { fetchBody: JSON.stringify({ answers: { effort: { choice: 'low', probabilities: { low: 0.6, medium: 0.1, high: 0.3 } } } }) })
+  await $.prompt.submit({ text: ASK })
+  await run($)
+  expect(s.sent).toEqual(['high'])
+})

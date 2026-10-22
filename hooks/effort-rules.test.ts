@@ -2,6 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import {
   cacheRewritten,
+  cautiousPick,
   clampTo,
   effortLine,
   endsOnQuestion,
@@ -48,6 +49,16 @@ test('a Haiku reply is read, even inside prose', () => {
   const levels = levelsUpTo('high')
   expect(parseHaiku('{"effort":"low","sure":0.9,"why":"tiny edit"}', levels)).toEqual({ effort: 'low', sure: 0.9, why: 'tiny edit' })
   expect(parseHaiku('Sure! {"effort":"medium","why":"x"} hope that helps', levels)?.effort).toBe('medium')
+})
+
+test('a reply Haiku closed badly is still read (it lost one verdict in five on real prompts)', () => {
+  const levels = levelsUpTo('high')
+  expect(parseHaiku('{"effort":"medium","sure":0.6,"why":"Scoped git log review, several tool calls","}', levels)).toEqual({
+    effort: 'medium',
+    sure: 0.6,
+    why: 'Scoped git log review, several tool calls',
+  })
+  expect(parseHaiku('```json\n{"effort":"low","sure":.8}\n```', levels)?.effort).toBe('low')
 })
 
 test('a level above the ceiling or garbage is refused', () => {
@@ -105,4 +116,15 @@ test('the highest label of a three-level judge keeps a higher app effort', () =>
   expect(liftHighest('high', 'max')).toBe('max')
   expect(liftHighest('high', 'high')).toBe('high')
   expect(liftHighest('medium', 'xhigh')).toBe('medium')
+})
+
+test('the cautious pick keeps the top level once it is plausible and asks for confidence before "low"', () => {
+  const three = levelsUpTo('high')
+  expect(cautiousPick({ low: 0.8, medium: 0.15, high: 0.05 }, three)).toBe('low')
+  expect(cautiousPick({ low: 0.5, medium: 0.4, high: 0.1 }, three)).toBe('medium')
+  expect(cautiousPick({ low: 0.6, medium: 0.1, high: 0.3 }, three)).toBe('high')
+  expect(cautiousPick({ low: 0.1, medium: 0.6, high: 0.3 }, three)).toBe('high')
+  expect(cautiousPick({ low: 0.9, medium: 0.1 }, levelsUpTo('medium'))).toBe('low')
+  expect(cautiousPick({ low: 0.5, medium: 0.5 }, levelsUpTo('medium'))).toBe('medium')
+  expect(cautiousPick({ low: 1 }, levelsUpTo('low'))).toBe('low')
 })

@@ -31,6 +31,8 @@ TASK = (
     "Judge scope and amount of work. A short follow-up keeps the current effort."
 )
 UNSURE_BELOW = 0.5
+TOP_PLAUSIBLE = 0.25  # keep in step with TOP_PLAUSIBLE / LOW_NEEDS in hooks/effort-rules.ts
+LOW_NEEDS = 0.6
 FOLLOW_UP_MAX_CHARS = 12
 FOLLOW_UP_MAX_WORDS = 2
 
@@ -45,17 +47,27 @@ def is_follow_up(text):
     return 0 < len(t) <= FOLLOW_UP_MAX_CHARS and len(t.split()) <= FOLLOW_UP_MAX_WORDS
 
 
+def cautious_pick(probs, levels):
+    # How Cruise decides with a full distribution: keep the top level once it is plausible; ask for confidence before "low".
+    top = levels[-1]
+    if len(levels) == 1 or probs.get(top, 0) >= TOP_PLAUSIBLE:
+        return top
+    rest = levels[:-1]
+    return rest[0] if len(rest) == 1 or probs.get(rest[0], 0) >= LOW_NEEDS else rest[1]
+
+
 def ask(url, key, mode, model, message, top, current, after_question, timeout):
     # Jev and Laya heads offer at most low / medium / high; "high" then means "as hard as it gets".
     levels = EFFORTS[: min(EFFORTS.index(top), EFFORTS.index("high")) + 1]
+    # Laya heads are trained on a two-line text (train/build_dataset.py); Jev takes a structured state.
+    state = (
+        f"last reply asked a question: {'yes' if after_question else 'no'}\nmessage: {message[:2000]}"
+        if mode == "laya"
+        else {"task": TASK, "current_effort": current, "last_reply_ended_with_question": after_question, "next_message": message[:2000]}
+    )
     body = {
         "model": model or ("jev-1" if mode == "laya" else "jev-latest"),
-        "state": {
-            "task": TASK,
-            "current_effort": current,
-            "last_reply_ended_with_question": after_question,
-            "next_message": message[:2000],
-        },
+        "state": state,
         "questions": {
             "effort": {
                 "type": "choice",
@@ -81,6 +93,9 @@ def ask(url, key, mode, model, message, top, current, after_question, timeout):
     p = effort.get("answer_confidence")
     if p is None:
         p = (effort.get("probabilities") or {}).get(choice, effort.get("confidence"))
+    probs = effort.get("probabilities")
+    if probs:
+        return cautious_pick(probs, levels), None, ms  # the distribution decides; no separate unsure gate
     return choice, p, ms
 
 
