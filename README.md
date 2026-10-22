@@ -1,6 +1,23 @@
-# Cruise
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img src="assets/logo-light.svg" alt="Cruise: cruise control for Claude Code" width="440">
+  </picture>
+</p>
 
-**Cruise control for Claude Code**, by Francisco Prestes. One plugin, three jobs, each of which you can switch off:
+<p align="center">
+  <b>Context warnings, a progress band and per-prompt effort steering for Claude Code.</b><br>
+  <a href="#install">Install</a> · <a href="#how-it-works">How it works</a> · <a href="#effort-steering">Effort steering</a> · <a href="#settings">Settings</a> · <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue" align="top">
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/cruise-bench-dark.svg">
+    <img src="assets/cruise-bench-light.svg" alt="An isometric bench showing how Cruise works: messages pass under a small judge, which sets an effort fader that never passes the ceiling; a context gauge lights its 75% and 90% warnings and raises a /handoff tag." width="860">
+  </picture>
+</p>
+
+One plugin, three jobs, each of which you can switch off:
 
 | | What it does | On by default |
 | --- | --- | --- |
@@ -15,6 +32,15 @@ Effort low (app: high) · tiny edit
 Running in background: 2 agents, 1 command
 ```
 
+## How it works
+
+The animation above is the whole plugin, one stage at a time:
+
+1. **You send a message.** It is the only thing Cruise looks at.
+2. **A small judge reads that message**, never your conversation: just the text, whether the last reply ended with a question, and the effort now in use. The judge is `haiku` (your own Claude login), `jev` (a hosted API) or `laya` (a model on your machine).
+3. **It sets the effort the job needs.** A typo fix goes to `low`, a normal edit to `medium`, a repository-wide review stays at `high`. Cruise only ever steers **down** from the effort you set in the app: the ceiling stop is your own setting, and a judge that fails or is unsure leaves it alone.
+4. **It watches the context.** At 75% and 90% it warns you and points to `/handoff`, so a long session ends with a clean hand-off rather than a quiet loss of quality. A progress band above the prompt keeps the current request and plan step in view.
+
 ## Install
 
 At the Claude Code prompt:
@@ -24,7 +50,7 @@ At the Claude Code prompt:
 /plugin install cruise@prestes
 ```
 
-Then run `/reload-plugins` or open a new session. Inside the company you can also install from the internal GitLab (`/plugin marketplace add https://git.example.invalid/group/cruise.git`; needs Git configured for `git.example.invalid`): same plugin, same marketplace name.
+Then run `/reload-plugins` or open a new session.
 
 The installer may say some options are "not yet set". That is fine: every option has a default. Change any of them with `/plugin configure cruise@prestes`.
 
@@ -207,7 +233,7 @@ python3 eval/judge_eval.py --url <judge url> --mode laya   # score a judge on th
 # train/ turns your own sessions into a training set for Laya: see train/README.md
 ```
 
-Changes go in through a merge request. Raise `version` in `.claude-plugin/plugin.json` when you change behaviour, so the update reaches your colleagues.
+Pull requests are welcome. Raise `version` in `.claude-plugin/plugin.json` when you change behaviour, so the update reaches everyone who installed it.
 
 ## Credits
 
