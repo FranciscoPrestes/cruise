@@ -20,13 +20,13 @@ Running in background: 2 agents, 1 command
 At the Claude Code prompt:
 
 ```text
-/plugin marketplace add https://git.example.invalid/group/cruise.git
-/plugin install cruise@nt
+/plugin marketplace add FranciscoPrestes/cruise
+/plugin install cruise@prestes
 ```
 
-Then run `/reload-plugins` or open a new session. The repository is visible to everyone logged in to the internal GitLab, and you need Git configured to clone from `git.example.invalid` (SSH key or HTTPS credential).
+Then run `/reload-plugins` or open a new session. Inside the company you can also install from the internal GitLab (`/plugin marketplace add https://git.example.invalid/group/cruise.git`; needs Git configured for `git.example.invalid`): same plugin, same marketplace name.
 
-The installer may say some options are "not yet set". That is fine: every option has a default. Change any of them with `/plugin configure cruise@nt`.
+The installer may say some options are "not yet set". That is fine: every option has a default. Change any of them with `/plugin configure cruise@prestes`.
 
 Check it works: `/cruise` prints what Cruise is doing, and sending a request of 25 characters or more makes the band appear.
 
@@ -102,7 +102,7 @@ Run the cruise:setup-laya skill. Tell me what it will download and how much disk
 If the plugin is not installed yet, paste this instead and it will install the plugin first:
 
 ```text
-Install the Cruise plugin: run `claude plugin marketplace add https://git.example.invalid/group/cruise.git` and then `claude plugin install cruise@nt`. Then run the cruise:setup-laya skill: tell me what it will download and how much disk and memory it needs, wait for my OK, and then install and configure everything.
+Install the Cruise plugin: run `claude plugin marketplace add FranciscoPrestes/cruise` and then `claude plugin install cruise@prestes`. Then run the cruise:setup-laya skill: tell me what it will download and how much disk and memory it needs, wait for my OK, and then install and configure everything.
 ```
 
 **What to expect (measured on a Mac with 10 cores and 34 GB of memory):**
@@ -186,7 +186,7 @@ Recommended flow when the context warning appears: finish the step, `/handoff`, 
 
 ```text
 /plugin marketplace update cruise
-/plugin uninstall cruise@nt
+/plugin uninstall cruise@prestes
 ```
 
 ## Known limitations
@@ -212,3 +212,7 @@ Changes go in through a merge request. Raise `version` in `.claude-plugin/plugin
 ## Credits
 
 The idea of an effort judge, its prompt wording and the labelled prompts in `eval/judge-cases.json` come from [effortless](https://github.com/HeyCubit/effortless) by HeyCubit (MIT). Laya is [NandhaKishorM/laya](https://github.com/NandhaKishorM/laya) (Apache 2.0) and is installed separately, never bundled. Jev is a hosted service by TypeSafe. See `NOTICE`.
+
+## License
+
+MIT, see `LICENSE`. Third-party credits in `NOTICE`.

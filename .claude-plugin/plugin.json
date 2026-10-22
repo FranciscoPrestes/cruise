@@ -5,6 +5,7 @@
   "author": {
     "name": "Francisco Prestes"
   },
+  "license": "MIT",
   "types": "./types/index.d.ts",
   "userConfig": {
     "context": {

@@ -5,7 +5,7 @@ description: Installs and configures Laya, a small local model, as Cruise's effo
 
 # Set up Laya for Cruise
 
-You are installing software on the user's own machine. **Tell the user the plan and the sizes first, wait for a clear yes, and ask again before anything optional** (start at login, extra checkpoints, training). Never edit `~/.claude/settings.json` yourself: settings change through `/plugin configure cruise@nt`.
+You are installing software on the user's own machine. **Tell the user the plan and the sizes first, wait for a clear yes, and ask again before anything optional** (start at login, extra checkpoints, training). Never edit `~/.claude/settings.json` yourself: settings change through `/plugin configure cruise@prestes`.
 
 Be straight with the user about what they get: Laya without training is a weak judge (see "How good is it", below). Offer `effort: haiku` as the working alternative and make sure they still want Laya.
 
@@ -55,7 +55,7 @@ Everything lives under one folder, `~/.local/share/cruise/laya`, so removing it 
    ```
    The reply must contain `answers.effort.choice`.
 9. **Start at login (ask first).** On macOS a LaunchAgent in `~/Library/LaunchAgents/com.franciscoprestes.cruise.laya.plist` running `$BASE/start.sh` with `RunAtLoad`; on Linux a systemd user unit. Both are **untested**: say so, and offer to skip it and let the user start the server by hand with `$BASE/start.sh`. Without it, Cruise just falls back to the app's own effort whenever the server is down.
-10. **Point Cruise at it.** Tell the user to run `/plugin configure cruise@nt` and set `effort` = `laya`, `judgeUrl` = `http://127.0.0.1:<PORT>/v1/systemone`, `judgeModel` = `multilingual`. Then `/reload-plugins`.
+10. **Point Cruise at it.** Tell the user to run `/plugin configure cruise@prestes` and set `effort` = `laya`, `judgeUrl` = `http://127.0.0.1:<PORT>/v1/systemone`, `judgeModel` = `multilingual`. Then `/reload-plugins`.
 11. **Check.** After a few prompts, `/cruise` should show verdicts and no judge failures.
 12. **Report** in plain language: what was installed and where, how much disk it uses (`du -sh "$BASE"`), how to start, stop (`pkill -f laya-serve` only for the process on that port) and remove it, and the accuracy warning below.
 
@@ -97,4 +97,4 @@ Serve it by adding `LAYA_EXTRA_MODELS='{"cruise-effort": "<HOME>/.local/share/cr
 1. Stop the server (the process listening on the chosen port, which should be `laya-serve`).
 2. Remove the login item if one was created.
 3. `rm -rf ~/.local/share/cruise/laya`.
-4. `/plugin configure cruise@nt` and set `effort` back to `off` (or `haiku`).
+4. `/plugin configure cruise@prestes` and set `effort` back to `off` (or `haiku`).
