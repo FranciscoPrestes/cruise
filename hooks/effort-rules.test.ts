@@ -2,12 +2,16 @@ import { expect, test } from 'claude-code/testing'
 
 import {
   cacheRewritten,
+  idleReason,
   clampTo,
   effortLine,
   endsOnQuestion,
   isFollowUp,
+  DEFAULT_ROUTER,
   isSteerable,
   judgeSystem,
+  routedFamilies,
+  routerPatterns,
   levelsUpTo,
   parseHaiku,
   parseJev,
@@ -28,6 +32,102 @@ test('only models measured to keep the cache are steered, and only when they tak
   expect(isSteerable('gpt-6.1-sol', 'high')).toBe(false)
   expect(isSteerable('gemini-4-argon-high', 'high')).toBe(false)
   expect(isSteerable('claude-opus-5-5', 12000)).toBe(false)
+})
+
+// Plain Claude Code: every id it can produce behaves exactly as before the router extra existed, whatever `routerModels` says.
+// What a person who opts in to routed models might write; nothing routed is steered unless it is named.
+const EXAMPLE = 'OpenAI (Login)/gpt-*,Google (Login)/gemini-*,Google (Login)/claude-sonnet-5-5-high'
+
+const PLAIN = [
+  ['claude-opus-5-5', 'high', true],
+  ['claude-sonnet-5-5', 'medium', true],
+  ['claude-fable-5-1', 'xhigh', true],
+  ['claude-opus-5-5-20260301', 'low', true],
+  ['claude-sonnet-5-5[1m]', 'high', true],
+  ['claude-haiku-5-5', undefined, false],
+  ['claude-haiku-5-5', 'high', false],
+  ['claude-opus-4-1', 'high', false],
+  ['claude-opus-5-5', undefined, false],
+  ['claude-opus-5-5', 12000, false],
+  ['claude-sonnet-5-5-high', 'high', false],
+  ['gpt-6.1-sol', 'high', false],
+  ['gemini-4-argon-high', 'high', false],
+] as const
+
+for (const [label, routers] of [
+  ['no router patterns', undefined],
+  ['the default router setting (empty)', routerPatterns(DEFAULT_ROUTER)],
+  ['the example opt-in patterns', routerPatterns(EXAMPLE)],
+  ['an empty router setting', routerPatterns('')],
+  ['an unrelated custom pattern', routerPatterns('my-model-*')],
+] as const) {
+  test(`plain Claude Code ids behave as before with ${label}`, () => {
+    for (const [model, effort, steerable] of PLAIN) expect(isSteerable(model, effort, routers)).toBe(steerable)
+  })
+}
+
+// Measured through CCR on the same Anthropic model: an effort change lost the whole prompt cache (and not in plain Claude Code), so ids with a
+// router label are not steered by default, Anthropic's included.
+test('a router label never makes a model steerable by itself, Anthropic ids included; only a pattern the person writes does', () => {
+  for (const model of ['Anthropic (Login)/claude-sonnet-5-5[1m]', 'Anthropic (Login)/claude-opus-5-5', 'Anthropic (Login)/claude-fable-5-1-20260301', 'Google (Login)/claude-sonnet-5-5-high', 'OpenAI (Login)/gpt-6.1-sol']) {
+    expect(isSteerable(model, 'high')).toBe(false)
+    expect(isSteerable(model, 'high', routerPatterns(DEFAULT_ROUTER))).toBe(false)
+  }
+  const anthropic = routerPatterns('Anthropic (Login)/claude-*')
+  expect(isSteerable('Anthropic (Login)/claude-sonnet-5-5[1m]', 'high', anthropic)).toBe(true)
+  expect(isSteerable('Anthropic (Login)/claude-sonnet-5-5[1m]', undefined, anthropic)).toBe(false)
+  expect(isSteerable('claude-sonnet-5-5-high', 'high', anthropic)).toBe(false)
+  expect(isSteerable('Google (Login)/claude-sonnet-5-5', 'high', anthropic)).toBe(false)
+})
+
+test('router patterns: comma-separated globs with * as the only wildcard, anchored and case-sensitive', () => {
+  const routed = routerPatterns(EXAMPLE)
+  expect(isSteerable('OpenAI (Login)/gpt-6.1-sol', 'medium', routed)).toBe(true)
+  expect(isSteerable('Google (Login)/gemini-3.8-flash-high', 'low', routed)).toBe(true)
+  expect(isSteerable('OpenAI (Login)/gpt-6.1-sol', undefined, routed)).toBe(false)
+  expect(isSteerable('OpenAI (Login)/gpt-6.1-sol', 'medium')).toBe(false)
+  expect(isSteerable('OpenRouter/~deepseek/deepseek-pro-latest', 'xhigh', routed)).toBe(false)
+  expect(isSteerable('gpt-6.1-sol', 'medium', routed)).toBe(false)
+  expect(isSteerable('openai (login)/gpt-6.1-sol', 'medium', routed)).toBe(false)
+  expect(isSteerable('xOpenAI (Login)/gpt-6.1-sol', 'medium', routed)).toBe(false)
+  expect(isSteerable('OpenAI (Login)/gpt-6.1-sol-extra', 'medium', routerPatterns('OpenAI (Login)/gpt-6.1-sol'))).toBe(false)
+  expect(isSteerable('OpenAI (Login)/o3', 'medium', routed)).toBe(false)
+  // Regex characters in a pattern are plain text.
+  const dots = routerPatterns('X (Login)/gpt-5.6')
+  expect(isSteerable('X (Login)/gpt-5.6', 'low', dots)).toBe(true)
+  expect(isSteerable('X (Login)/gpt-5x6', 'low', dots)).toBe(false)
+  // A person adds DeepSeek by naming it; spaces around commas and empty items are ignored.
+  const more = routerPatterns(' OpenAI (Login)/gpt-* , ,OpenRouter/~deepseek/* ')
+  expect(isSteerable('OpenRouter/~deepseek/deepseek-pro-latest', 'high', more)).toBe(true)
+  expect(isSteerable('OpenAI (Login)/gpt-6.1-sol', 'high', more)).toBe(true)
+})
+
+test('an opt-in pattern can name the Claude model that Google serves by its exact id; the bare id stays out', () => {
+  const routed = routerPatterns(EXAMPLE)
+  expect(isSteerable('Google (Login)/claude-sonnet-5-5-high', 'high', routed)).toBe(true)
+  expect(isSteerable('Google (Login)/claude-opus-5-5-high', 'high', routed)).toBe(false)
+  expect(isSteerable('Google (Login)/claude-sonnet-5-5', 'high', routed)).toBe(false)
+  expect(isSteerable('claude-sonnet-5-5-high', 'high', routed)).toBe(false)
+  expect(isSteerable('Google (Login)/claude-sonnet-5-5-high', 'high')).toBe(false)
+  expect(isSteerable('xGoogle (Login)/claude-sonnet-5-5-high', 'high', routed)).toBe(false)
+})
+
+test('the router setting is off by default: empty, missing or not a string steers nothing routed', () => {
+  expect(DEFAULT_ROUTER).toBe('')
+  expect(routerPatterns('')).toEqual([])
+  expect(routerPatterns('  , ')).toEqual([])
+  expect(routerPatterns(undefined)).toEqual([])
+  expect(routerPatterns(42)).toEqual([])
+  expect(isSteerable('OpenAI (Login)/gpt-6.1-sol', 'high', routerPatterns(''))).toBe(false)
+})
+
+test('the families steered are named for the dashboard', () => {
+  expect(routedFamilies(EXAMPLE)).toBe('Anthropic, OpenAI, Google (via router)')
+  expect(routedFamilies(DEFAULT_ROUTER)).toBe('Anthropic')
+  expect(routedFamilies('')).toBe('Anthropic')
+  expect(routedFamilies(undefined)).toBe('Anthropic')
+  expect(routedFamilies('OpenAI (Login)/gpt-*,OpenAI (Login)/o*,OpenRouter/~deepseek/*')).toBe('Anthropic, OpenAI, OpenRouter (via router)')
+  expect(routedFamilies('my-model-*')).toBe('Anthropic, my-model-* (via router)')
 })
 
 test('the judge may only choose up to the effort the app set', () => {
@@ -104,6 +204,47 @@ test('the cache guard trips only when an effort change was followed by a rewrite
   expect(cacheRewritten(prev, { effort: 'high', at: 60_000 }, { cache_creation_input_tokens: 800 })).toBe(false)
 })
 
+test('the cache guard stays harmless when a provider reports no cache numbers', () => {
+  const prev = { effort: 'low', at: 0 }
+  expect(cacheRewritten(prev, { effort: 'high', at: 60_000 }, {})).toBe(false)
+  expect(cacheRewritten(prev, { effort: 'high', at: 60_000 }, { cache_read_input_tokens: 0, cache_creation_input_tokens: 0 })).toBe(false)
+  expect(cacheRewritten(prev, { effort: 'high', at: 60_000 }, { input_tokens: 40_000, output_tokens: 10 } as never)).toBe(false)
+})
+
+test('a change of model through a router is not mistaken for a broken cache; in plain Claude Code the guard is as before', () => {
+  const rewrite = { cache_read_input_tokens: 0, cache_creation_input_tokens: 40_000 }
+  const gpt = { effort: 'low', at: 0, model: 'OpenAI (Login)/gpt-6.1-sol', cacheRead: 23_040 }
+  const gemini = { effort: 'high', at: 60_000, model: 'Google (Login)/gemini-3.8-flash-high' }
+  expect(cacheRewritten(gpt, gemini, rewrite)).toBe(false)
+  expect(cacheRewritten({ effort: 'low', at: 0, model: 'claude-opus-5-5' }, { effort: 'high', at: 60_000, model: 'Anthropic (Login)/claude-opus-5-5' }, rewrite)).toBe(false)
+  // Plain ids, with or without the model recorded: exactly the old behaviour, even across a model switch.
+  expect(cacheRewritten({ effort: 'low', at: 0, model: 'claude-opus-5-5' }, { effort: 'high', at: 60_000, model: 'claude-sonnet-5-5' }, rewrite)).toBe(true)
+  expect(cacheRewritten({ effort: 'low', at: 0 }, { effort: 'high', at: 60_000 }, rewrite)).toBe(true)
+})
+
+// Measured through the CCR gateway: it reports `cache_read_input_tokens` but never `cache_creation_input_tokens`; what was not read
+// from the cache is in `input_tokens`. GPT lost the whole cache on an effort change (23,040 read, then 0 read and 23,485 uncached);
+// Gemini lost part of it (23,166 read, then 16,080 read and 9,140 uncached).
+test('through a router the guard reads the uncached input, and only where the provider has shown that it reports a cache', () => {
+  const gptBefore = { effort: 'xhigh', at: 0, model: 'OpenAI (Login)/gpt-6.1-sol', cacheRead: 23_040 }
+  const gptNow = { effort: 'low', at: 60_000, model: 'OpenAI (Login)/gpt-6.1-sol' }
+  expect(cacheRewritten(gptBefore, gptNow, { input_tokens: 23_485, cache_read_input_tokens: 0 })).toBe(true)
+  expect(cacheRewritten(gptBefore, gptNow, { input_tokens: 460, cache_read_input_tokens: 23_040 })).toBe(false)
+  const geminiBefore = { effort: 'xhigh', at: 0, model: 'Google (Login)/gemini-3.8-flash-high', cacheRead: 23_166 }
+  const geminiNow = { effort: 'low', at: 60_000, model: 'Google (Login)/gemini-3.8-flash-high' }
+  expect(cacheRewritten(geminiBefore, geminiNow, { input_tokens: 9_140, cache_read_input_tokens: 16_080 })).toBe(false)
+  // A provider that never reports a cache (read 0 before as well) can never trip the guard, however much input it counts.
+  expect(cacheRewritten({ ...gptBefore, cacheRead: 0 }, gptNow, { input_tokens: 40_000, cache_read_input_tokens: 0 })).toBe(false)
+  expect(cacheRewritten({ ...gptBefore, cacheRead: undefined }, gptNow, { input_tokens: 40_000 })).toBe(false)
+  expect(cacheRewritten(gptBefore, gptNow, {})).toBe(false)
+  // The Anthropic label through a router is read the way the gateway reports, too.
+  expect(cacheRewritten({ ...gptBefore, model: 'Anthropic (Login)/claude-opus-5-5' }, { ...gptNow, model: 'Anthropic (Login)/claude-opus-5-5' }, { input_tokens: 30_000, cache_read_input_tokens: 0 })).toBe(true)
+  // Plain Claude Code ids ignore all of this: only cache_creation counts, as before.
+  const plain = { effort: 'low', at: 0, model: 'claude-opus-5-5', cacheRead: 45_000 }
+  expect(cacheRewritten(plain, { effort: 'high', at: 60_000, model: 'claude-opus-5-5' }, { input_tokens: 40_000, cache_read_input_tokens: 0 })).toBe(false)
+  expect(cacheRewritten(plain, { effort: 'high', at: 60_000, model: 'claude-opus-5-5' }, { cache_creation_input_tokens: 40_000, cache_read_input_tokens: 0 })).toBe(true)
+})
+
 test('the band line names the pick, the ceiling and a pause', () => {
   const base: EffortState = {
     pending: null, pick: null, paused: null, appSeen: 'high', judged: 0, kept: 0, failed: 0,
@@ -145,4 +286,14 @@ test('the Haiku instructions carry only examples of the levels on offer', () => 
   expect(text).toContain('-> high')
   expect(text).not.toContain('-> xhigh')
   expect(judgeSystem(levelsUpTo('max'))).toContain('-> max')
+})
+
+test('why a model is left alone is said in plain words', () => {
+  const none = { mode: 'haiku', model: '' }
+  expect(idleReason('claude-haiku-5-5', none, '')).toBe('Cruise steers Anthropic Opus, Sonnet and Fable 5')
+  expect(idleReason('Anthropic (Login)/claude-sonnet-5-5[1m]', none, '')).toContain('lost its prompt cache when the effort changed')
+  expect(idleReason('OpenAI (Login)/gpt-6.1-sol', none, '')).toContain('off by default')
+  expect(idleReason('OpenAI (Login)/gpt-6.1-sol', none, 'Google (Login)/gemini-*')).toContain('not in routerModels')
+  expect(idleReason('OpenAI (Login)/gpt-6.1-sol', none, 'OpenAI (Login)/gpt-*')).toContain('Haiku judge is not used')
+  expect(idleReason('OpenAI (Login)/gpt-6.1-sol', { mode: 'haiku', model: 'x' }, 'OpenAI (Login)/gpt-*')).toBe('Cruise steers Anthropic, OpenAI (via router)')
 })

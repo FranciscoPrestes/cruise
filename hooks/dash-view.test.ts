@@ -10,13 +10,13 @@ const long = 'a very long reason the judge gave for this pick, far wider than an
 const full: Snapshot = {
   limits: DEFAULTS,
   context: { on: true, percent: 99 },
-  progress: { on: true, facts: { ask: { text: HUGE_ASK, at: 0 }, now: 12 * 60_000, expanded: false, step: { n: 3, total: 12, done: 2, title: long, complete: false }, background: '2 agents, 1 command' } },
-  effort: { on: true, mode: 'jev (a-long-model-name)', way: "up or down from your app's, up to max", pick: 'xhigh', app: 'medium', why: long, paused: null, picks: { low: 40, medium: 30, high: 20, xhigh: 7, max: 3 }, counts: '100 judged · 70 steered · 12 failed · 123456 judge tokens' },
+  progress: { facts: { ask: { text: HUGE_ASK, at: 0 }, now: 12 * 60_000, expanded: false, step: { n: 3, total: 12, done: 2, title: long, complete: false }, background: '2 agents, 1 command' } },
+  effort: { on: true, mode: 'jev (a-long-model-name)', way: "up or down from your app's, up to max", pick: 'xhigh', app: 'medium', why: long, paused: null, idle: null, idleWhy: null, families: 'Anthropic, OpenAI, Google (via router)', picks: { low: 40, medium: 30, high: 20, xhigh: 7, max: 3 }, counts: '100 judged · 70 steered · 12 failed · 123456 judge tokens' },
   update: { line: '9.9.9 is available (you have 1.5.0) · type /cruise:update', available: true },
   relay: { action: 'auto', autoAt: 85, running: false, now: 600_000, last: { at: 0, ok: false, mode: 'auto', why: 'no handoff file was written, so nothing was cleared and this sentence is long on purpose' } },
 }
-const open: Snapshot = { ...full, progress: { on: true, facts: { ...full.progress.facts!, expanded: true } } }
-const noPlan: Snapshot = { ...full, progress: { on: true, facts: { ...full.progress.facts!, ask: { text: 'fix the login redirect after the session expires', at: 0 }, step: null, background: null } } }
+const open: Snapshot = { ...full, progress: { facts: { ...full.progress.facts!, expanded: true } } }
+const noPlan: Snapshot = { ...full, progress: { facts: { ...full.progress.facts!, ask: { text: 'fix the login redirect after the session expires', at: 0 }, step: null, background: null } } }
 const running: Snapshot = { ...full, relay: { ...full.relay, action: 'button', running: true } }
 const alertOnly: Snapshot = { ...full, relay: { ...full.relay, action: 'alert', last: null } }
 const paused: Snapshot = { ...full, effort: { ...full.effort, paused: 'the prompt cache was rewritten after an effort change' }, context: { on: true, percent: undefined } }
@@ -45,7 +45,7 @@ const mountPane = ($: Parameters<Parameters<typeof test>[2]>[0], columns: number
   $.ui.mount({ plugin: 'cruise', surface: 'terminal', component: 'Pane', requestId: 'cruise', props: { bodyColumns: columns } as never })
 
 for (const columns of [100, 40]) {
-  test(`the dashboard names every feature (${columns} columns)`, { options: { progress: true } }, async ($, on) => {
+  test(`the dashboard names every feature (${columns} columns)`, async ($, on) => {
     on('clock.now', async () => ({ value: 1_000 }) as never)
     on('prompt.submit', async () => ({ text: 'ok' }) as never)
     on('tool.call', async () => ({ result: {} }) as never)
@@ -93,12 +93,6 @@ test('without a plan the Progress section says so quietly', () => {
   expect(lines.join('\n')).toContain('no plan yet · steps appear when Claude keeps a task list')
 })
 
-test('with progress off the Progress section only says how to turn it on', () => {
-  const { ask, lines } = text({ ...full, progress: { on: false, facts: null } })
-  expect(ask).toBeUndefined()
-  expect(lines).toEqual(['off · turn on with /cruise:configure'])
-})
-
 test('the Handoff row says what the context warning offers and how the last run ended', () => {
   const handoff = (snap: Snapshot) => rows(snap, 60, true).find(r => r.label === 'Handoff')!.lines.map(l => l.map(r => r.text).join('')).join('\n')
   expect(handoff(full)).toContain('auto at 85% · clears your conversation')
@@ -114,4 +108,12 @@ test('the Context row shows the automatic point when auto is on, and the /handof
   expect(context(full)).not.toContain('then type /handoff')
   expect(context({ ...full, relay: { ...full.relay, action: 'button' } })).toContain('then type /handoff')
   expect(context({ ...full, relay: { ...full.relay, action: 'alert' } })).not.toContain('auto at')
+})
+
+test('the Effort row names the families steered, and the model that is left alone', () => {
+  const effort = (snap: Snapshot) => rows(snap, 70, true).find(r => r.label === 'Effort')!.lines.map(l => l.map(r => r.text).join('')).join('\n')
+  expect(effort(full)).toContain('steers Anthropic, OpenAI, Google (via router)')
+  const idle = effort({ ...full, effort: { ...full.effort, idle: 'OpenRouter/~deepseek/deepseek-pro-latest', idleWhy: 'Cruise steers Anthropic, OpenAI, Google (via router)' } })
+  expect(idle).toContain('resting · OpenRouter/~deepseek/deepseek-pro-latest is left alone')
+  expect(idle).toContain('Cruise steers Anthropic, OpenAI, Google (via router)')
 })

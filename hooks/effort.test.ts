@@ -7,6 +7,9 @@ const usage = (read: number, wrote: number) => ({ input_tokens: 2, output_tokens
 type Setup = { sent: unknown[]; judged: string[]; models: string[]; toasts: string[]; calls: { url?: string; auth?: string; body?: string }[]; clock: { advance: (ms: number) => Promise<void> } }
 
 // Everything beneath the plugin is a stub; the plugin's own hooks run for real.
+// Routed models are an opt-in: nothing routed is steered unless routerModels names it.
+const EX = 'OpenAI (Login)/gpt-*,Google (Login)/gemini-*,Google (Login)/claude-sonnet-5-5-high'
+
 function stubs(on: any, opts: { replies?: unknown[]; reply?: unknown; steps?: ReturnType<typeof usage>[]; fetchBody?: string; throwJudge?: boolean } = {}): Setup {
   const clock = mock.clock(on)
   const out: Setup = { sent: [], judged: [], models: [], toasts: [], calls: [], clock }
@@ -54,6 +57,90 @@ test('haiku: a simple prompt goes out at the effort the judge picked, below the 
   expect(s.sent).toEqual(['low'])
   expect(s.judged).toHaveLength(1)
   expect(s.judged[0]).toContain('Highest level allowed: max')
+})
+
+test('through a router: a routed model the person opted in is steered', { options: { effort: 'haiku', judgeModel: 'claude-haiku-5-5' , routerModels: EX } }, async ($, on) => {
+  const s = stubs(on)
+  await $.prompt.submit({ text: ASK })
+  await run($, { model: 'OpenAI (Login)/gpt-6.1-sol', effort: 'medium' })
+  expect(s.sent).toEqual(['low'])
+  expect(s.judged).toHaveLength(1)
+})
+
+test('through a router: Anthropic ids with the router label are left alone by default (the cache is lost there) and steered only if named', { options: { effort: 'haiku', judgeModel: 'claude-haiku-5-5' } }, async ($, on) => {
+  const s = stubs(on)
+  await $.prompt.submit({ text: ASK })
+  await run($, { model: 'Anthropic (Login)/claude-sonnet-5-5[1m]', effort: 'high' })
+  expect(s.sent).toEqual(['high'])
+  expect(s.judged).toHaveLength(0)
+})
+
+test('through a router: Anthropic ids are steered once the person names them in routerModels', { options: { effort: 'haiku', judgeModel: 'claude-haiku-5-5', routerModels: 'Anthropic (Login)/claude-*' } }, async ($, on) => {
+  const s = stubs(on)
+  await $.prompt.submit({ text: ASK })
+  await run($, { model: 'Anthropic (Login)/claude-sonnet-5-5[1m]', effort: 'high' })
+  expect(s.sent).toEqual(['low'])
+})
+
+test('through a router: nothing routed is steered by default, and DeepSeek and the like stay out even when GPT and Gemini are in', { options: { effort: 'haiku', judgeModel: 'claude-haiku-5-5' } }, async ($, on) => {
+  const s = stubs(on)
+  await $.prompt.submit({ text: ASK })
+  await run($, { model: 'OpenAI (Login)/gpt-6.1-sol', effort: 'medium' })
+  await run($, { model: 'Google (Login)/gemini-3.8-flash-high', effort: 'xhigh', index: 1 })
+  expect(s.sent).toEqual(['medium', 'xhigh'])
+  expect(s.judged).toHaveLength(0)
+  const text = JSON.stringify(await $.command.run({ command: 'cruise', args: '' } as never))
+  expect(text).toContain('off by default')
+})
+
+test('the dashboard says why a router-labelled Anthropic model is left alone: the cache lost on an effort change', { options: { effort: 'haiku', judgeModel: 'claude-haiku-5-5' } }, async ($, on) => {
+  const s = stubs(on)
+  await $.prompt.submit({ text: ASK })
+  await run($, { model: 'Anthropic (Login)/claude-sonnet-5-5[1m]', effort: 'high' })
+  const text = JSON.stringify(await $.command.run({ command: 'cruise', args: '' } as never))
+  expect(s.sent).toEqual(['high'])
+  expect(text).toContain('lost its prompt cache when the effort changed')
+})
+
+test('plain Claude Code is steered exactly as before whatever routerModels says, even a pattern that would match everything', { options: { effort: 'haiku', routerModels: '*' } }, async ($, on) => {
+  const s = stubs(on)
+  await $.prompt.submit({ text: ASK })
+  await run($, { model: 'claude-opus-5-5', effort: 'high' })
+  expect(s.sent).toEqual(['low'])
+  expect(s.models).toEqual(['claude-haiku-5-5'])
+})
+
+test('plain Claude Code leaves Haiku and unsupported ids alone with routerModels empty', { options: { effort: 'haiku' } }, async ($, on) => {
+  const s = stubs(on)
+  await $.prompt.submit({ text: ASK })
+  await run($, { model: 'claude-sonnet-5-5-high', effort: 'high' })
+  expect(s.sent).toEqual(['high'])
+  expect(s.judged).toHaveLength(0)
+})
+
+test('through a router: with GPT and Gemini opted in, DeepSeek and other Google models are still left alone', { options: { effort: 'haiku', judgeModel: 'claude-haiku-5-5', routerModels: EX } }, async ($, on) => {
+  const s = stubs(on)
+  await $.prompt.submit({ text: ASK })
+  await run($, { model: 'OpenRouter/~deepseek/deepseek-pro-latest', effort: 'xhigh' })
+  await run($, { model: 'Google (Login)/claude-opus-5-5-high', effort: 'high', index: 1 })
+  expect(s.sent).toEqual(['xhigh', 'high'])
+  expect(s.judged).toHaveLength(0)
+})
+
+test('through a router: a pattern the person adds is steered', { options: { effort: 'haiku', judgeModel: 'claude-haiku-5-5', routerModels: 'OpenRouter/~deepseek/*' } }, async ($, on) => {
+  const s = stubs(on)
+  await $.prompt.submit({ text: ASK })
+  await run($, { model: 'OpenRouter/~deepseek/deepseek-pro-latest', effort: 'xhigh' })
+  expect(s.sent).toEqual(['low'])
+})
+
+test('through a router: a provider that reports no cache numbers never pauses steering', { options: { effort: 'haiku', judgeModel: 'claude-haiku-5-5' , routerModels: EX } }, async ($, on) => {
+  const s = stubs(on, { replies: [verdict('low'), verdict('high')], steps: [{} as never, {} as never] })
+  await $.prompt.submit({ text: ASK })
+  await run($, { model: 'OpenAI (Login)/gpt-6.1-sol', effort: 'medium' })
+  await $.prompt.submit({ text: 'Redesign the whole billing module across all services and migrate the data, with a rollback plan' })
+  await run($, { model: 'OpenAI (Login)/gpt-6.1-sol', effort: 'medium', index: 1 })
+  expect(s.toasts.some(t => t.includes('cache'))).toBe(false)
 })
 
 test('the conversation never leaves: the judge sees the next message and two small facts', { options: { effort: 'haiku' } }, async ($, on) => {

@@ -1,20 +1,18 @@
-// Update check: once a day it reads the version published on GitHub and, when it is newer, tells the person (`check`)
-// or installs it (`auto`). Off with `updates: off`. A failure here is never shown: it is advice, not a feature.
+// Update check: once a day it reads the version published on GitHub and tells the person when it is newer.
+// Installation is always manual. Off with `updates: off`.
 import type { EngineInterface, PluginOptions } from 'claude-code'
 
 import { VERSION } from './version'
 
 export const MANIFEST_URL = 'https://raw.githubusercontent.com/FranciscoPrestes/cruise/main/.claude-plugin/plugin.json'
-export const MARKETPLACE = 'prestes'
 const DAY_MS = 24 * 60 * 60 * 1000
 const FETCH_TIMEOUT_MS = 4000
-const UPDATE_TIMEOUT_MS = 120_000
 const KEY = 'cruise.update'
 
-export type UpdateMode = 'check' | 'auto' | 'off'
+export type UpdateMode = 'check' | 'off'
 export type UpdateRecord = { checkedAt: number | null; latest: string | null; told: string | null }
 
-export const updateMode = (options: PluginOptions): UpdateMode => (options.updates === 'auto' || options.updates === 'off' ? options.updates : 'check')
+export const updateMode = (options: PluginOptions): UpdateMode => (options.updates === 'off' ? 'off' : 'check')
 
 const numbers = (version: string): number[] | undefined => {
   const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(version.trim())
@@ -51,13 +49,6 @@ async function fetchLatest($: EngineInterface): Promise<string | undefined> {
   return res.ok ? manifestVersion(res.text) : undefined
 }
 
-async function install($: EngineInterface): Promise<boolean> {
-  const run = (argv: string[]) => $.process.run(argv, { timeoutMs: UPDATE_TIMEOUT_MS })
-  const refreshed = await run(['claude', 'plugin', 'marketplace', 'update', MARKETPLACE])
-  if (refreshed.exitCode !== 0) return false
-  return (await run(['claude', 'plugin', 'update', `cruise@${MARKETPLACE}`])).exitCode === 0
-}
-
 async function check($: EngineInterface, mode: UpdateMode): Promise<void> {
   if (mode === 'off') return
   const now = await $.clock.now()
@@ -72,12 +63,7 @@ async function check($: EngineInterface, mode: UpdateMode): Promise<void> {
   const latest = record.latest
   if (!latest || !isNewer(latest, VERSION) || record.told === latest) return
   await $.store.set(KEY, { ...record, told: latest })
-  if (mode === 'check') {
-    $.ui.toast(noticeFor(latest))
-    return
-  }
-  const done = await install($)
-  $.ui.toast(done ? `Cruise updated to ${latest}. Restart Claude Code to use it.` : `Cruise ${latest} is available but the automatic update failed. Type /cruise:update.`)
+  $.ui.toast(noticeFor(latest))
 }
 
 export async function checkForUpdate($: EngineInterface, mode: UpdateMode): Promise<void> {
@@ -93,6 +79,5 @@ export async function updateLine($: EngineInterface, mode: UpdateMode): Promise<
   if (mode === 'off') return 'automatic check off (setting "updates") · /cruise:update checks by hand'
   const saved = (await $.store.get(KEY).catch(() => undefined)) as UpdateRecord | undefined
   if (saved?.latest && isNewer(saved.latest, VERSION)) return `${saved.latest} is available (you have ${VERSION}) · type /cruise:update`
-  const how = mode === 'auto' ? 'installs by itself' : 'asks first'
-  return `${VERSION}${saved?.latest ? ', the latest' : ''} · checks daily, ${how} · /cruise:update`
+  return `${VERSION}${saved?.latest ? ', the latest' : ''} · checks daily, notifies only · /cruise:update`
 }

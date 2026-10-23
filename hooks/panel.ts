@@ -17,7 +17,7 @@ export function gauge(percent: number, limits: Thresholds): string {
 }
 
 export const HELP = [
-  'Settings: context · warnAt/urgentAt · progress · effort · steer · topLevel · judgeModel · updates',
+  'Settings: context · warnAt/urgentAt · contextAction · effort · steer · topLevel · judgeModel · updates',
   'Change any: /cruise:configure (a short conversation) or /plugin configure cruise@prestes',
   'Update now: /cruise:update   ·   Long session: /handoff, then /pickup',
 ].join('\n')
@@ -37,7 +37,6 @@ async function contextRow($: EngineInterface, options: PluginOptions): Promise<s
 }
 
 export async function panel($: EngineInterface, options: PluginOptions): Promise<string> {
-  const progress = options.progress === true ? row('🟢', 'Progress', 'two lines above the prompt: request, step, effort, background') : row('⚪', 'Progress', 'off · turn on with /cruise:configure')
   const mode = judgeMode(options)
   const effort = row(mode === 'off' ? '⚪' : '🟢', 'Effort', await report($, options, LABEL_WIDTH + 1))
   const updates = await updateLine($, updateMode(options))
@@ -45,7 +44,6 @@ export async function panel($: EngineInterface, options: PluginOptions): Promise
     `✈  Cruise ${VERSION}  ·  cruise control for Claude Code`,
     RULE,
     await contextRow($, options),
-    progress,
     effort,
     row(updates.includes('available') ? '🟡' : '🟢', 'Updates', updates),
     RULE,

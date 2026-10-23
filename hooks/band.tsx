@@ -1,30 +1,31 @@
-// The band above the prompt. The engine allows one hook per site, so this one draws everything the band holds: the progress
-// rows (when `progress` is on) and, from the first context warning, one extra row with the handoff button (or its automatic notice).
+// The band above the prompt: one row, and only when there is something to say. Below the first context warning it is the effort the
+// judge picked; from the warning up it is the context, that pick and the handoff button (or the automatic notice). Never more than a row.
 import type { EngineInterface, PluginOptions, Register } from 'claude-code'
 
 import { contextLimits } from './context'
-import { fitRuns } from './dash'
-import { judgeMode } from './effort'
-import { progressBand } from './progress'
-import { autoThreshold, contextAction, contextRow, loadRelay, startRelay } from './relay'
+import { effortToken, fitRuns } from './dash'
+import { effortParts, judgeMode } from './effort'
+import { autoThreshold, bandRow, contextAction, loadRelay, startRelay } from './relay'
 
 type Ui = ReturnType<EngineInterface['ui']['resolve']>
 
-export const RELAY_HOTKEY = 'h'
-export const RELAY_LABEL = 'Handoff and continue'
+const RELAY_HOTKEY = 'h'
+const RELAY_LABEL = 'Handoff and continue'
 // "h: Handoff and continue" and two cells of air: what the button takes from the row.
 const BUTTON_COLS = 26
 
-async function relayBand($: EngineInterface, { Box, Text, Button }: Ui, options: PluginOptions, columns: number, isWorking: boolean) {
+async function band($: EngineInterface, { Box, Text, Button }: Ui, options: PluginOptions, columns: number, isWorking: boolean) {
   const limits = contextLimits(options)
-  const usage = await $.session.usage().catch(() => undefined)
-  const row = contextRow({
+  const usage = options.context === false ? undefined : await $.session.usage().catch(() => undefined)
+  const parts = judgeMode(options) === 'off' ? null : await effortParts($)
+  const row = bandRow({
     percent: usage?.context.percent,
     window: usage?.context.window,
-    action: contextAction(options),
+    action: options.context === false ? 'alert' : contextAction(options),
     limits,
     autoAt: autoThreshold(options, limits),
     running: (await loadRelay($)).running,
+    effort: parts && 'pick' in parts ? effortToken(parts.pick, parts.app) : [],
   })
   if (!row) return null
   const runs = fitRuns(row.runs, Math.max(12, columns - 2 - (row.button ? BUTTON_COLS : 0)))
@@ -37,17 +38,8 @@ async function relayBand($: EngineInterface, { Box, Text, Button }: Ui, options:
 }
 
 export const registerBand: Register = (on, options) => {
-  const wantProgress = options.progress === true
-  const showEffort = judgeMode(options) !== 'off'
-
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
-    const ui = $.ui.resolve(e)
-    const columns = e.props.bodyColumns ?? 80
-    const progress = wantProgress ? await progressBand($, ui, columns, showEffort) : null
-    const relay = options.context === false ? null : await relayBand($, ui, options, columns, e.props.isWorking)
-    if (!progress && !relay) return next(e)
-    const { Box } = ui
-    return <Box flexDirection="column">{progress}{relay}</Box>
+    return (await band($, $.ui.resolve(e), options, e.props.bodyColumns ?? 80, e.props.isWorking)) ?? next(e)
   })
 }

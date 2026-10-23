@@ -68,6 +68,10 @@ export function tickRow(width: number, limits: Thresholds): string {
   return row.join('')
 }
 
+// » high (app medium): the effort the judge picked, in its level colour, with the app's own effort dim beside it.
+// » is one cell wide in every terminal (⚡ is two in some and one in others, which shifted whatever came after it).
+export const effortToken = (pick: string, app: string | null): Run[] => [{ text: `» ${pick}`, color: LEVEL_COLOR[pick], bold: true }, ...(app ? [{ text: ` (app ${app})`, dim: true }] : [])]
+
 const ORDER = ['low', 'medium', 'high', 'xhigh', 'max']
 
 // One bar split between the efforts picked so far, in proportion, every pick at least one cell wide.

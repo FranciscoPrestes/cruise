@@ -9,12 +9,12 @@ import type { Thresholds } from './levels'
 export type ContextAction = 'button' | 'alert' | 'auto'
 export type RelayRecord = { at: number; ok: boolean; mode: 'button' | 'auto'; why: string }
 export type RelayState = { running: boolean; pickupPending: boolean; autoDone: boolean; mode: 'button' | 'auto' | null; last: RelayRecord | null }
-export type Entry = { name: string; kind: string; mtimeMs: number }
+type Entry = { name: string; kind: string; mtimeMs: number }
 
 export const contextAction = (options: PluginOptions): ContextAction => (options.contextAction === 'alert' || options.contextAction === 'auto' ? options.contextAction : 'button')
 
 // The highest point automatic mode may start at: above it the handoff itself (a turn that writes the file) might not fit.
-export const AUTO_MAX = 95
+const AUTO_MAX = 95
 
 // Where automatic mode starts: `autoAt`, or the urgent warning when it is 0 or unset; never before the first warning, never above 95.
 export function autoThreshold(options: PluginOptions, limits: Thresholds): number {
@@ -37,7 +37,7 @@ export function windowLabel(tokens: number | undefined): string | undefined {
   return tokens >= 1_000_000 ? `${Number((tokens / 1_000_000).toFixed(1))}M` : `${Math.round(tokens / 1000)}K`
 }
 
-export type RowInput = { percent: number | undefined; window: number | undefined; action: ContextAction; limits: Thresholds; autoAt: number; running: boolean }
+type RowInput = { percent: number | undefined; window: number | undefined; action: ContextAction; limits: Thresholds; autoAt: number; running: boolean }
 
 // The extra row of the band: absent below the first warning and in alert mode; with the button in button mode; without it in auto mode and while running.
 export function contextRow(i: RowInput): { runs: Run[]; button: boolean } | null {
@@ -47,6 +47,20 @@ export function contextRow(i: RowInput): { runs: Run[]; button: boolean } | null
   if (i.running) return { runs: [head, { text: ' · handing off, clearing and picking up…', color: 'yellow' }], button: false }
   if (i.action === 'auto') return { runs: [head, { text: ` · automatic at ${i.autoAt}%`, dim: true }], button: false }
   return { runs: [head, { text: ' · ', dim: true }], button: true }
+}
+
+type BandInput = RowInput & { effort: Run[] }
+
+// The whole band, one row at most. Above the first warning in button mode: context, the effort pick and the button. In auto mode and while a
+// relay runs: the context row as it is. Otherwise (below the warning, alert mode, context off): the effort pick alone, if the judge has picked.
+// Nothing when there is nothing to say.
+export function bandRow(i: BandInput): { runs: Run[]; button: boolean } | null {
+  const context = contextRow(i)
+  if (!context) return i.effort.length > 0 ? { runs: i.effort, button: false } : null
+  if (i.running || i.action === 'auto' || i.effort.length === 0) return context
+  const [head] = context.runs
+  const dot: Run = { text: ' · ', dim: true }
+  return { runs: [...(head ? [head] : []), dot, ...i.effort, dot], button: true }
 }
 
 // Auto runs once per context band, never during a run or while a pickup waits; the band is over when the context falls below `resetBelow`.

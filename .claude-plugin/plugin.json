@@ -51,12 +51,6 @@
       "min": 1,
       "max": 95
     },
-    "progress": {
-      "type": "boolean",
-      "title": "Progress band",
-      "description": "Show a two-line band above the prompt: the current request, then the plan step, the effort pick and background work. Off by default, since it takes screen space.",
-      "default": false
-    },
     "purser": {
       "type": "boolean",
       "title": "Purser mode",
@@ -102,6 +96,12 @@
         "max"
       ]
     },
+    "routerModels": {
+      "type": "string",
+      "title": "Router models to steer (opt-in)",
+      "description": "Off by default (empty). Only for people who run Claude Code through a router such as claude-code-router: comma-separated patterns, * is the wildcard, exact case, of the models whose effort Cruise may steer too, for example OpenAI (Login)/gpt-*,Google (Login)/gemini-*. Measured through one gateway: changing the effort cost GPT the whole prompt cache and Gemini part of it, and the same Anthropic model lost its cache too, so Anthropic ids behind a router are left alone unless you name them here. The judge's levels pass through unchanged, because the router maps them; on GPT, max costs far more tokens than high, so consider topLevel high. Behind a router the Haiku judge is not used until judgeModel names a model your router serves. Plain Claude Code is not affected either way.",
+      "default": ""
+    },
     "judgeUrl": {
       "type": "string",
       "title": "Judge URL (jev or laya)",
@@ -117,18 +117,17 @@
     },
     "judgeModel": {
       "type": "string",
-      "title": "Judge model (jev or laya)",
-      "description": "Which checkpoint to ask for. Empty lets the server choose (Jev: jev-latest, Laya: routes by language). Use it to point Laya at a checkpoint you trained.",
+      "title": "Judge model",
+      "description": "The model that judges each prompt. Haiku judge: empty means claude-haiku-5-5; behind a router (such as claude-code-router) the Haiku judge is not used until you name a model your router serves here, for example Google (Login)/gemini-3.5-flash-lite. Jev or Laya: which checkpoint to ask for (empty lets the server choose: Jev jev-latest, Laya routes by language; use it to point Laya at a checkpoint you trained).",
       "default": ""
     },
     "updates": {
       "type": "string",
       "title": "Update check",
-      "description": "check: look on GitHub once a day and tell you when a new version exists, you decide when to install (/cruise:update). auto: install it for you. off: never check.",
+      "description": "check: look on GitHub once a day and tell you when a new version exists. Never installs automatically; you decide when to install (/cruise:update). off: never check.",
       "default": "check",
       "options": [
         "check",
-        "auto",
         "off"
       ]
     }

@@ -19,7 +19,7 @@ import { updateLine, updateMode } from './updates'
 import { VERSION } from './version'
 import { age } from './helpers'
 
-export const PANE = 'cruise'
+const PANE = 'cruise'
 const REFRESH_MS = 5000
 const LABEL = 11
 const METER_MAX = 36
@@ -27,7 +27,7 @@ const METER_MAX = 36
 export type Snapshot = {
   limits: Thresholds
   context: { on: boolean; percent?: number }
-  progress: { on: boolean; facts: ProgressFacts | null }
+  progress: { facts: ProgressFacts }
   effort: Awaited<ReturnType<typeof effortFacts>>
   update: { line: string; available: boolean }
   // The handoff relay: what the context warning offers, what it is doing now and how the last run ended.
@@ -42,7 +42,7 @@ export async function snapshot($: EngineInterface, options: PluginOptions): Prom
   return {
     limits,
     context: { on: options.context !== false, percent },
-    progress: { on: options.progress === true, facts: options.progress === true ? await progressFacts($) : null },
+    progress: { facts: await progressFacts($) },
     effort: await effortFacts($, options),
     update: { line: update, available: update.includes('available') },
     relay: { action: contextAction(options), autoAt: autoThreshold(options, limits), running: relay.running, now: await $.clock.now().catch(() => 0), last: relay.last },
@@ -76,8 +76,11 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
 
   const e = s.effort
   // » marks the pick: a glyph every terminal draws one cell wide (⚡ is two in some and one in others, which broke the card's edge).
+  // A model that is left alone is named: the effort rows above it are from before it.
   const now: Run[] = e.paused
     ? [{ text: `⏸ paused: ${e.paused}`, color: 'yellow' }]
+    : e.idle
+      ? [{ text: `resting · ${e.idle} is left alone`, color: 'yellow' }]
     : e.pick
       ? [{ text: `» ${e.pick}`, color: LEVEL_COLOR[e.pick] ?? 'white', bold: true }, ...(e.app ? dim(` (app ${e.app})`) : []), ...(e.why ? dim(` · ${e.why}`) : [])]
       : dim('waiting for your first prompt')
@@ -87,8 +90,9 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
     ? [OFF]
     : [
         now,
+        ...(e.idle && e.idleWhy ? [dim(e.idleWhy)] : []),
         ...(!hasPicks ? [] : framed ? [mix(e.picks, Math.min(METER_MAX, body)), legend] : [[...mix(e.picks, 12), { text: '  ' }, ...legend]]),
-        ...(framed ? [dim(`${e.mode} judge · ${e.way}`), dim(e.counts)] : [dim(`${e.mode} judge · ${e.counts}`)]),
+        ...(framed ? [dim(`${e.mode} judge · ${e.way}`), dim(`steers ${e.families}`), dim(e.counts)] : [dim(`${e.mode} judge · ${e.counts}`)]),
       ]
 
   const r = s.relay
@@ -103,20 +107,18 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
       : dim('not run yet')
 
   const facts = s.progress.facts
-  const step = facts?.step ?? null
+  const step = facts.step
   const stepLine: Run[] = step
     ? [{ text: '◆ ', color: 'magenta', bold: true }, { text: `${step.n}/${step.total} `, bold: true }, { text: '▰'.repeat(step.done) + '▱'.repeat(step.total - step.done), color: 'green' }, { text: ` ${step.complete ? 'complete' : step.title}` }]
     : dim('no plan yet · steps appear when Claude keeps a task list')
-  const tail: Run[] = [...(facts?.ask ? [{ text: age(facts.now - facts.ask.at), dim: true }] : []), ...(facts?.background ? [{ text: `⚙ ${facts.background}`, color: 'blue' }] : [])]
+  const tail: Run[] = [...(facts.ask ? [{ text: age(facts.now - facts.ask.at), dim: true }] : []), ...(facts.background ? [{ text: `⚙ ${facts.background}`, color: 'blue' }] : [])]
     .flatMap((r, i): Run[] => (i ? [{ text: ' · ', dim: true }, r] : [r]))
-  const askShown = s.progress.on && facts?.ask ? askView(facts.ask.text, body - 2, facts.expanded) : undefined
-  const progress: Run[][] = !s.progress.on
-    ? [OFF]
-    : [
-        ...(facts?.ask ? [] : [dim('no request yet')]),
-        // Above the prompt the row count is tight, so the age and background work share the step's line there.
-        ...(framed || tail.length === 0 ? [stepLine, ...(tail.length > 0 ? [tail] : [])] : [[...stepLine, { text: '  │  ', dim: true }, ...tail]]),
-      ]
+  const askShown = facts.ask ? askView(facts.ask.text, body - 2, facts.expanded) : undefined
+  const progress: Run[][] = [
+    ...(facts.ask ? [] : [dim('no request yet')]),
+    // Above the prompt the row count is tight, so the age and background work share the step's line there.
+    ...(framed || tail.length === 0 ? [stepLine, ...(tail.length > 0 ? [tail] : [])] : [[...stepLine, { text: '  │  ', dim: true }, ...tail]]),
+  ]
 
   const ctxDot = percent === undefined ? undefined : zone(percent, s.limits)
   const on = (yes: boolean) => (yes ? 'green' : undefined)
@@ -124,7 +126,7 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
     { dot: yes(s.context.on), color: ctxDot ?? on(s.context.on), label: 'Context', lines: fit(context) },
     { dot: r.action === 'alert' ? '○' : '●', color: r.action === 'alert' ? undefined : r.last && !r.last.ok ? 'yellow' : 'green', label: 'Handoff', lines: fit([how, last]) },
     { dot: yes(e.on), color: e.paused ? 'yellow' : on(e.on), label: 'Effort', lines: fit(effort) },
-    { dot: yes(s.progress.on), color: on(s.progress.on), label: 'Progress', lines: fit(progress), ask: askShown },
+    { dot: '●', color: 'green', label: 'Progress', lines: fit(progress), ask: askShown },
     { dot: '●', color: s.update.available ? 'yellow' : 'green', label: 'Updates', lines: fit([dim(s.update.available ? s.update.line : 'up to date · checks daily')]) },
   ]
 }
@@ -143,7 +145,7 @@ export function chrome(inner: number) {
 type Ui = ReturnType<EngineInterface['ui']['resolve']>
 
 // `framed`: draw the rounded card. Above the prompt the engine already boxes the pane, so the card drops its own border there.
-export function Dashboard(ui: Ui, s: Snapshot, columns: number, framed = true, onToggle: () => void = () => {}) {
+function Dashboard(ui: Ui, s: Snapshot, columns: number, framed = true, onToggle: () => void = () => {}) {
   const { Box, Text } = ui
   const inner = Math.max(20, columns - (framed ? 4 : 2))
   const body = Math.max(8, inner - LABEL)

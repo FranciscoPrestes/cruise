@@ -10,5 +10,5 @@ test('the gauge turns yellow at the first warning and red at the urgent one', ()
 })
 
 test('the help names every setting a person can change', () => {
-  for (const name of ['context', 'warnAt', 'progress', 'effort', 'steer', 'topLevel', 'judgeModel', 'updates']) expect(HELP).toContain(name)
+  for (const name of ['context', 'warnAt', 'contextAction', 'effort', 'steer', 'topLevel', 'judgeModel', 'updates']) expect(HELP).toContain(name)
 })

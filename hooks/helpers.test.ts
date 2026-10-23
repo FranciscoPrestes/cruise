@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { age, backgroundSummary, cleanAsk, isRealAsk, oneLine, planFromTodos, planSummary } from './helpers'
+import { age, backgroundSummary, cleanAsk, isRealAsk, planFromTodos, planProgress } from './helpers'
 
 test('short replies and commands do not become the request', () => {
   expect(isRealAsk('go ahead')).toBe(false)
@@ -28,13 +28,13 @@ test('current step and plan total', () => {
     { content: 'Write mod', activeForm: 'Writing mod', status: 'in_progress' },
     { content: 'Test', activeForm: 'Testing', status: 'pending' },
   ])
-  expect(planSummary(plan)).toBe('Step 2 of 3: Writing mod')
-  expect(planSummary({})).toBe(null)
+  expect(planProgress(plan)).toEqual({ n: 2, total: 3, done: 1, title: 'Writing mod', complete: false })
+  expect(planProgress({})).toBe(null)
 })
 
 test('finished plan', () => {
   const plan = planFromTodos([{ content: 'A', activeForm: 'A', status: 'completed' }])
-  expect(planSummary(plan)).toBe('Plan complete: 1 of 1')
+  expect(planProgress(plan)).toMatchObject({ total: 1, done: 1, complete: true })
 })
 
 test('background work is grouped and pluralized', () => {
@@ -43,9 +43,8 @@ test('background work is grouped and pluralized', () => {
   expect(backgroundSummary([])).toBe(null)
 })
 
-test('age and line cut', () => {
+test('age', () => {
   expect(age(30_000)).toBe('now')
   expect(age(12 * 60_000)).toBe('12 min ago')
   expect(age(72 * 60_000)).toBe('1 h 12 min ago')
-  expect(oneLine('abc  def', 5)).toBe('abc …')
 })

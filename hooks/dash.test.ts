@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { cells, fitRuns, mix, meter, tickRow, zone } from './dash'
+import { cells, effortToken, fitRuns, mix, meter, tickRow, zone } from './dash'
 import { DEFAULTS } from './levels'
 
 const text = (runs: readonly { text: string }[]) => runs.map(r => r.text).join('')
@@ -58,4 +58,9 @@ test('fitRuns never exceeds the width, ends in an ellipsis and keeps each run it
 
 test('an empty mix is empty', () => {
   expect(mix({}, 20)).toEqual([])
+})
+
+test('the effort token is the pick in its level colour, with the app effort dim beside it', () => {
+  expect(effortToken('high', 'medium')).toEqual([{ text: '» high', color: 'yellow', bold: true }, { text: ' (app medium)', dim: true }])
+  expect(effortToken('low', null)).toEqual([{ text: '» low', color: 'green', bold: true }])
 })

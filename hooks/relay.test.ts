@@ -1,7 +1,8 @@
 import { expect, test } from 'claude-code/testing'
 
 import { DEFAULTS } from './levels'
-import { autoThreshold, contextAction, contextRow, decideAuto, freshHandoff, handoffDir, runRelay, windowLabel } from './relay'
+import { effortToken } from './dash'
+import { autoThreshold, bandRow, contextAction, contextRow, decideAuto, freshHandoff, handoffDir, runRelay, windowLabel } from './relay'
 import type { RelayDeps, RelayState } from './relay'
 
 const idle: RelayState = { running: false, pickupPending: false, autoDone: false, mode: null, last: null }
@@ -61,6 +62,30 @@ test('the context row appears only from the first warning, and only when the act
   const busy = row(90, 'button', true)
   expect(busy?.button).toBe(false)
   expect(busy?.runs.map(r => r.text).join('')).toContain('handing off')
+})
+
+const PICK = effortToken('high', 'medium')
+
+test('the band is one row: the effort pick alone below the warning, context then pick then the button above it', () => {
+  const row = (percent: number | undefined, action: 'button' | 'alert' | 'auto', over: { effort?: typeof PICK; running?: boolean } = {}) =>
+    bandRow({ percent, window: 200_000, action, limits: DEFAULTS, autoAt: 80, running: over.running ?? false, effort: over.effort ?? [] })
+  const text = (r: ReturnType<typeof row>) => r?.runs.map(x => x.text).join('')
+  expect(row(40, 'button')).toBeNull()
+  expect(row(undefined, 'button')).toBeNull()
+  expect(text(row(40, 'button', { effort: PICK }))).toBe('» high (app medium)')
+  expect(row(40, 'button', { effort: PICK })?.button).toBe(false)
+  expect(text(row(72, 'button', { effort: PICK }))).toBe('Context 72% of 200K · » high (app medium) · ')
+  expect(row(72, 'button', { effort: PICK })?.button).toBe(true)
+  expect(text(row(72, 'button'))).toBe('Context 72% of 200K · ')
+  // Alert mode adds no context row, but the pick is still worth a token.
+  expect(text(row(95, 'alert', { effort: PICK }))).toBe('» high (app medium)')
+  expect(row(95, 'alert')).toBeNull()
+})
+
+test('the automatic and running texts do not carry the pick', () => {
+  const base = { percent: 72, window: 200_000, limits: DEFAULTS, autoAt: 80, effort: PICK }
+  expect(bandRow({ ...base, action: 'auto', running: false })?.runs.map(r => r.text).join('')).toBe('Context 72% of 200K · automatic at 80%')
+  expect(bandRow({ ...base, action: 'button', running: true })?.runs.map(r => r.text).join('')).toContain('handing off')
 })
 
 test('auto runs once at its point, between turns, and again only after the context fell', () => {

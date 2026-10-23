@@ -13,7 +13,9 @@ const CRITERIA: Readonly<Record<Effort, string>> = {
 }
 
 // Models measured to keep the prompt cache when the effort changes between requests (see the README).
-// The exact Anthropic ids only (optionally dated or `[1m]`): a router can name another provider's model `claude-sonnet-5-5-high`.
+// The exact Anthropic ids only (optionally dated or `[1m]`), as Claude Code sends them. Ids with a router label never match: through CCR the same
+// Anthropic model lost its whole prompt cache when the effort changed, which plain Claude Code does not (see the README), and a router can name
+// another provider's model `claude-sonnet-5-5-high`.
 const STEERABLE = /^claude-(opus|sonnet|fable)-5(-\d+)?(-\d{8})?(\[1m\])?$/
 const CACHE_TTL_GUARD_MS = 4 * 60_000
 const REWRITE_MIN_TOKENS = 5000
@@ -25,8 +27,29 @@ const UNSURE_BELOW = 0.4
 
 export const isEffort = (value: unknown): value is Effort => EFFORTS.includes(value as Effort)
 
-// Only a model that takes an effort setting, and only a family where changing it keeps the cache.
-export const isSteerable = (model: string, appEffort: unknown): appEffort is Effort => isEffort(appEffort) && STEERABLE.test(model)
+// The models of a router that are steered too: an opt-in extra for people who run Claude Code through claude-code-router or the like, off by default.
+// Each pattern is a glob: `*` is the only wildcard, the match is anchored and case-sensitive. Measured through one CCR gateway: the effort of an OpenAI
+// or Google model changes its behaviour, but changing it cost GPT the whole prompt cache and Gemini part of it, and the same Anthropic model
+// lost its whole cache too. DeepSeek through OpenRouter showed no effect.
+export const DEFAULT_ROUTER = ''
+
+const patternList = (value: unknown): string[] =>
+  (typeof value === 'string' ? value : DEFAULT_ROUTER).split(',').map(p => p.trim()).filter(Boolean)
+
+export const routerPatterns = (value: unknown): readonly RegExp[] =>
+  patternList(value).map(p => new RegExp(`^${p.split('*').map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`))
+
+// What the dashboard says is steered: Anthropic always, then the routed families (the label before `(Login)/` or `/`), once each.
+export function routedFamilies(value: unknown): string {
+  const labels = patternList(value).map(p => (p.split(/ \(Login\)\/|\//)[0] ?? p).trim() || p)
+  const routed = [...new Set(labels)]
+  return routed.length === 0 ? 'Anthropic' : `Anthropic, ${routed.join(', ')} (via router)`
+}
+
+// Only a model that takes an effort setting, and only a family where changing it keeps the cache. Plain Claude Code ids never carry a
+// router label, so with or without `routers` they are judged by the Anthropic rule alone.
+export const isSteerable = (model: string, appEffort: unknown, routers: readonly RegExp[] = []): appEffort is Effort =>
+  isEffort(appEffort) && (STEERABLE.test(model) || routers.some(r => r.test(model)))
 
 // How far the judge may move the effort: `both` up and down from the app's effort, `down` only lower.
 export type Steer = 'both' | 'down'
@@ -173,14 +196,44 @@ export function quantilePick(probs: Readonly<Record<string, number>>, levels: re
 // A judge that is unsure of its own answer leaves the current level alone.
 export const settle = (verdict: Verdict, current: Effort | null): Effort => (current && verdict.sure !== undefined && verdict.sure < UNSURE_BELOW ? current : verdict.effort)
 
-export type Sent = { effort: string; at: number }
-export type Usage = { cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null }
+export type Sent = { effort: string; at: number; model?: string; cacheRead?: number }
+export type Usage = { input_tokens?: number | null; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null }
+
+const viaRouter = (model: string | undefined): boolean => model !== undefined && model.includes('/')
 
 // The request that followed an effort change wrote most of the prompt afresh: the cache did not survive the change.
 // A request more than a few minutes after the last one proves nothing (the cache may simply have expired).
+// Through a router (a model id with a `/`) a change of model rewrites the cache by itself, so the guard does not judge that request.
+// Plain Claude Code reports a write as `cache_creation_input_tokens`. The CCR gateway never does: it reports what it read as
+// `cache_read_input_tokens` and everything else as `input_tokens`, so through a router the uncached input is the write, and only a provider
+// that showed a cache before (a read on the previous request) can trip the guard: one that never reports a cache never does.
 export function cacheRewritten(prev: Sent | null, now: Sent, usage: Usage): boolean {
   if (!prev || prev.effort === now.effort || now.at - prev.at > CACHE_TTL_GUARD_MS) return false
+  if (prev.model !== now.model && prev.model !== undefined && now.model !== undefined && (viaRouter(prev.model) || viaRouter(now.model))) return false
   const read = usage.cache_read_input_tokens ?? 0
   const wrote = usage.cache_creation_input_tokens ?? 0
+  if (viaRouter(now.model)) {
+    const fresh = Math.max(wrote, usage.input_tokens ?? 0)
+    return (prev.cacheRead ?? 0) > 0 && fresh >= REWRITE_MIN_TOKENS && fresh > read
+  }
   return wrote >= REWRITE_MIN_TOKENS && wrote > read
+}
+
+// Measured under `ccr code`: a mod's `$.model.complete` call for Haiku (bare or with the router label) came back from the Anthropic login with a
+// 429 and CCR's failure fallback answered it with gpt-6.1-sol; a call naming another router model (a Gemini, GPT) was served by that model.
+// The result does not say which model answered, so behind a router the Haiku judge is not used unless the person names a judge model that
+// their router serves (their choice of where the next message goes).
+export const routedJudgeBlocked = (judge: { mode: string; model: string }, model: string): boolean => judge.mode === 'haiku' && judge.model === '' && viaRouter(model)
+
+// Why a model is left alone, in words for the dashboard. Only called for a model that is being left alone.
+export function idleReason(model: string, judge: { mode: string; model: string }, routersText: unknown): string {
+  const patterns = routerPatterns(routersText)
+  if (!viaRouter(model)) return 'Cruise steers Anthropic Opus, Sonnet and Fable 5'
+  if (isSteerable(model, 'high', patterns)) {
+    return routedJudgeBlocked(judge, model)
+      ? 'through a router the Haiku judge is not used: set judgeModel to a model your router serves, or use the jev or laya judge'
+      : `Cruise steers ${routedFamilies(routersText)}`
+  }
+  if (/^Anthropic \(Login\)\/claude-(opus|sonnet|fable)-5/.test(model)) return 'through a router the same Anthropic model lost its prompt cache when the effort changed (measured), so it is left alone; name it in routerModels to steer it anyway'
+  return patterns.length === 0 ? 'routed models are off by default: name one in routerModels to steer it' : `it is not in routerModels (Cruise steers ${routedFamilies(routersText)})`
 }

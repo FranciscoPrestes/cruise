@@ -7,7 +7,7 @@ import { cells } from './dash'
 
 type Ui = ReturnType<EngineInterface['ui']['resolve']>
 
-export const ASK_HOTKEY = 'e'
+const ASK_HOTKEY = 'e'
 
 // ❯ the request rows (two when collapsed), and, only when the request is longer than that, a control to open or close it.
 export function AskBlock({ Box, Text, Button }: Ui, view: AskView, onToggle: () => void, key: string) {

@@ -13,6 +13,10 @@ import {
   endsOnQuestion,
   isFollowUp,
   isSteerable,
+  routedFamilies,
+  idleReason,
+  routedJudgeBlocked,
+  routerPatterns,
   allowedTop,
   judgeQuestion,
   judgeSystem,
@@ -62,13 +66,13 @@ export function judgeMode(options: PluginOptions): JudgeMode {
   return mode === 'off' || mode === 'jev' || mode === 'laya' ? mode : 'haiku'
 }
 
-export type Judge = { mode: JudgeMode; url: string; key: string; model: string; steer: Steer; reach: Effort }
+export type Judge = { mode: JudgeMode; url: string; key: string; model: string; steer: Steer; reach: Effort; routers: readonly RegExp[] }
 
 export function judgeFrom(options: PluginOptions): Judge {
   const mode = judgeMode(options)
   const url = typeof options.judgeUrl === 'string' && options.judgeUrl.trim() ? options.judgeUrl.trim() : mode === 'laya' ? LAYA_URL : JEV_URL
   const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
-  return { mode, url, key: text(options.judgeKey), model: text(options.judgeModel), steer: steerFrom(options.steer), reach: reachFrom(options.topLevel) }
+  return { mode, url, key: text(options.judgeKey), model: text(options.judgeModel), steer: steerFrom(options.steer), reach: reachFrom(options.topLevel), routers: routerPatterns(options.routerModels) }
 }
 
 // A prompt the person typed is judged on the next main-loop request. Commands and system notes are not prompts.
@@ -180,9 +184,10 @@ async function decide($: EngineInterface, judge: Judge, top: Effort, app: Effort
 // The effort to send on this model request, or nothing to let the app's own effort go out unchanged.
 export async function effortFor($: EngineInterface, e: { model: string; effort?: unknown }, judge: Judge): Promise<Effort | undefined> {
   const before = await read($, effortState)
-  const idle = isSteerable(e.model, e.effort) ? null : e.model
+  const steerable = isSteerable(e.model, e.effort, judge.routers) && !routedJudgeBlocked(judge, e.model)
+  const idle = steerable ? null : e.model
   if (before.idle !== idle) await update($, effortState, s => ({ ...s, idle }))
-  if (!isSteerable(e.model, e.effort)) return undefined
+  if (!isSteerable(e.model, e.effort, judge.routers) || !steerable) return undefined
   const app = e.effort
   if (before.paused) return undefined
   if (before.appSeen !== app) await update($, effortState, s => ({ ...s, appSeen: app }))
@@ -200,9 +205,10 @@ export async function afterRequest(
   e: { model: string; effort?: unknown },
   sent: Effort | undefined,
   usage: Usage | undefined,
+  routers: readonly RegExp[] = [],
 ): Promise<void> {
-  if (!isSteerable(e.model, e.effort)) return
-  const now = { effort: sent ?? String(e.effort), at: await $.clock.now() }
+  if (!isSteerable(e.model, e.effort, routers)) return
+  const now = { effort: sent ?? String(e.effort), at: await $.clock.now(), model: e.model, cacheRead: usage?.cache_read_input_tokens ?? 0 }
   const prev = (await read($, effortState)).lastSent
   const broke = usage !== undefined && cacheRewritten(prev, now, usage)
   await update($, effortState, s => ({
@@ -236,6 +242,8 @@ export async function effortFacts($: EngineInterface, options: PluginOptions) {
     why: s.why,
     paused: s.paused,
     idle: s.idle,
+    idleWhy: s.idle ? idleReason(s.idle, judge, options.routerModels) : null,
+    families: routedFamilies(options.routerModels),
     picks: s.picks,
     counts: `${s.judged} judged · ${s.steered} steered · ${s.failed} failed · ${s.judgeTokens} judge tokens`,
   }
@@ -246,7 +254,7 @@ export async function report($: EngineInterface, options: PluginOptions, cont = 
   const judge = judgeFrom(options)
   const s = await read($, effortState)
   if (judge.mode === 'off') return 'off · turn on with /cruise:configure'
-  if (s.idle) return `resting · ${s.idle} has no effort setting Cruise can steer`
+  if (s.idle) return `resting · ${s.idle} is left alone (${idleReason(s.idle, judge, options.routerModels)})`
   const picks = Object.entries(s.picks).map(([k, n]) => `${k} ${n}`).join(' · ') || 'nothing picked yet'
   const way = judge.steer === 'down' ? "only lower than your app's effort" : `moves your app's effort up or down (up to ${judge.reach})`
   const pad = ' '.repeat(cont)

@@ -2,22 +2,13 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Ask, BgTask, Plan } from '../types'
-import { AskBlock } from './ask-block'
-import { askView } from './ask'
-import { fitRuns } from './dash'
-import type { Run } from './dash'
-import { effortParts } from './effort'
-import { LEVEL_COLOR } from './levels'
 import { addTask, endedTaskId, removeTask, snapshot } from './tasks'
-import { age, backgroundSummary, cleanAsk, isRealAsk, oneLine, planFromTodos, planProgress } from './helpers'
+import { backgroundSummary, cleanAsk, isRealAsk, planFromTodos, planProgress } from './helpers'
 
 const ask = atom({ plugin: 'cruise', key: 'progressAsk' } as const, null as Ask | null)
 const plan = atom({ plugin: 'cruise', key: 'progressPlan' } as const, {} as Plan)
 const background = atom({ plugin: 'cruise', key: 'progressBackground' } as const, [] as readonly BgTask[])
-const tick = atom({ plugin: 'cruise', key: 'progressTick' } as const, 0)
 const expanded = atom({ plugin: 'cruise', key: 'progressExpanded' } as const, false)
-
-const TICK_MS = 60_000
 
 // The band is informational only: a failure here must never block a prompt or a tool.
 const quietly = (work: Promise<unknown>) => work.catch(() => undefined)
@@ -44,8 +35,8 @@ async function runningAgents($: EngineInterface): Promise<readonly string[]> {
   return agents.filter(a => a.status === 'running').map(() => 'subagent')
 }
 
-// What the band and the /cruise dashboard both show: the request, how long ago, the plan step, background work and whether the request is open.
-// Reading the tick redraws both once a minute.
+// What the Progress section of the /cruise dashboard shows: the request, how long ago, the plan step, background work and whether the request is open.
+// The tracking runs all the time (a few small state writes per prompt and tool call); only the dashboard draws it.
 export type ProgressFacts = {
   ask: Ask | null
   now: number
@@ -55,28 +46,26 @@ export type ProgressFacts = {
 }
 
 export async function progressFacts($: EngineInterface): Promise<ProgressFacts> {
-  await read($, tick)
   return {
     ask: await read($, ask),
-    now: await $.clock.now(),
+    now: await $.clock.now().catch(() => 0),
     expanded: await read($, expanded),
     step: planProgress(await read($, plan)),
     background: backgroundSummary([...(await runningAgents($)), ...(await read($, background)).map(t => t.type)]),
   }
 }
 
-// Opens or closes the request (the control beside it; the same state serves the band and the dashboard).
+// Opens or closes the request (the control beside it in the dashboard).
 export async function toggleAsk($: EngineInterface): Promise<void> {
   await quietly(update($, expanded, open => !open))
 }
 
-// Redraws the band once a minute so "x min ago" does not freeze between events. A session always starts with the request closed.
+// A session always starts with the request closed.
 export function startProgress($: EngineInterface): void {
   void quietly(update($, expanded, () => false))
-  $.clock.every(TICK_MS, () => quietly(update($, tick, n => n + 1)))
 }
 
-// The latest real request is what the band shows; a new one clears the previous plan.
+// The latest real request is what the dashboard shows; a new one clears the previous plan and closes the request.
 export async function noteAsk($: EngineInterface, e: { text: string; command?: unknown; isMeta?: true }, minAskChars: number): Promise<void> {
   const text = cleanAsk(e.text)
   if (e.command || e.isMeta || !isRealAsk(text, minAskChars)) return
@@ -159,44 +148,4 @@ export const registerProgress: Register = on => {
     await quietly(update($, background, () => snapshot(e.background_tasks, e.session_crons)))
     return next(e)
   })
-}
-
-type Ui = ReturnType<EngineInterface['ui']['resolve']>
-
-// The progress part of the band above the prompt (the band itself, one hook for everything it shows, is in band.tsx).
-export async function progressBand($: EngineInterface, ui: Ui, bodyColumns: number, showEffort: boolean) {
-    const facts = await progressFacts($)
-    const current = facts.ask
-    if (current === null) return null
-
-    const width = Math.max(20, bodyColumns - 2)
-    const effort = showEffort ? await effortParts($) : null
-    const { Box, Text } = ui
-
-    // Always collapsed to at most three rows, whatever the room: the request in two (a control opens it whole), then one row
-    // for where the work is, what it costs and how long ago it was asked.
-    const view = askView(current.text, width - 2, facts.expanded)
-    const steps = facts.step
-    const bar = steps ? '▰'.repeat(steps.done) + '▱'.repeat(steps.total - steps.done) : ''
-    const stepRuns: Run[] = steps
-      ? [{ text: '◆ ', color: 'magenta', bold: true }, { text: `${steps.n}/${steps.total} `, bold: true }, { text: bar, color: 'green' }, { text: ` ${oneLine(steps.complete ? 'complete' : steps.title, Math.max(8, Math.floor(width / 3)))}` }]
-      : []
-    const effortRuns: Run[] =
-      effort && 'paused' in effort
-        ? [{ text: '⏸ effort steering paused', color: 'yellow' }]
-        : effort
-          ? [{ text: `⚡ ${effort.pick}`, color: LEVEL_COLOR[effort.pick] ?? 'white', bold: true }, ...(effort.app ? [{ text: ` (app ${effort.app})`, dim: true }] : []), ...(effort.why ? [{ text: ` · ${oneLine(effort.why, 24)}`, dim: true }] : [])]
-          : []
-    const bgRuns: Run[] = facts.background ? [{ text: `⚙ ${facts.background}`, color: 'blue' }] : []
-    const whenRuns: Run[] = [{ text: age(facts.now - current.at), dim: true }]
-    // One Text for the whole row, its runs coloured inside it: separate boxes in a row broke apart when the terminal was narrow.
-    const sep: Run = { text: '  │  ', dim: true }
-    const second = fitRuns(
-      [whenRuns, stepRuns, effortRuns, bgRuns].filter(g => g.length > 0).flatMap((g, i) => (i === 0 ? g : [sep, ...g])),
-      width,
-    )
-    const request = AskBlock(ui, view, () => void toggleAsk($), 'ask-more')
-    const status = <Text>{second.map(r => <Text color={r.color} dimColor={r.dim} bold={r.bold}>{r.text}</Text>)}</Text>
-    // Open, the request can be taller than the band's room and the engine scrolls it: the status row goes first so it never scrolls away.
-    return <Box flexDirection="column">{facts.expanded ? [status, request] : [request, status]}</Box>
 }

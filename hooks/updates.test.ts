@@ -33,13 +33,13 @@ const mount = (on: any) => {
   on('store.set', async (_$: unknown, e: { key: string; value: unknown }) => { mem[e.key] = e.value; return { value: undefined } as never })
   return clock
 }
-function stubs(on: any, manifest: string, opts: { failUpdate?: boolean } = {}): Setup {
+function stubs(on: any, manifest: string): Setup {
   const out: Setup = { toasts: [], fetched: 0, ran: [] }
   mount(on)
   on('ui.toast', async (_$: unknown, e: { text: string }) => { out.toasts.push(e.text); return { value: undefined } as never })
   on('ui.status', async () => ({ value: undefined }) as never)
   on('http.fetch', async () => { out.fetched += 1; return { value: { ok: true, status: 200, headers: {}, text: manifest } } as never })
-  on('process.run', async (_$: unknown, e: { argv: string[] }) => { out.ran.push(e.argv); return { value: { exitCode: opts.failUpdate ? 1 : 0, stdout: '', stderr: '' } } as never })
+  on('process.run', async (_$: unknown, e: { argv: string[] }) => { out.ran.push(e.argv); return { value: { exitCode: 0, stdout: '', stderr: '' } } as never })
   return out
 }
 
@@ -66,20 +66,11 @@ test('off: it never looks', { options: { updates: 'off' } }, async ($, on) => {
   expect(s.fetched).toBe(0)
 })
 
-test('auto: it refreshes the marketplace, updates the plugin and says to restart', { options: { updates: 'auto' } }, async ($, on) => {
+test('legacy auto setting only announces the update and never installs it', { options: { updates: 'auto' } }, async ($, on) => {
   const s = stubs(on, '{"version":"9.0.0"}')
   await start($)
-  expect(s.ran).toEqual([
-    ['claude', 'plugin', 'marketplace', 'update', 'prestes'],
-    ['claude', 'plugin', 'update', 'cruise@prestes'],
-  ])
-  expect(s.toasts.some(t => t.includes('updated to 9.0.0') && t.includes('Restart'))).toBe(true)
-})
-
-test('auto: a failed update points to the manual command', { options: { updates: 'auto' } }, async ($, on) => {
-  const s = stubs(on, '{"version":"9.0.0"}', { failUpdate: true })
-  await start($)
-  expect(s.toasts.some(t => t.includes('failed') && t.includes('/cruise:update'))).toBe(true)
+  expect(s.ran).toHaveLength(0)
+  expect(s.toasts.some(t => t.includes('9.0.0') && t.includes('/cruise:update'))).toBe(true)
 })
 
 test('a broken answer from GitHub is ignored without a word', async ($, on) => {

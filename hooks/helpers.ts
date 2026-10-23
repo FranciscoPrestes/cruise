@@ -15,11 +15,6 @@ export function isRealAsk(text: string, minChars: number = DEFAULT_MIN_ASK_CHARS
   return t.length >= minChars && !t.startsWith('/') && !t.startsWith('<')
 }
 
-export function oneLine(text: string, max: number): string {
-  const t = text.replace(/\s+/g, ' ').trim()
-  return t.length <= max ? t : `${t.slice(0, Math.max(1, max - 1))}…`
-}
-
 export function age(ms: number): string {
   if (ms < MINUTE) return 'now'
   if (ms < HOUR) return `${Math.round(ms / MINUTE)} min ago`
@@ -32,17 +27,7 @@ export function planFromTodos(todos: readonly { content: string; activeForm: str
   )
 }
 
-export function planSummary(plan: Plan): string | null {
-  const steps = Object.values(plan)
-  if (steps.length === 0) return null
-  const done = steps.filter(s => s.status === 'completed').length
-  if (done === steps.length) return `Plan complete: ${steps.length} of ${steps.length}`
-  const current = steps.find(s => s.status === 'in_progress') ?? steps.find(s => s.status === 'pending')
-  const n = steps.indexOf(current as Step) + 1
-  return `Step ${n} of ${steps.length}: ${current?.title ?? ''}`
-}
-
-// The same facts as planSummary, as parts the band can colour: step number, total, title and how many are done.
+// The plan as parts the dashboard can draw: current step number, total, its title and how many are done.
 export function planProgress(plan: Plan): { n: number; total: number; done: number; title: string; complete: boolean } | null {
   const steps = Object.values(plan)
   if (steps.length === 0) return null

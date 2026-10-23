@@ -15,14 +15,13 @@ import { welcome } from './welcome'
 // so the events several features share are owned here, and each feature's function is called from them.
 export const register: Register = (on, options) => {
   const wantContext = options.context !== false
-  const wantProgress = options.progress === true
   const wantEffort = judgeMode(options) !== 'off'
   const limits = contextLimits(options)
   const judge = judgeFrom(options)
   const minAskChars = typeof options.minAskChars === 'number' ? options.minAskChars : DEFAULT_MIN_ASK_CHARS
 
   on('session.start', async ($, e, next) => {
-    if (wantProgress) startProgress($)
+    startProgress($)
     void resetRelay($).catch(() => undefined)
     void welcome($, options)
     void checkForUpdate($, updateMode(options))
@@ -36,14 +35,14 @@ export const register: Register = (on, options) => {
   registerPurser(on, options)
 
   on('prompt.submit', async ($, e, next) => {
-    if (wantProgress) await noteAsk($, e, minAskChars)
+    await noteAsk($, e, minAskChars)
     if (wantEffort) await notePrompt($, e)
     return next(e)
   })
 
   on('tool.call', async ($, e, next) => {
     const out = await next(e)
-    if (wantProgress) await trackShell($, out)
+    await trackShell($, out)
     if (wantContext) await checkContext($, limits)
     return out
   })
@@ -57,7 +56,7 @@ export const register: Register = (on, options) => {
     else if (wantContext) await checkContext($, limits)
     const steer = wantEffort && e.agentId === undefined ? await effortFor($, e, judge) : undefined
     const result = yield* next(steer ? { ...e, effort: steer } : e)
-    if (wantEffort && e.agentId === undefined) await afterRequest($, e, steer, result.usage ?? undefined)
+    if (wantEffort && e.agentId === undefined) await afterRequest($, e, steer, result.usage ?? undefined, judge.routers)
     if (wantContext) await checkContext($, limits)
     return result
   })
@@ -71,5 +70,5 @@ export const register: Register = (on, options) => {
     return result
   })
 
-  if (wantProgress) registerProgress(on, options)
+  registerProgress(on, options)
 }

@@ -22,7 +22,7 @@ export type EffortState = {
   // How many times each effort was picked.
   picks: Readonly<Record<string, number>>
   // The effort and time of the previous main-loop request, for the cache guard.
-  lastSent: { effort: string; at: number } | null
+  lastSent: { effort: string; at: number; model?: string; cacheRead?: number } | null
   // The judge's reason for the current pick.
   why: string
   // The model of the last main-loop request when it takes no steering here (another provider, or no effort setting); null while steering applies.
@@ -36,14 +36,12 @@ declare module 'claude-code' {
       contextWarned: Level
       // Context: the model of the last main-loop request, to notice a model switch.
       contextModel: string
-      // Progress band: the current request, the plan, background work and a minute tick.
+      // Progress tracking (shown in the /cruise dashboard): the current request, the plan and background work.
       progressAsk: Ask | null
       progressPlan: Plan
       // Background work other than subagents (subagents are read live): kept up to date as tasks start
       // and end, and reset to the engine's own list at each Stop / SubagentStop.
       progressBackground: readonly BgTask[]
-      // Bumped once a minute so the "x min ago" label redraws on its own.
-      progressTick: number
       // The request is shown whole (true) or cut to two rows (false, the default and what every new prompt restores).
       progressExpanded: boolean
       // Effort steering (optional): the judge's verdicts and the cache guard.
