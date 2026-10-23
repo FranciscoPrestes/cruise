@@ -1,11 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 180" width="640" height="180" role="img" aria-label="Cruise, cruise control for Claude Code">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
-  <rect x="24" y="26" width="128" height="128" rx="32" fill="url(#g)"/>
-  <path d="M61.1 116.9A38 38 0 1 1 114.9 116.9" fill="none" stroke="#fff" stroke-opacity=".32" stroke-width="9" stroke-linecap="round"/>
-  <path d="M61.1 116.9A38 38 0 0 1 112.4 60.9" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"/>
-  <line x1="88" y1="90" x2="106" y2="68.5" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
-  <circle cx="88" cy="90" r="8" fill="#fff"/>
-  <rect x="74" y="131" width="28" height="5" rx="2.5" fill="#fff" fill-opacity=".55"/>
-  <text x="176" y="98" font-family="ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="68" font-weight="700" letter-spacing="-2" fill="#1f2328">Cruise</text>
-  <text x="179" y="132" font-family="ui-sans-serif,system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif" font-size="21" font-weight="500" fill="#59636e">cruise control for Claude Code</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 180" width="640" height="180" role="img" aria-label="Cruise, cruise control for Claude Code"><g transform="translate(24 26)"><defs><linearGradient id="tile-llight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#F1F3F6"/></linearGradient></defs><rect x=".75" y=".75" width="126.5" height="126.5" rx="31" fill="url(#tile-llight)" stroke="rgba(15,23,42,0.14)" stroke-width="1.5"/><line x1="20" y1="98" x2="108" y2="98" stroke="#1E2430" stroke-opacity=".22" stroke-width="5" stroke-linecap="round"/><path d="M24 86C54 86 56 40 86 40" fill="none" stroke="#C15F3C" stroke-width="11" stroke-linecap="round"/><circle cx="98" cy="40" r="13" fill="#C15F3C"/><circle cx="98" cy="40" r="5" fill="#F1F3F6"/></g><text x="176" y="98" font-family='ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif' font-size="68" font-weight="700" letter-spacing="-2" fill="#1F2430">Cruise</text><text x="179" y="132" font-family='ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif' font-size="21" font-weight="500" fill="#57606A">Cruise control for Claude Code</text></svg>

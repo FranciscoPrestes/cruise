@@ -12,8 +12,8 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/cruise-bench-dark.svg">
-    <img src="assets/cruise-bench-light.svg" alt="An isometric bench showing how Cruise works: messages pass under a small judge, which moves an effort fader up or down from your app's setting, never past a top stop; a context gauge lights its 60% and 80% warnings and raises a /handoff tag." width="860">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/cruise-route-dark.svg">
+    <img src="assets/cruise-route-light.svg" alt="A flight route showing how Cruise works: each prompt is a waypoint and the aircraft climbs or descends to the effort the judge picks, under a ceiling; a context gauge warns at 60% and 80%, and at 80% the aircraft lands at a handoff stop and a new one takes off with an empty gauge, while a purser line says what is now, done and next." width="860">
   </picture>
 </p>
 
@@ -166,7 +166,7 @@ Not proven. If a level too low costs three times a level too high, no judge clea
 
 ## Credits
 
-The idea of an effort judge, its prompt wording and `eval/judge-cases.json` come from [effortless](https://github.com/HeyCubit/effortless) by HeyCubit (MIT). Laya is [NandhaKishorM/laya](https://github.com/NandhaKishorM/laya) (Apache 2.0), installed separately and never bundled. Jev is a hosted service by TypeSafe. The animation was made with the Anatomy skill (MIT). See [`NOTICE`](NOTICE).
+The idea of an effort judge, its prompt wording and `eval/judge-cases.json` come from [effortless](https://github.com/HeyCubit/effortless) by HeyCubit (MIT). Laya is [NandhaKishorM/laya](https://github.com/NandhaKishorM/laya) (Apache 2.0), installed separately and never bundled. Jev is a hosted service by TypeSafe. See [`NOTICE`](NOTICE).
 
 ## Develop
 

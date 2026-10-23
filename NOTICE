@@ -30,7 +30,3 @@ Third-party material
 
 3. Jev, a hosted service by TypeSafe (https://typesafe.ai). Not included. Used only when the user chooses the `jev` judge
    and supplies their own key.
-
-4. anatomy (https://github.com/wheresryan22/anatomy), MIT License, Copyright (c) 2026 Ryan.
-   The isometric drawing kit behind assets/cruise-bench-*.svg (assets/figure/build.mjs imports it; its stylesheet is
-   embedded in each SVG). Install it to rebuild the figure: node assets/figure/build.mjs --kit <path to anatomy>.
