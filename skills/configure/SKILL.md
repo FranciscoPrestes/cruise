@@ -13,7 +13,7 @@ Cruise already works with its defaults, so make that clear first: "Everything be
 
 If this skill is loaded directly from a local source folder (`--plugin-dir` or `CLAUDE_CODE_PLUGIN_DIRS`), use `cruise@inline` instead of `cruise@prestes` in every command below, so settings apply to the active copy. Do not uninstall or change the inactive marketplace copy.
 
-Run `claude plugin configure cruise@prestes --json` to see every option, its type and its current value. Use the names it prints. The defaults of version 1.5 are:
+Run `claude plugin configure cruise@prestes --json` to see every option, its type and its current value. Use the names it prints. The defaults of version 1.6 are:
 
 | Setting | Default | Meaning |
 | --- | --- | --- |

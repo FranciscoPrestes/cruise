@@ -1,6 +1,6 @@
 {
   "name": "cruise",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Cruise control for Claude Code: watches the context, shows where you are and (optionally) picks the reasoning effort for each prompt",
   "author": {
     "name": "Francisco Prestes"
