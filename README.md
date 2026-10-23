@@ -25,7 +25,7 @@ Cruise is a mod for Claude Code (its commands call mods "plugins") with four job
 | --- | --- | --- |
 | **Context** | Warns at 60% and 80% of the context window and points to `/handoff`, before quality drops | on |
 | **Progress** | Two lines above the prompt: your latest request, then the plan step, the effort pick and what runs in the background | **off** (it takes screen space) |
-| **Crew** | A short standing instruction that makes replies easy to follow and cheap to read: the result or next action first, numbered steps, and one status line on multi-step work (`Now · Done · Next`), like a cabin crew's announcement | on |
+| **Purser** | A short standing instruction that makes replies easy to follow and cheap to read: the result or next action first, numbered steps, and one status line on multi-step work (`Now | Done | Next`), like a purser's cabin announcement | on |
 | **Effort** | A small judge reads each prompt and picks the lowest reasoning effort that still does the job, among `low`, `medium`, `high`, `xhigh`, `max` | on, judged by Haiku on your own login |
 
 ```text
@@ -63,7 +63,7 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 | `context` | on | Context warnings |
 | `warnAt` / `urgentAt` / `resetBelow` | 60 / 80 / 40 | First warning, urgent warning, and where warnings start over (%) |
 | `progress` | off | The two-line band above the prompt |
-| `crew` | on | Crew mode: the short reply style above (about 300 tokens in the cached system prompt) |
+| `purser` | on | Purser mode: the short reply style above (about 500 tokens in the cached system prompt) |
 | `minAskChars` | 25 | Shorter messages ("go ahead") do not replace the request shown |
 | `effort` | `haiku` | The judge: `off`, `haiku`, `jev` or `laya` |
 | `steer` | `both` | `both`: the judge may raise or lower your app's effort. `down`: only lower it |

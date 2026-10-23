@@ -1,7 +1,7 @@
 import type { Register } from 'claude-code'
 
 import { checkContext, contextLimits } from './context'
-import { registerCrew } from './crew'
+import { registerPurser } from './purser'
 import { afterRequest, effortFor, judgeFrom, judgeMode, notePrompt } from './effort'
 import { DEFAULT_MIN_ASK_CHARS } from './helpers'
 import { registerDash } from './dash-view'
@@ -28,7 +28,7 @@ export const register: Register = (on, options) => {
   })
 
   registerDash(on, options)
-  registerCrew(on, options)
+  registerPurser(on, options)
 
   on('prompt.submit', async ($, e, next) => {
     if (wantProgress) await noteAsk($, e, minAskChars)
