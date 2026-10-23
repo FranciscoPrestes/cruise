@@ -19,12 +19,13 @@
 
 ## What it is
 
-Cruise is a mod for Claude Code (its commands call mods "plugins") with three jobs. Each can be switched off.
+Cruise is a mod for Claude Code (its commands call mods "plugins") with four jobs. Each can be switched off.
 
 | | What it does | Default |
 | --- | --- | --- |
 | **Context** | Warns at 60% and 80% of the context window and points to `/handoff`, before quality drops | on |
 | **Progress** | Two lines above the prompt: your latest request, then the plan step, the effort pick and what runs in the background | **off** (it takes screen space) |
+| **Crew** | A short standing instruction that makes replies easy to follow and cheap to read: the result or next action first, numbered steps, and one status line on multi-step work (`Now · Done · Next`), like a cabin crew's announcement | on |
 | **Effort** | A small judge reads each prompt and picks the lowest reasoning effort that still does the job, among `low`, `medium`, `high`, `xhigh`, `max` | on, judged by Haiku on your own login |
 
 ```text
@@ -62,6 +63,7 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 | `context` | on | Context warnings |
 | `warnAt` / `urgentAt` / `resetBelow` | 60 / 80 / 40 | First warning, urgent warning, and where warnings start over (%) |
 | `progress` | off | The two-line band above the prompt |
+| `crew` | on | Crew mode: the short reply style above (about 300 tokens in the cached system prompt) |
 | `minAskChars` | 25 | Shorter messages ("go ahead") do not replace the request shown |
 | `effort` | `haiku` | The judge: `off`, `haiku`, `jev` or `laya` |
 | `steer` | `both` | `both`: the judge may raise or lower your app's effort. `down`: only lower it |
@@ -80,7 +82,9 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 
 "Two small facts": the effort you are on, and whether the last reply ended with a question. **Cruise never sends the conversation to a judge.**
 
-**Behaviour you can rely on.** The effort you set in the app is the starting point and wins if you change it. A judge that fails, is slow or is unsure leaves your setting alone. Only the Opus, Sonnet and Fable 5 families are steered; Haiku and subagents are not. Short follow-ups ("yes", "go") keep the current pick. If the prompt cache is ever rewritten after an effort change, steering stops for the session and says so. Ultracode (under `/effort`) cannot be switched by a mod; that stays your call.
+**Behaviour you can rely on.** The effort you set in the app is the starting point and wins if you change it. A judge that fails, is slow or is unsure leaves your setting alone. Only Anthropic's own Opus, Sonnet and Fable 5 models are steered. Haiku, subagents and any other provider's model (for example behind a router such as claude-code-router) are left alone, and the panel says so; Cruise does not translate effort into another provider's reasoning levels. Short follow-ups ("yes", "go") keep the current pick. If the prompt cache is ever rewritten after an effort change, steering stops for the session and says so. Ultracode (under `/effort`) cannot be switched by a mod; that stays your call.
+
+**Switching model.** Changing model with `/model` keeps the whole conversation, so nothing is reset. The context percentage is the last reply's tokens over the window of the model you are on, so a model with a smaller window shows a higher percentage for the same conversation; Cruise says which window it means (`Context 72% of 200K`) and, after a switch, warns again with the new figure. The first request on a new model also rewrites the prompt cache once.
 
 **Skills.** `/handoff` saves the state of a session and `/pickup` resumes it in a fresh one (use `/cruise:handoff` if you have your own skills with those names). `/cruise:configure` sets Cruise up, `/cruise:update` installs a new version, `/cruise:setup-laya` installs Laya. Remove with `/plugin uninstall cruise@prestes`.
 

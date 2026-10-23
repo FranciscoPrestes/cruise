@@ -4,6 +4,11 @@ export const DEFAULT_MIN_ASK_CHARS = 25
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 
+// A big paste reaches the hook wrapped in <pasted_content id="…">…</pasted_content id="…">: without this, a pasted prompt began with "<" and never counted as a request.
+export function cleanAsk(text: string): string {
+  return text.replace(/<\/?pasted_content[^>]*>/g, '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f�]/g, '').trim()
+}
+
 // A real request; "go ahead", commands and system notices do not replace the current one.
 export function isRealAsk(text: string, minChars: number = DEFAULT_MIN_ASK_CHARS): boolean {
   const t = text.trim()

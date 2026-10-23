@@ -26,6 +26,7 @@ import {
   steerFrom,
 } from './effort-rules'
 import type { Steer, Usage, Verdict } from './effort-rules'
+import { cleanAsk } from './helpers'
 
 export type JudgeMode = 'off' | 'haiku' | 'jev' | 'laya'
 
@@ -50,6 +51,7 @@ const INITIAL: EffortState = {
   picks: {},
   lastSent: null,
   why: '',
+  idle: null,
 }
 
 export const effortState = atom({ plugin: 'cruise', key: 'effort' } as const, INITIAL)
@@ -73,7 +75,8 @@ export function judgeFrom(options: PluginOptions): Judge {
 export async function notePrompt($: EngineInterface, e: { text: string; command?: unknown; isMeta?: true }): Promise<void> {
   if (e.command || e.isMeta || !e.text.trim()) return
   const afterQuestion = await lastReplyAsked($)
-  await update($, effortState, s => ({ ...s, pending: { text: e.text, afterQuestion } }))
+  // A pasted prompt arrives wrapped in a tag: the judge reads the words, not the wrapper.
+  await update($, effortState, s => ({ ...s, pending: { text: cleanAsk(e.text), afterQuestion } }))
 }
 
 async function lastReplyAsked($: EngineInterface): Promise<boolean> {
@@ -176,9 +179,11 @@ async function decide($: EngineInterface, judge: Judge, top: Effort, app: Effort
 
 // The effort to send on this model request, or nothing to let the app's own effort go out unchanged.
 export async function effortFor($: EngineInterface, e: { model: string; effort?: unknown }, judge: Judge): Promise<Effort | undefined> {
+  const before = await read($, effortState)
+  const idle = isSteerable(e.model, e.effort) ? null : e.model
+  if (before.idle !== idle) await update($, effortState, s => ({ ...s, idle }))
   if (!isSteerable(e.model, e.effort)) return undefined
   const app = e.effort
-  const before = await read($, effortState)
   if (before.paused) return undefined
   if (before.appSeen !== app) await update($, effortState, s => ({ ...s, appSeen: app }))
   const top = allowedTop(app, judge.steer, judge.reach)
@@ -218,11 +223,30 @@ export async function effortParts($: EngineInterface): Promise<{ pick: string; a
   return { pick: s.pick, app: s.appSeen && s.appSeen !== s.pick ? s.appSeen : null, why: s.why ?? null }
 }
 
+// The effort facts for the /cruise dashboard, drawn there as colour (the state is read here, where it is declared).
+export async function effortFacts($: EngineInterface, options: PluginOptions) {
+  const judge = judgeFrom(options)
+  const s = await read($, effortState)
+  return {
+    on: judge.mode !== 'off',
+    mode: `${judge.mode}${judge.model ? ` (${judge.model})` : ''}`,
+    way: judge.steer === 'down' ? "only lower than your app's" : `up or down from your app's, up to ${judge.reach}`,
+    pick: s.pick,
+    app: s.appSeen && s.appSeen !== s.pick ? s.appSeen : null,
+    why: s.why,
+    paused: s.paused,
+    idle: s.idle,
+    picks: s.picks,
+    counts: `${s.judged} judged · ${s.steered} steered · ${s.failed} failed · ${s.judgeTokens} judge tokens`,
+  }
+}
+
 // The effort part of the /cruise panel: a headline and two detail lines, each starting with `cont` spaces of indent.
 export async function report($: EngineInterface, options: PluginOptions, cont = 14): Promise<string> {
   const judge = judgeFrom(options)
   const s = await read($, effortState)
   if (judge.mode === 'off') return 'off · turn on with /cruise:configure'
+  if (s.idle) return `resting · ${s.idle} has no effort setting Cruise can steer`
   const picks = Object.entries(s.picks).map(([k, n]) => `${k} ${n}`).join(' · ') || 'nothing picked yet'
   const way = judge.steer === 'down' ? "only lower than your app's effort" : `moves your app's effort up or down (up to ${judge.reach})`
   const pad = ' '.repeat(cont)

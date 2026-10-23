@@ -25,6 +25,8 @@ export type EffortState = {
   lastSent: { effort: string; at: number } | null
   // The judge's reason for the current pick.
   why: string
+  // The model of the last main-loop request when it takes no steering here (another provider, or no effort setting); null while steering applies.
+  idle: string | null
 }
 
 declare module 'claude-code' {
@@ -32,6 +34,8 @@ declare module 'claude-code' {
     cruise: {
       // Context: percent of context at which the last warning was shown; 0 = none yet.
       contextWarned: Level
+      // Context: the model of the last main-loop request, to notice a model switch.
+      contextModel: string
       // Progress band: the current request, the plan, background work and a minute tick.
       progressAsk: Ask | null
       progressPlan: Plan
@@ -40,6 +44,8 @@ declare module 'claude-code' {
       progressBackground: readonly BgTask[]
       // Bumped once a minute so the "x min ago" label redraws on its own.
       progressTick: number
+      // The request is shown whole (true) or cut to two rows (false, the default and what every new prompt restores).
+      progressExpanded: boolean
       // Effort steering (optional): the judge's verdicts and the cache guard.
       effort: EffortState
     }

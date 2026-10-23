@@ -23,6 +23,10 @@ test('only models measured to keep the cache are steered, and only when they tak
   expect(isSteerable('claude-haiku-5-5', undefined)).toBe(false)
   expect(isSteerable('claude-opus-4-1', 'high')).toBe(false)
   expect(isSteerable('claude-opus-5-5', undefined)).toBe(false)
+  expect(isSteerable('claude-sonnet-5-5[1m]', 'high')).toBe(true)
+  expect(isSteerable('claude-sonnet-5-5-high', 'high')).toBe(false)
+  expect(isSteerable('gpt-6.1-sol', 'high')).toBe(false)
+  expect(isSteerable('gemini-4-argon-high', 'high')).toBe(false)
   expect(isSteerable('claude-opus-5-5', 12000)).toBe(false)
 })
 

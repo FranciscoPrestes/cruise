@@ -105,3 +105,15 @@ test('context warnings can be switched off in the settings', { options: { contex
   await $.turn.complete({ reason: 'answer', answer: 'ok', durationMs: 1, isAborted: false, turnId: 't9' })
   expect(toasts).toHaveLength(0)
 })
+
+const usageOf = (percent: number, window: number) => ({ value: { startedAt: 0, context: { window, tokens: 0, percent } } }) as never
+
+test('the warning names the window the percentage is a share of', async ($, on) => {
+  const toasts: string[] = []
+  on('session.usage', async () => usageOf(65, 200000))
+  on('ui.status', async () => ({ value: undefined }) as never)
+  on('ui.toast', async (_$, e) => { toasts.push(e.text); return { value: undefined } as never })
+  on('turn.complete', async () => ({ text: '' }))
+  await $.turn.complete({ reason: 'answer', answer: 'ok', durationMs: 1, isAborted: false, turnId: 't9' })
+  expect(toasts[0]).toContain('65% of 200K')
+})

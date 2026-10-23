@@ -145,9 +145,9 @@ test('the "x min ago" label moves on by itself as the minutes pass', { options: 
   await $.session.start({ source: 'startup', cwd: '/tmp' } as never)
   await $.prompt.submit({ text: 'integrate billing into the planning app using the existing connection' })
   const band = await mountBand($) // stays mounted: nothing remounts it, so only the tick can redraw it
-  expect(await band.findAll({ text: /· now/ })).not.toHaveLength(0)
+  expect(await band.findAll({ text: /^now|│  now|now$/ })).not.toHaveLength(0)
   await clock.advance(5 * 60_000)
-  expect(await band.findAll({ text: /· 5 min ago/ })).not.toHaveLength(0)
+  expect(await band.findAll({ text: /5 min ago/ })).not.toHaveLength(0)
 })
 
 test('a task created but not started shows its subject as the step', { options: { progress: true } }, async ($, on) => {
@@ -169,4 +169,40 @@ test('the progress band can be switched off in the settings', { options: { progr
     drawn = false
   }
   expect(drawn).toBe(false)
+})
+
+const HUGE = Array.from({ length: 5 }, (_, i) => `Review the billing module and list every place where currency conversion could drift (part ${i + 1}). `.repeat(6)).join('\n\n')
+
+test('a huge request is collapsed to two rows with a control; the control opens it and a new prompt closes it again', { options: { progress: true } }, async ($, on) => {
+  on('clock.now', async () => ({ value: 1_000 }) as never)
+  on('prompt.submit', async () => ({ text: 'ok' }) as never)
+  await $.prompt.submit({ text: HUGE })
+  const band = await $.ui.mount({ plugin: 'cruise', surface: 'terminal', component: 'AbovePrompt', props: { bodyColumns: 80, maxRows: 40 } as never })
+  expect(await band.findAll({ text: /\+ more/ })).not.toHaveLength(0)
+  expect(await band.findAll({ text: /…$/ })).not.toHaveLength(0)
+  expect(await band.findAll({ text: /part 5/ })).toHaveLength(0)
+
+  await $.ui.press({ plugin: 'cruise', key: 'ask-more' })
+  expect(await band.findAll({ text: /- less/ })).not.toHaveLength(0)
+  expect(await band.findAll({ text: /part 5/ })).not.toHaveLength(0)
+
+  await $.prompt.submit({ text: 'now fix the login redirect after the session expires' })
+  expect(await band.findAll({ text: /\+ more/ })).toHaveLength(0)
+  expect(await band.findAll({ text: /login redirect/ })).not.toHaveLength(0)
+})
+
+test('a pasted request (wrapped in <pasted_content>) still becomes the request', { options: { progress: true } }, async ($, on) => {
+  on('clock.now', async () => ({ value: 1_000 }) as never)
+  on('prompt.submit', async () => ({ text: 'ok' }) as never)
+  await $.prompt.submit({ text: `<pasted_content id="c665">\n${HUGE}\n</pasted_content id="c665">` })
+  const band = await mountBand($)
+  expect(await band.findAll({ text: /Review the billing module/ })).not.toHaveLength(0)
+  expect(await band.findAll({ text: /pasted_content/ })).toHaveLength(0)
+})
+
+test('a short request has no control',{ options: { progress: true } }, async ($, on) => {
+  on('clock.now', async () => ({ value: 1_000 }) as never)
+  on('prompt.submit', async () => ({ text: 'ok' }) as never)
+  await $.prompt.submit({ text: 'integrate billing into the planning app using the existing connection' })
+  expect(await (await mountBand($)).findAll({ text: /more|less/ })).toHaveLength(0)
 })

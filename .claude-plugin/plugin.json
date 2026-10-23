@@ -38,6 +38,12 @@
       "description": "Show a two-line band above the prompt: the current request, then the plan step, the effort pick and background work. Off by default, since it takes screen space.",
       "default": false
     },
+    "crew": {
+      "type": "boolean",
+      "title": "Crew mode",
+      "description": "A short standing instruction so Claude's replies are easy to follow and cheap to read: result or next action first, numbered steps, one status line (now, done, next) on multi-step work, no preamble or recap. Adds about 300 tokens to the cached system prompt. Turn it off if you prefer Claude's default style.",
+      "default": true
+    },
     "minAskChars": {
       "type": "number",
       "title": "Minimum request length",

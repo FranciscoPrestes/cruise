@@ -16,6 +16,8 @@ function stubs(on: any, opts: { replies?: unknown[]; reply?: unknown; steps?: Re
   on('session.messages', async () => ({ value: [] }) as never)
   on('ui.toast', async (_$: unknown, e: { text: string }) => { out.toasts.push(e.text); return { value: undefined } as never })
   on('ui.status', async () => ({ value: undefined }) as never)
+  // No pane can be drawn here, so /cruise falls back to its plain-text report.
+  on('ui.open', async () => ({ value: { isPlaced: false } }) as never)
   on('session.usage', async () => ({ value: { startedAt: 0, context: { window: 1, tokens: 0, percent: 10 } } }) as never)
   on('model.complete', async (_$: unknown, e: { prompt: string; model: string }) => { out.judged.push(e.prompt); out.models.push(e.model); if (opts.throwJudge) throw new Error('boom'); const r = opts.replies ? opts.replies[asked] : opts.reply; asked += 1; return { value: r ?? verdict('low') } as never })
   on('http.fetch', async (_$: unknown, e: { url: string; init?: { headers?: Record<string, string>; body?: string } }) => {

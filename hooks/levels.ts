@@ -4,6 +4,9 @@ import type { Level } from '../types'
 
 export type Thresholds = { warnAt: number; urgentAt: number; resetBelow: number }
 
+// One colour per effort, from calm to costly: the band and the panel draw the same levels alike.
+export const LEVEL_COLOR: Readonly<Record<string, string>> = { low: 'green', medium: 'cyan', high: 'yellow', xhigh: 'magenta', max: 'red' }
+
 export const DEFAULTS: Thresholds = { warnAt: 60, urgentAt: 80, resetBelow: 40 }
 
 const num = (value: unknown, fallback: number) => (typeof value === 'number' && Number.isFinite(value) ? value : fallback)

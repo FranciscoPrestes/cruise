@@ -1,12 +1,20 @@
 import { expect, test } from 'claude-code/testing'
 
-import { age, backgroundSummary, isRealAsk, oneLine, planFromTodos, planSummary } from './helpers'
+import { age, backgroundSummary, cleanAsk, isRealAsk, oneLine, planFromTodos, planSummary } from './helpers'
 
 test('short replies and commands do not become the request', () => {
   expect(isRealAsk('go ahead')).toBe(false)
   expect(isRealAsk('/model opus')).toBe(false)
   expect(isRealAsk('<task-notification> anything long enough to pass the length check')).toBe(false)
   expect(isRealAsk('integrate billing into the planning app')).toBe(true)
+})
+
+test('a pasted prompt is the request: the paste wrapper is removed, system notices still are not', () => {
+  const pasted = '<pasted_content id="2af8">\nReview the billing module and list every rounding path.\n</pasted_content id="2af8">'
+  expect(cleanAsk(pasted)).toBe('Review the billing module and list every rounding path.')
+  expect(isRealAsk(cleanAsk(pasted))).toBe(true)
+  expect(cleanAsk('before <pasted_content id="1">middle</pasted_content id="1"> after')).toBe('before middle after')
+  expect(isRealAsk(cleanAsk('<task-notification> anything long enough to pass the length check'))).toBe(false)
 })
 
 test('the minimum length is adjustable', () => {

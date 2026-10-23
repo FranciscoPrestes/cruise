@@ -13,7 +13,8 @@ const CRITERIA: Readonly<Record<Effort, string>> = {
 }
 
 // Models measured to keep the prompt cache when the effort changes between requests (see the README).
-const STEERABLE = /^claude-(opus|sonnet|fable)-5-/
+// The exact Anthropic ids only (optionally dated or `[1m]`): a router can name another provider's model `claude-sonnet-5-5-high`.
+const STEERABLE = /^claude-(opus|sonnet|fable)-5(-\d+)?(-\d{8})?(\[1m\])?$/
 const CACHE_TTL_GUARD_MS = 4 * 60_000
 const REWRITE_MIN_TOKENS = 5000
 const FOLLOW_UP_MAX_CHARS = 12
