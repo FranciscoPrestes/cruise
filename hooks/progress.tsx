@@ -6,7 +6,7 @@ import { AskBlock } from './ask-block'
 import { askView } from './ask'
 import { fitRuns } from './dash'
 import type { Run } from './dash'
-import { effortParts, judgeMode } from './effort'
+import { effortParts } from './effort'
 import { LEVEL_COLOR } from './levels'
 import { addTask, endedTaskId, removeTask, snapshot } from './tasks'
 import { age, backgroundSummary, cleanAsk, isRealAsk, oneLine, planFromTodos, planProgress } from './helpers'
@@ -85,9 +85,7 @@ export async function noteAsk($: EngineInterface, e: { text: string; command?: u
   )
 }
 
-export const registerProgress: Register = (on, options) => {
-  const showEffort = judgeMode(options) !== 'off'
-
+export const registerProgress: Register = on => {
   // The plan is the main conversation's: a subagent's task list must not overwrite it.
   on('tool.call', { tool: 'TodoWrite' }, async ($, e, next) => {
     if (e.agentId) return next(e)
@@ -161,15 +159,18 @@ export const registerProgress: Register = (on, options) => {
     await quietly(update($, background, () => snapshot(e.background_tasks, e.session_crons)))
     return next(e)
   })
+}
 
-  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+type Ui = ReturnType<EngineInterface['ui']['resolve']>
+
+// The progress part of the band above the prompt (the band itself, one hook for everything it shows, is in band.tsx).
+export async function progressBand($: EngineInterface, ui: Ui, bodyColumns: number, showEffort: boolean) {
     const facts = await progressFacts($)
     const current = facts.ask
-    if (e.props.hasSurvey || current === null) return next(e)
+    if (current === null) return null
 
-    const width = Math.max(20, (e.props.bodyColumns ?? 80) - 2)
+    const width = Math.max(20, bodyColumns - 2)
     const effort = showEffort ? await effortParts($) : null
-    const ui = $.ui.resolve(e)
     const { Box, Text } = ui
 
     // Always collapsed to at most three rows, whatever the room: the request in two (a control opens it whole), then one row
@@ -198,5 +199,4 @@ export const registerProgress: Register = (on, options) => {
     const status = <Text>{second.map(r => <Text color={r.color} dimColor={r.dim} bold={r.bold}>{r.text}</Text>)}</Text>
     // Open, the request can be taller than the band's room and the engine scrolls it: the status row goes first so it never scrolls away.
     return <Box flexDirection="column">{facts.expanded ? [status, request] : [request, status]}</Box>
-  })
 }

@@ -11,6 +11,8 @@ import { effortFacts } from './effort'
 import type { Thresholds } from './levels'
 import { LEVEL_COLOR } from './levels'
 import { panel } from './panel'
+import { autoThreshold, contextAction, loadRelay } from './relay'
+import type { ContextAction, RelayRecord } from './relay'
 import { progressFacts, toggleAsk } from './progress'
 import type { ProgressFacts } from './progress'
 import { updateLine, updateMode } from './updates'
@@ -28,18 +30,22 @@ export type Snapshot = {
   progress: { on: boolean; facts: ProgressFacts | null }
   effort: Awaited<ReturnType<typeof effortFacts>>
   update: { line: string; available: boolean }
+  // The handoff relay: what the context warning offers, what it is doing now and how the last run ended.
+  relay: { action: ContextAction; autoAt: number; running: boolean; now: number; last: RelayRecord | null }
 }
 
 export async function snapshot($: EngineInterface, options: PluginOptions): Promise<Snapshot> {
   const limits = contextLimits(options)
   const percent = options.context === false ? undefined : await $.session.usage().then(u => u.context.percent, () => undefined)
   const update = await updateLine($, updateMode(options))
+  const relay = await loadRelay($)
   return {
     limits,
     context: { on: options.context !== false, percent },
     progress: { on: options.progress === true, facts: options.progress === true ? await progressFacts($) : null },
     effort: await effortFacts($, options),
     update: { line: update, available: update.includes('available') },
+    relay: { action: contextAction(options), autoAt: autoThreshold(options, limits), running: relay.running, now: await $.clock.now().catch(() => 0), last: relay.last },
   }
 }
 
@@ -56,6 +62,7 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
   const barWidth = Math.max(4, Math.min(METER_MAX, body - 6))
   const percent = s.context.percent
   const warns = `warns at ${s.limits.warnAt}% and ${s.limits.urgentAt}%`
+  const auto = s.relay.action === 'auto'
 
   const context: Run[][] = !s.context.on
     ? [OFF]
@@ -64,7 +71,7 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
       : [
           [...meter(percent, barWidth, s.limits), { text: `  ${percent}%`, bold: true, color: zone(percent, s.limits) }],
           ...(framed ? [dim(tickRow(barWidth, s.limits))] : []),
-          dim(`${warns}, then type /handoff`),
+          dim(auto ? `${warns} · auto at ${s.relay.autoAt}%` : `${warns}, then type /handoff`),
         ]
 
   const e = s.effort
@@ -83,6 +90,17 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
         ...(!hasPicks ? [] : framed ? [mix(e.picks, Math.min(METER_MAX, body)), legend] : [[...mix(e.picks, 12), { text: '  ' }, ...legend]]),
         ...(framed ? [dim(`${e.mode} judge · ${e.way}`), dim(e.counts)] : [dim(`${e.mode} judge · ${e.counts}`)]),
       ]
+
+  const r = s.relay
+  const how: Run[] =
+    r.action === 'alert' ? dim('alert only · warnings, no button')
+    : r.action === 'auto' ? [{ text: `auto at ${r.autoAt}% · clears your conversation`, color: 'yellow' }]
+    : dim(`button · offered from ${s.limits.warnAt}%, above the prompt`)
+  const last: Run[] = r.running
+    ? [{ text: 'running: handoff, clear, pickup…', color: 'yellow' }]
+    : r.last
+      ? [{ text: `${age(r.now - r.last.at)} · `, dim: true }, { text: r.last.ok ? 'ok' : 'aborted', color: r.last.ok ? 'green' : 'yellow', bold: true }, { text: ` · ${r.last.why}`, dim: true }]
+      : dim('not run yet')
 
   const facts = s.progress.facts
   const step = facts?.step ?? null
@@ -104,6 +122,7 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
   const on = (yes: boolean) => (yes ? 'green' : undefined)
   return [
     { dot: yes(s.context.on), color: ctxDot ?? on(s.context.on), label: 'Context', lines: fit(context) },
+    { dot: r.action === 'alert' ? '○' : '●', color: r.action === 'alert' ? undefined : r.last && !r.last.ok ? 'yellow' : 'green', label: 'Handoff', lines: fit([how, last]) },
     { dot: yes(e.on), color: e.paused ? 'yellow' : on(e.on), label: 'Effort', lines: fit(effort) },
     { dot: yes(s.progress.on), color: on(s.progress.on), label: 'Progress', lines: fit(progress), ask: askShown },
     { dot: '●', color: s.update.available ? 'yellow' : 'green', label: 'Updates', lines: fit([dim(s.update.available ? s.update.line : 'up to date · checks daily')]) },

@@ -13,9 +13,12 @@ const full: Snapshot = {
   progress: { on: true, facts: { ask: { text: HUGE_ASK, at: 0 }, now: 12 * 60_000, expanded: false, step: { n: 3, total: 12, done: 2, title: long, complete: false }, background: '2 agents, 1 command' } },
   effort: { on: true, mode: 'jev (a-long-model-name)', way: "up or down from your app's, up to max", pick: 'xhigh', app: 'medium', why: long, paused: null, picks: { low: 40, medium: 30, high: 20, xhigh: 7, max: 3 }, counts: '100 judged · 70 steered · 12 failed · 123456 judge tokens' },
   update: { line: '9.9.9 is available (you have 1.5.0) · type /cruise:update', available: true },
+  relay: { action: 'auto', autoAt: 85, running: false, now: 600_000, last: { at: 0, ok: false, mode: 'auto', why: 'no handoff file was written, so nothing was cleared and this sentence is long on purpose' } },
 }
 const open: Snapshot = { ...full, progress: { on: true, facts: { ...full.progress.facts!, expanded: true } } }
 const noPlan: Snapshot = { ...full, progress: { on: true, facts: { ...full.progress.facts!, ask: { text: 'fix the login redirect after the session expires', at: 0 }, step: null, background: null } } }
+const running: Snapshot = { ...full, relay: { ...full.relay, action: 'button', running: true } }
+const alertOnly: Snapshot = { ...full, relay: { ...full.relay, action: 'alert', last: null } }
 const paused: Snapshot = { ...full, effort: { ...full.effort, paused: 'the prompt cache was rewritten after an effort change' }, context: { on: true, percent: undefined } }
 
 // Every drawn line (label column and content) must fit in the card's inner width, at any pane width and in both layouts.
@@ -24,7 +27,7 @@ for (const columns of [40, 60, 80, 150]) {
     test(`every line fits the card (${columns} columns, ${framed ? 'framed' : 'inline'})`, () => {
       const inner = Math.max(20, columns - (framed ? 4 : 2))
       const body = Math.max(8, inner - 11)
-      for (const snap of [full, open, noPlan, paused]) {
+      for (const snap of [full, open, noPlan, paused, running, alertOnly]) {
         for (const row of rows(snap, body, framed)) {
           for (const line of row.lines) expect(11 + line.reduce((n, r) => n + cells(r.text), 0)).toBeLessThanOrEqual(inner)
           // The request block: its widest row, plus the control (2 cells of air and "e: + more") when there is one.
@@ -94,4 +97,21 @@ test('with progress off the Progress section only says how to turn it on', () =>
   const { ask, lines } = text({ ...full, progress: { on: false, facts: null } })
   expect(ask).toBeUndefined()
   expect(lines).toEqual(['off · turn on with /cruise:configure'])
+})
+
+test('the Handoff row says what the context warning offers and how the last run ended', () => {
+  const handoff = (snap: Snapshot) => rows(snap, 60, true).find(r => r.label === 'Handoff')!.lines.map(l => l.map(r => r.text).join('')).join('\n')
+  expect(handoff(full)).toContain('auto at 85% · clears your conversation')
+  expect(handoff(full)).toContain('aborted')
+  expect(handoff(running)).toContain('running')
+  expect(handoff(alertOnly)).toContain('alert only')
+  expect(handoff({ ...full, relay: { ...full.relay, action: 'button', last: { at: 0, ok: true, mode: 'button', why: 'handoff saved, context cleared, pickup started' } } })).toContain('ok')
+})
+
+test('the Context row shows the automatic point when auto is on, and the /handoff hint otherwise', () => {
+  const context = (snap: Snapshot) => rows(snap, 60, true).find(r => r.label === 'Context')!.lines.map(l => l.map(r => r.text).join('')).join('\n')
+  expect(context(full)).toContain('auto at 85%')
+  expect(context(full)).not.toContain('then type /handoff')
+  expect(context({ ...full, relay: { ...full.relay, action: 'button' } })).toContain('then type /handoff')
+  expect(context({ ...full, relay: { ...full.relay, action: 'alert' } })).not.toContain('auto at')
 })
