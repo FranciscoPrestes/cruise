@@ -10,6 +10,8 @@
   <a href="#install">Install</a> · <a href="#configure">Configure</a> · <a href="#laya-on-your-machine">Laya</a> · <a href="#research">Research</a> · <a href="#credits">Credits</a> · <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue" align="top">
 </p>
 
+https://github.com/user-attachments/assets/586b3d2d-75e1-415b-9da0-379ae7cbf45a
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/cruise-route-dark.svg">
