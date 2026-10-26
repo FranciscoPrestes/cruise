@@ -64,17 +64,17 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 | `context` | on | Context warnings |
 | `warnAt` / `urgentAt` / `resetBelow` | 60 / 80 / 40 | First warning, urgent warning, and where warnings start over (%) |
 | `contextAction` | `button` | When the context fills: `button` (a row above the prompt with a button that does handoff, clear and pickup), `alert` (warnings only) or `auto` (does all three by itself) |
-| `autoAt` | 80 | Only with `auto`: the % of context at which it saves the handoff, clears and picks up by itself. Kept between the first warning and 95; 80 leaves room for the handoff itself. `/cruise` shows it as `auto at 80%` |
+| `autoAt` | 80 | Only with `auto`: the % of context at which it hands off by itself, kept between the first warning and 95 |
 | `purser` | on | Purser mode: the short reply style above (about 500 tokens in the cached system prompt) |
 | `minAskChars` | 25 | Shorter messages ("go ahead") do not replace the request shown |
 | `effort` | `haiku` | The judge: `off`, `haiku`, `jev` or `laya` |
 | `steer` | `both` | `both`: the judge may raise or lower your app's effort. `down`: only lower it |
 | `topLevel` | `max` | Highest effort the judge may pick: `high`, `xhigh` or `max` |
-| `routerModels` | empty (off) | Opt-in extra for people who run Claude Code through a router such as claude-code-router: comma-separated patterns (`*` wildcard, exact case) of the models whose effort Cruise may steer too, for example `OpenAI (Login)/gpt-*,Google (Login)/gemini-*`. Plain Claude Code is not affected. Read [`docs/router.md`](docs/router.md) before turning it on |
+| `routerModels` | empty (off) | Only behind a router such as claude-code-router: patterns of models whose effort Cruise may steer, for example `OpenAI (Login)/gpt-*`. See [`docs/router.md`](docs/router.md) first |
 | `judgeUrl` / `judgeKey` / `judgeModel` | empty | Where a `jev` or `laya` judge listens, its key (kept in secure storage), and its model |
 | `updates` | `check` | `check`: look on GitHub once a day and tell you; never install automatically. `off`: never look |
 
-**Choose a judge**
+### Choose a judge
 
 | `effort` | Judge | Needs | What leaves your machine |
 | --- | --- | --- | --- |
@@ -85,15 +85,18 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 
 "Two small facts": the effort you are on, and whether the last reply ended with a question. **Cruise never sends the conversation to a judge.**
 
-**Behaviour you can rely on.** The effort you set in the app is the starting point and wins if you change it. A judge that fails, is slow or is unsure leaves your setting alone. In plain Claude Code only Anthropic's own Opus, Sonnet and Fable 5 models are steered; Haiku, subagents and anything else are left alone, and the panel says so. Behind a router nothing is steered by default (see below); Cruise never translates effort into another provider's reasoning levels. Short follow-ups ("yes", "go") keep the current pick. If the prompt cache is ever rewritten after an effort change, steering stops for the session and says so. Ultracode (under `/effort`) cannot be switched by a mod; that stays your call.
+### How it behaves
 
-**Through a router (opt-in, off by default).** Behind a router such as claude-code-router, models appear as `<Label> (Login)/<model>`. Cruise steers none of them unless you name them in `routerModels`, and it does **not** steer Anthropic ids behind a router either: measured, an effort change loses the prompt cache there (Anthropic, GPT and Gemini through one gateway), while plain Claude Code keeps it. Behind a router the Haiku judge is also not used until you set `judgeModel` to a model your router serves, because the bare Haiku name can be answered by another vendor when the Anthropic login is rate limited. The `jev` and `laya` judges do not go through the router. Everything else (context warnings, the handoff button, purser mode, `/cruise`) works with any model. The measurements, the judge trial and a direct comparison with Codex and Antigravity are in [`docs/router.md`](docs/router.md).
+- **Your setting wins.** The effort you set in the app is the starting point, and changing it overrides the judge. A judge that fails, is slow or is unsure leaves your setting alone. Short follow-ups ("yes", "go") keep the current pick.
+- **What is steered.** In plain Claude Code, only Anthropic's Opus, Sonnet and Fable 5 models. Haiku, subagents and everything else are left alone, and the panel says so. Ultracode (under `/effort`) cannot be switched by a mod.
+- **Cache guard.** If the prompt cache is ever rewritten after an effort change, steering stops for the session and says so.
+- **Handoff button.** Press it (or `h`, after `ctrl+x` then `tab` to focus the band) and Cruise runs `/handoff`, checks that the file was really written, clears the conversation and runs `/pickup` in the fresh one. If the file is missing, nothing is cleared. `contextAction: auto` does the same by itself at `autoAt`. It clears your conversation, so it is opt-in.
+- **Switching model.** `/model` keeps the conversation. The percentage is over the window of the model you are on, so Cruise names the window (`72% of 200K`) and warns again after a switch. The first request on a new model rewrites the prompt cache once.
+- **Through a router.** Nothing is steered and the Haiku judge is not used until you opt in with `routerModels` and `judgeModel`. Context warnings, the handoff button, purser mode and `/cruise` work with any model. The reasons and measurements are in [`docs/router.md`](docs/router.md).
 
-**Handoff button.** From the first warning, a row above the prompt reads `Context 72% of 200K · h: Handoff and continue`. Press it (or `h`, after `ctrl+x` then `tab` to focus the band) and Cruise runs `/handoff` as a turn, checks that the handoff file was really written, clears the conversation and runs `/pickup` in the fresh one. If the file is missing nothing is cleared. With `contextAction: auto` the same happens by itself, once per band, between turns, at `autoAt` (80 by default): it clears your conversation, so it is opt-in. `/cruise` shows the last run.
+### Commands
 
-**Switching model.** Changing model with `/model` keeps the whole conversation, so nothing is reset. The context percentage is the last reply's tokens over the window of the model you are on, so a model with a smaller window shows a higher percentage for the same conversation; Cruise says which window it means (`Context 72% of 200K`) and, after a switch, warns again with the new figure. The first request on a new model also rewrites the prompt cache once.
-
-**Skills.** `/handoff` saves the state of a session and `/pickup` resumes it in a fresh one (use `/cruise:handoff` if you have your own skills with those names). `/cruise:configure` sets Cruise up, `/cruise:update` installs a new version, `/cruise:setup-laya` installs Laya. Remove with `/plugin uninstall cruise@prestes`.
+`/cruise` opens the panel. `/handoff` saves the state of a session and `/pickup` resumes it in a fresh one (`/cruise:handoff` if you already have skills with those names). `/cruise:configure` changes settings, `/cruise:update` installs a new version, `/cruise:setup-laya` installs Laya. Remove with `/plugin uninstall cruise@prestes`.
 
 ## Laya on your machine
 
