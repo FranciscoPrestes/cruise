@@ -7,7 +7,7 @@
 
 <p align="center">
   <b>Cruise control for Claude Code: context warnings, a handoff button and per-prompt effort steering.</b><br>
-  <a href="#install">Install</a> · <a href="#configure">Configure</a> · <a href="#laya-on-your-machine">Laya</a> · <a href="#research">Research</a> · <a href="#credits">Credits</a> · <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue" align="top">
+  <a href="#install">Install</a> · <a href="#configure">Configure</a> · <a href="#laya-on-your-machine">Laya</a> · <a href="#research">Research</a> · <a href="#credits">Credits</a> · <a href="https://github.com/FranciscoPrestes/cruise/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/FranciscoPrestes/cruise" align="top"></a> <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue" align="top">
 </p>
 
 https://github.com/user-attachments/assets/586b3d2d-75e1-415b-9da0-379ae7cbf45a
@@ -27,7 +27,7 @@ Cruise is a mod for Claude Code (its commands call mods "plugins") with four job
 | --- | --- | --- |
 | **Context** | Warns at 60% and 80% of the context window and points to `/handoff`, before quality drops | on |
 | **Handoff** | From the first warning, one row above the prompt with a button that saves the handoff, clears the conversation and picks up (or does it by itself, if you choose `auto`) | button |
-| **Purser** | A short standing instruction that makes replies easy to follow and cheap to read: the result or next action first, numbered steps, and one status line on multi-step work (`Now · Done · Next`), like a purser's cabin announcement | on |
+| **Purser** | A short standing instruction that makes replies easy to follow and cheap to read: the result or next action first, numbered steps, one status line on multi-step work (`Now · Done · Next`), and a real choice offered as a short pick list with the recommended option first, like a purser's cabin announcement | on |
 | **Effort** | A small judge reads each prompt and picks the lowest reasoning effort that still does the job, among `low`, `medium`, `high`, `xhigh`, `max` | on, judged by Haiku on your own login |
 
 ```text
