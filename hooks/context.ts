@@ -29,15 +29,16 @@ async function check($: EngineInterface, limits: Thresholds, model?: string): Pr
   $.ui.status(step.warned ? `Context ${percent}% of ${of} · type /handoff` : undefined)
   if (switched && step.show) {
     $.ui.toast(`Model changed: the conversation comes with you, and it is ${percent}% of this model's ${of} window. Type /handoff when this step is done.`)
+    void $.ui.notify(`Context at ${percent}%: time for a handoff`, { title: 'Claude Code' }).catch(() => undefined)
     return
   }
 
   if (step.show === limits.urgentAt) {
     $.ui.toast(`Context at ${percent}% of ${of}. Type /handoff now, before compaction.`)
-    void $.ui.notify(`Context at ${percent}%: time for a handoff`, { title: 'Claude Code' })
   } else if (step.show) {
     $.ui.toast(`Context at ${percent}% of ${of}. When you finish this step, type /handoff.`)
   }
+  if (step.show) void $.ui.notify(`Context at ${percent}%: time for a handoff`, { title: 'Claude Code' }).catch(() => undefined)
 }
 
 export function contextLimits(options: PluginOptions): Thresholds {

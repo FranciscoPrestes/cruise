@@ -80,7 +80,7 @@ export async function notePrompt($: EngineInterface, e: { text: string; command?
   if (e.command || e.isMeta || !e.text.trim()) return
   const afterQuestion = await lastReplyAsked($)
   // A pasted prompt arrives wrapped in a tag: the judge reads the words, not the wrapper.
-  await update($, effortState, s => ({ ...s, pending: { text: cleanAsk(e.text), afterQuestion } }))
+  await update($, effortState, s => ({ ...s, ...(!isFollowUp(e.text) || afterQuestion ? { summary: undefined } : {}), pending: { text: cleanAsk(e.text), afterQuestion } }))
 }
 
 async function lastReplyAsked($: EngineInterface): Promise<boolean> {
@@ -175,6 +175,7 @@ async function decide($: EngineInterface, judge: Judge, top: Effort, app: Effort
     ...s,
     pick: effort,
     why: verdict.why,
+    summary: verdict.summary,
     judged: s.judged + 1,
     judgeTokens: s.judgeTokens + got.tokens,
     picks: { ...s.picks, [effort]: (s.picks[effort] ?? 0) + 1 },
@@ -240,6 +241,7 @@ export async function effortFacts($: EngineInterface, options: PluginOptions) {
     pick: s.pick,
     app: s.appSeen && s.appSeen !== s.pick ? s.appSeen : null,
     why: s.why,
+    summary: s.summary,
     paused: s.paused,
     idle: s.idle,
     idleWhy: s.idle ? idleReason(s.idle, judge, options.routerModels) : null,
@@ -258,9 +260,9 @@ export async function report($: EngineInterface, options: PluginOptions, cont = 
   const picks = Object.entries(s.picks).map(([k, n]) => `${k} ${n}`).join(' · ') || 'nothing picked yet'
   const way = judge.steer === 'down' ? "only lower than your app's effort" : `moves your app's effort up or down (up to ${judge.reach})`
   const pad = ' '.repeat(cont)
-  const now = s.pick ? `now ⚡ ${s.pick}${s.appSeen && s.appSeen !== s.pick ? ` (app ${s.appSeen})` : ''}${s.why ? ` · ${s.why}` : ''}` : 'waiting for your first prompt'
+  const now = s.pick ? `now » ${s.pick}${s.appSeen && s.appSeen !== s.pick ? ` (app ${s.appSeen})` : ''}${s.why ? ` · ${s.why}` : ''}` : 'waiting for your first prompt'
   return [
-    `${judge.mode}${judge.model ? ` (${judge.model})` : ''} judge · ${way}${s.paused ? `  ·  ⏸ PAUSED: ${s.paused}` : ''}`,
+    `${judge.mode}${judge.model ? ` (${judge.model})` : ''} judge · ${way}${s.paused ? `  ·  || PAUSED: ${s.paused}` : ''}`,
     `${pad}${now}`,
     `${pad}${s.judged} judged · ${s.steered} steered · judge failures: ${s.failed} · judge tokens: ${s.judgeTokens}`,
     `${pad}${picks}`,

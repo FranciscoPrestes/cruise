@@ -53,7 +53,7 @@ test('background work from the last Stop is shown', async ($, on) => {
   on('classic.Stop', async () => ({}) as never)
   await $.prompt.submit({ text: 'integrate billing into the planning app using the existing connection' })
   await $.classic.Stop({ stop_hook_active: false, background_tasks: [{ id: '1', type: 'shell', status: 'running', description: 'dev server' }], session_crons: [] } as never)
-  expect(await (await mountDash($)).findAll({ text: /⚙ 1 command/ })).not.toHaveLength(0)
+  expect(await (await mountDash($)).findAll({ text: /◆ 1 command/ })).not.toHaveLength(0)
 })
 
 test('TaskCreate and TaskUpdate drive the step shown', async ($, on) => {
@@ -76,7 +76,7 @@ test('a background shell appears as soon as it starts', async ($, on) => {
   on('tool.call', async () => ({ result: { backgroundTaskId: 'b1', stdout: '', stderr: '', interrupted: false } }) as never)
   await askAndMount($, on)
   await $.tool.call({ tool: 'Bash', command: 'npm run dev', run_in_background: true } as never)
-  expect(await (await mountDash($)).findAll({ text: /⚙ 1 command/ })).not.toHaveLength(0)
+  expect(await (await mountDash($)).findAll({ text: /◆ 1 command/ })).not.toHaveLength(0)
 })
 
 test('a stopped task leaves the dashboard immediately', async ($, on) => {
@@ -119,14 +119,14 @@ test('a command sent to the background with Ctrl+B is followed too', async ($, o
   on('tool.call', async () => ({ result: { backgroundTaskId: 'b9', backgroundedByUser: true, stdout: '', stderr: '', interrupted: false } }) as never)
   await askAndMount($, on)
   await $.tool.call({ tool: 'Bash', command: 'sleep 600' } as never)
-  expect(await (await mountDash($)).findAll({ text: /⚙ 1 command/ })).not.toHaveLength(0)
+  expect(await (await mountDash($)).findAll({ text: /◆ 1 command/ })).not.toHaveLength(0)
 })
 
 test('a background shell started by another tool is followed too', async ($, on) => {
   on('tool.call', async () => ({ result: { backgroundTaskId: 'p1' } }) as never)
   await askAndMount($, on)
   await $.tool.call({ tool: 'PowerShell', command: 'Start-Sleep 600' } as never)
-  expect(await (await mountDash($)).findAll({ text: /⚙ 1 command/ })).not.toHaveLength(0)
+  expect(await (await mountDash($)).findAll({ text: /◆ 1 command/ })).not.toHaveLength(0)
 })
 
 test('the engine\'s own list at Stop corrects anything the tracking missed', async ($, on) => {

@@ -25,6 +25,7 @@ export type EffortState = {
   lastSent: { effort: string; at: number; model?: string; cacheRead?: number } | null
   // The judge's reason for the current pick.
   why: string
+  summary?: string
   // The model of the last main-loop request when it takes no steering here (another provider, or no effort setting); null while steering applies.
   idle: string | null
 }

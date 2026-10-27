@@ -18,7 +18,7 @@ const BAR_WIDTH = 10
 // ▰▰▰▰▰▰▱▱▱▱ with a dot that turns yellow at the first warning and red at the urgent one.
 export function gauge(percent: number, limits: Thresholds): string {
   const lit = Math.max(0, Math.min(BAR_WIDTH, Math.round((percent / 100) * BAR_WIDTH)))
-  const dot = percent >= limits.urgentAt ? '🔴' : percent >= limits.warnAt ? '🟡' : '🟢'
+  const dot = percent >= limits.urgentAt ? '!' : percent >= limits.warnAt ? '!' : '●'
   return `${dot} ${'▰'.repeat(lit)}${'▱'.repeat(BAR_WIDTH - lit)} ${percent}%`
 }
 
@@ -33,18 +33,18 @@ const row = (dot: string, label: string, text: string): string => `${dot} ${labe
 const RULE = '─'.repeat(64)
 
 async function contextRow($: EngineInterface, options: PluginOptions): Promise<string> {
-  if (options.context === false) return row('⚪', 'Context', 'off · turn on with /cruise:configure')
+  if (options.context === false) return row('○', 'Context', 'off · turn on with /cruise:configure')
   const limits = contextLimits(options)
   const percent = await $.session.usage().then(u => u.context.percent, () => undefined)
   const warns = `warns at ${limits.warnAt}% and ${limits.urgentAt}%`
-  if (percent === undefined) return row('🟢', 'Context', warns)
-  const [dot = '🟢', ...bar] = gauge(percent, limits).split(' ')
+  if (percent === undefined) return row('●', 'Context', warns)
+  const [dot = '●', ...bar] = gauge(percent, limits).split(' ')
   return row(dot, 'Context', `${bar.join(' ')}  ·  ${warns}`)
 }
 
 export async function panel($: EngineInterface, options: PluginOptions): Promise<string> {
   const mode = judgeMode(options)
-  const effort = row(mode === 'off' ? '⚪' : '🟢', 'Effort', await report($, options, LABEL_WIDTH + 1))
+  const effort = row(mode === 'off' ? '○' : '●', 'Effort', await report($, options, LABEL_WIDTH + 1))
   const updates = await updateLine($, updateMode(options))
   const location = await workspace($)
   const handoff = await handoffInfo($)
@@ -53,9 +53,9 @@ export async function panel($: EngineInterface, options: PluginOptions): Promise
   const relay = await loadRelay($)
   const elapsed = (at: number | undefined) => session.now !== undefined && at !== undefined ? age(Math.max(0, session.now - at)) : 'unavailable'
   return [
-    `✈  Cruise ${VERSION}  ·  cruise control for Claude Code`,
+    `◐  Cruise ${VERSION}  ·  cruise control for Claude Code`,
     RULE,
-    row('🟢', 'Workspace', location.cwd),
+    row('●', 'Workspace', location.cwd),
     row(' ', '', [location.branch, location.worktree].filter(Boolean).join(' · ')),
     row(' ', '', location.files ? `Git: ${location.files.length} changed` : 'Git changes unavailable'),
     ...(location.files ?? []).map(f => `    ${f.staged}${f.unstaged} ${f.path}`),
@@ -67,7 +67,7 @@ export async function panel($: EngineInterface, options: PluginOptions): Promise
     row(' ', 'Time', `observed start: ${elapsed(session.started)} · last activity: ${elapsed(session.activity)}`),
     await contextRow($, options),
     effort,
-    row(updates.includes('available') ? '🟡' : '🟢', 'Updates', updates),
+    row(updates.includes('available') ? '!' : '●', 'Updates', updates),
     RULE,
     HELP,
   ].join('\n')

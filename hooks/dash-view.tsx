@@ -72,7 +72,7 @@ export function detailPages(s: Snapshot, width: number): string[][] {
     'Workspace:', s.workspace.cwd, `${s.workspace.branch} · ${s.workspace.worktree}`, 'Git files:', ...(files ? files.map(f => `staged=${f.staged === ' ' ? '-' : f.staged} unstaged=${f.unstaged === ' ' ? '-' : f.unstaged} ${f.path}`) : ['unavailable']),
     'Latest handoff in folder:', ...(handoff?.status === 'found' ? [handoff.path, handoff.goal ?? 'goal unavailable'] : [handoff?.status ?? 'unavailable']),
     'Active work:', ...(s.progress.facts.details ?? ['agents unavailable']),
-    'Model:', s.session?.model ?? 'unavailable', 'Request:', s.progress.facts.ask?.text ?? 'unavailable',
+    'Model:', s.session?.model ?? 'unavailable', 'Task summary:', s.effort.summary ?? 'unavailable', 'Request:', s.progress.facts.ask?.text ?? 'unavailable',
   ].flatMap(line => pathLines(line, width).map(run => run.map(part => part.text).join('')))
   const pages: string[][] = []
   for (let i = 0; i < lines.length; i += 8) pages.push(lines.slice(i, i + 8))
@@ -110,12 +110,12 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
   // » marks the pick: a glyph every terminal draws one cell wide (⚡ is two in some and one in others, which broke the card's edge).
   // A model that is left alone is named: the effort rows above it are from before it.
   const now: Run[] = e.paused
-    ? [{ text: `⏸ paused: ${e.paused}`, color: 'yellow' }]
+    ? [{ text: `|| paused: ${e.paused}`, color: 'yellow' }]
     : e.idle
       ? [{ text: `resting · ${e.idle} is left alone`, color: 'yellow' }]
     : e.pick
       ? [{ text: `» ${e.pick}`, color: LEVEL_COLOR[e.pick] ?? 'white', bold: true }, ...(e.app ? dim(` (app ${e.app})`) : []), ...(e.why ? dim(` · ${e.why}`) : [])]
-      : dim('waiting for your first prompt')
+      : dim('no eligible prompt judged yet')
   const legend: Run[] = Object.entries(e.picks).flatMap(([k, n], i): Run[] => [{ text: `${i ? '   ' : ''}● `, color: LEVEL_COLOR[k] }, { text: `${k} ${n}`, dim: true }])
   const hasPicks = Object.keys(e.picks).length > 0
   const effort: Run[][] = !e.on
@@ -143,11 +143,12 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
   const stepLine: Run[] = step
     ? [{ text: '◆ ', color: 'magenta', bold: true }, { text: `${step.n}/${step.total} `, bold: true }, { text: '▰'.repeat(step.done) + '▱'.repeat(step.total - step.done), color: 'green' }, { text: ` ${step.complete ? 'complete' : step.title}` }]
     : dim('no plan yet · steps appear when Claude keeps a task list')
-  const tail: Run[] = [...(facts.ask ? [{ text: age(facts.now - facts.ask.at), dim: true }] : []), ...(facts.background ? [{ text: `⚙ ${facts.background}`, color: 'blue' }] : [])]
+  const tail: Run[] = [...(facts.ask ? [{ text: age(facts.now - facts.ask.at), dim: true }] : []), ...(facts.background ? [{ text: `◆ ${facts.background}`, color: 'blue' }] : [])]
     .flatMap((r, i): Run[] => (i ? [{ text: ' · ', dim: true }, r] : [r]))
   const askShown = facts.ask ? askView(facts.ask.text, body - 2, facts.expanded) : undefined
   const progress: Run[][] = [
-    ...(facts.ask ? [] : [dim('no request yet')]),
+    ...(e.summary ? wrapText(`Task summary: ${e.summary}`, body).map(dim) : []),
+    ...(facts.ask ? [] : [dim('waiting for an observed request')]),
     // Above the prompt the row count is tight, so the age and background work share the step's line there.
     ...(framed || tail.length === 0 ? [stepLine, ...(tail.length > 0 ? [tail] : [])] : [[...stepLine, { text: '  │  ', dim: true }, ...tail]]),
   ]
@@ -155,19 +156,19 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
   const ctxDot = percent === undefined ? undefined : zone(percent, s.limits)
   const files = s.workspace.files
   const git = files ? `${files.filter(f => f.unstaged !== ' ' && f.unstaged !== '?').length} modified · ${files.filter(f => f.staged === '?').length} new · ${files.filter(f => f.staged !== ' ' && f.staged !== '?').length} staged` : 'Git changes unavailable'
-  const latest = s.handoff?.status === 'found' ? `folder handoff · ${age(Math.max(0, r.now - s.handoff.at))}` : `folder handoff · ${s.handoff?.status ?? 'unavailable'}`
+  const latest = s.handoff?.status === 'found' ? `Last in folder: ${age(Math.max(0, r.now - s.handoff.at))}` : `Last in folder: ${s.handoff?.status ?? 'unavailable'}`
   const session = s.session
-  const elapsed = session?.now !== undefined && session.started !== undefined ? age(Math.max(0, session.now - session.started)) : 'unavailable'
-  const activity = session?.now !== undefined && session.activity !== undefined ? age(Math.max(0, session.now - session.activity)) : 'unavailable'
+  const elapsed = session?.now !== undefined && session.started !== undefined ? age(Math.max(0, session.now - session.started)) : 'start not observed'
+  const activity = session?.now !== undefined && session.activity !== undefined ? `${session.action ?? 'observed'} · ${age(Math.max(0, session.now - session.activity))}` : 'waiting for observed activity'
   const on = (yes: boolean) => (yes ? 'green' : undefined)
   return [
-    { dot: '●', color: 'green', label: 'Workspace', lines: fit([...pathLines(s.workspace.cwd, body), ...wrapText([s.workspace.branch, s.workspace.worktree].filter(Boolean).join(' · '), body).map(dim), ...wrapText(git, body).map(dim)]) },
+    { dot: '◇', color: 'green', label: 'Workspace', lines: fit([...pathLines(s.workspace.cwd, body), ...wrapText([s.workspace.branch, s.workspace.worktree].filter(Boolean).join(' · '), body).map(dim), ...wrapText(git, body).map(dim)]) },
     { dot: yes(s.context.on), color: ctxDot ?? on(s.context.on), label: 'Context', lines: fit(context) },
-    { dot: r.action === 'alert' ? '○' : '●', color: r.action === 'alert' ? undefined : r.last && !r.last.ok ? 'yellow' : 'green', label: 'Handoff', lines: fit([how, last, dim(latest), ...(r.stage ? [dim(r.stage)] : [])]) },
+    { dot: '↗', color: r.action === 'alert' ? undefined : r.last && !r.last.ok ? 'yellow' : 'green', label: 'Handoff', lines: fit([how, [{ text: 'Relay: ', dim: true }, ...last], dim(latest), ...(r.stage ? [dim(r.stage)] : [])]) },
     { dot: yes(e.on), color: e.paused ? 'yellow' : on(e.on), label: 'Effort', lines: fit([dim(`model: ${session?.model ?? 'unavailable'}`), ...effort]) },
     { dot: '●', color: 'green', label: 'Progress', lines: fit(progress), ask: askShown },
-    { dot: '●', color: 'green', label: 'Time', lines: fit([dim(`observed start: ${elapsed}`), dim(`last activity: ${activity}`)]) },
-    { dot: '●', color: s.update.available ? 'yellow' : 'green', label: 'Updates', lines: fit([dim(s.update.available ? s.update.line : 'up to date · checks daily')]) },
+    { dot: '◷', color: 'green', label: 'Time', lines: fit([dim(`observed start: ${elapsed}`), ...wrapText(`last activity: ${activity}`, body).map(dim)]) },
+    { dot: '◇', color: s.update.available ? 'yellow' : 'green', label: 'Updates', lines: fit(wrapText(s.update.line, body).map(dim)) },
   ]
 }
 
@@ -193,13 +194,13 @@ function Dashboard(ui: Ui, s: Snapshot, columns: number, framed = true, onToggle
   const top = chrome(inner)
   const pages = detailPages(s, inner)
   const currentPage = Math.min(page, pages.length - 1)
-  if (page >= 0) return <Box flexDirection="column" width={columns}><Text bold>{`Details ${currentPage + 1}/${pages.length}`}</Text>{pages[currentPage]!.map(line => <Text>{line}</Text>)}<Button key="details-previous" label="previous" hotkey="p" onPress={() => onPage((currentPage + pages.length - 1) % pages.length)} /><Button key="details-next" label="next" hotkey="n" onPress={() => onPage((currentPage + 1) % pages.length)} /><Button key="details-close" label="close" hotkey="d" onPress={() => onPage(-1)} /></Box>
+  if (page >= 0) return <Box flexDirection="column" width={columns}><Text bold>{`Details ${currentPage + 1}/${pages.length}`}</Text>{pages[currentPage]!.map(line => <Text>{line}</Text>)}<Button key="details-previous" label="Previous page" hotkey="p" onPress={() => onPage((currentPage + pages.length - 1) % pages.length)} /><Button key="details-next" label="Next page" hotkey="n" onPress={() => onPage((currentPage + 1) % pages.length)} /><Button key="details-close" label="Back to overview" hotkey="d" onPress={() => onPage(-1)} /></Box>
   const overview = rows(s, body, framed)
   return (
     <Box flexDirection="column" borderStyle={framed ? 'round' : undefined} borderColor={ORANGE} paddingX={1} width={columns}>
       {text(top.title)}
       <Text color={ORANGE}>{top.rule}</Text>
-      <Box flexDirection="row"><Button key="details-open" label="details" hotkey="d" onPress={() => onPage(0)} /><Button key="overview-end" label="bottom" hotkey="b" onPress={() => onScroll('end')} /><Button key="overview-start" label="top" hotkey="t" onPress={() => onScroll('start')} /></Box>
+      <Box flexDirection="row"><Button key="details-open" label="View details" hotkey="d" onPress={() => onPage(0)} /><Button key="overview-end" label="Scroll down" hotkey="b" onPress={() => onScroll('end')} /><Button key="overview-start" label="Scroll up" hotkey="t" onPress={() => onScroll('start')} /></Box>
       {overview.map(r => (
         <Box flexDirection="row">
           <Box width={LABEL}>

@@ -79,5 +79,5 @@ export async function updateLine($: EngineInterface, mode: UpdateMode): Promise<
   if (mode === 'off') return 'automatic check off (setting "updates") · /cruise:update checks by hand'
   const saved = (await $.store.get(KEY).catch(() => undefined)) as UpdateRecord | undefined
   if (saved?.latest && isNewer(saved.latest, VERSION)) return `${saved.latest} is available (you have ${VERSION}) · type /cruise:update`
-  return `${VERSION}${saved?.latest ? ', the latest' : ''} · checks daily, notifies only · /cruise:update`
+  return saved?.latest ? `${VERSION} · last checked: ${saved.latest} · /cruise:update` : `${VERSION} · update check not yet available · /cruise:update`
 }

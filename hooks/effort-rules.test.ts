@@ -155,6 +155,10 @@ test('a Haiku reply is read, even inside prose', () => {
   expect(parseHaiku('Sure! {"effort":"medium","why":"x"} hope that helps', levels)?.effort).toBe('medium')
 })
 
+test('a Haiku verdict can include a short task summary', () => {
+  expect(parseHaiku('{"effort":"xhigh","sure":0.9,"why":"long task","summary":"Migrar API e testes"}', levelsUpTo('max'))?.summary).toBe('Migrar API e testes')
+})
+
 test('a reply Haiku closed badly is still read (it lost one verdict in five on real prompts)', () => {
   const levels = levelsUpTo('high')
   expect(parseHaiku('{"effort":"medium","sure":0.6,"why":"Scoped git log review, several tool calls","}', levels)).toEqual({

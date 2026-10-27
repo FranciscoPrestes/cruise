@@ -100,6 +100,10 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 
 The panel shows the workspace, Git changes, latest handoff in the current folder, active work, current model and observed session activity. Open **details** to page through files, the handoff path and active work; a pickup started is not a completed pickup.
 
+The Haiku judge can also return a short summary of the request in the same call used to choose effort. The summary describes the request, not proof of completed work; the plan and observed activity are shown separately. The last activity time is based on events Cruise observes after loading, not a stall detector.
+
+With context warnings enabled, Cruise requests a system notification at each warning threshold. Whether the desktop displays it depends on the host's notification settings. In button mode, the handoff control is offered from the first warning when the turn is idle; while the model works the band says it will be available after the turn.
+
 Handoffs record the session folder, the projects involved and their paths, the harness and model when known, and a ready-to-copy continuation prompt. Run `/pickup` in the same folder, or give it an exact handoff file path from another folder. If two or more handoffs in the current folder were modified in the last two hours, pickup offers up to three to choose from. The Cruise handoff button uses its own exact file, so it does not need that choice.
 
 ## Laya on your machine

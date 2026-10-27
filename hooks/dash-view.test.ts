@@ -111,7 +111,7 @@ test('the Progress section shows the request cut to two rows, the age, the step 
   expect(ask?.control).toBe('more')
   expect(lines.join('\n')).toContain('3/12')
   expect(lines.join('\n')).toContain('12 min ago')
-  expect(lines.join('\n')).toContain('⚙ 2 agents, 1 command')
+  expect(lines.join('\n')).toContain('◆ 2 agents, 1 command')
 })
 
 test('opened, the Progress section shows the whole request and offers to close it', () => {

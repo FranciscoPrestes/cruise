@@ -3,6 +3,17 @@ import { expect, test } from 'claude-code/testing'
 const usage = (percent: number | undefined) =>
   ({ value: { startedAt: 0, context: { window: 200000, tokens: 0, percent } } }) as never
 
+test('the first warning also requests a system notification', async ($, on) => {
+  const notified: string[] = []
+  on('session.usage', async () => usage(65))
+  on('ui.notify', async (_$, e) => { notified.push(e.message); return { value: undefined } as never })
+  on('ui.status', async () => ({ value: undefined }) as never)
+  on('ui.toast', async () => ({ value: undefined }) as never)
+  on('turn.complete', async () => ({ text: '' }))
+  await $.turn.complete({ reason: 'answer', answer: 'ok', durationMs: 1, isAborted: false, turnId: 'n1' })
+  expect(notified).toHaveLength(1)
+})
+
 test('after a turn above 60% it shows the status line with /handoff', async ($, on) => {
   const statuses: (string | undefined)[] = []
   const toasts: string[] = []

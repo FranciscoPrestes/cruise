@@ -122,7 +122,7 @@ If the person asks for deep thought ("think hard", "be thorough"), pick the high
 Examples of the right level (the real messages are different, judge their scope the same way):
 ${examples}
 
-Reply with JSON only: {"effort":"<level>","sure":0.0-1.0 how sure you are,"why":"at most 6 words, in the user's language"}`
+Reply with JSON only: {"effort":"<level>","sure":0.0-1.0 how sure you are,"why":"at most 6 words, in the user's language","summary":"short description of the user's requested task in their language"}`
 }
 
 export function judgeQuestion(text: string, top: Effort, current: Effort | null, afterQuestion: boolean, app?: Effort): string {
@@ -142,7 +142,7 @@ export function judgeQuestion(text: string, top: Effort, current: Effort | null,
 export const layaState = (text: string, afterQuestion: boolean): string =>
   `last reply asked a question: ${afterQuestion ? 'yes' : 'no'}\nmessage: ${text.slice(0, 2000)}`
 
-export type Verdict = { effort: Effort; sure?: number; why: string; probs?: Readonly<Record<string, number>> }
+export type Verdict = { effort: Effort; sure?: number; why: string; summary?: string; probs?: Readonly<Record<string, number>> }
 
 // Reads {"effort":..., "sure":..., "why":...} out of a reply, or nothing when it holds no allowed level.
 // Haiku sometimes closes the object badly (`"why":"...","}`), which JSON.parse rejects: on real prompts that lost about
@@ -152,7 +152,10 @@ export function parseHaiku(text: string, levels: readonly Effort[]): Verdict | u
   if (!isEffort(effort) || !levels.includes(effort)) return undefined
   const sure = /"sure"\s*:\s*([0-9]*\.?[0-9]+)/.exec(text)?.[1]
   const why = /"why"\s*:\s*"([^"]*)/.exec(text)?.[1]
-  return { effort, sure: sure === undefined ? undefined : Number(sure), why: (why ?? '').slice(0, 60) }
+  const summary = /"summary"\s*:\s*"((?:\\.|[^"\\])*)"/.exec(text)?.[1]
+  let task: string | undefined
+  try { if (summary) task = JSON.parse(`"${summary}"`).replace(/[\x00-\x1f\x7f]/g, ' ').slice(0, 120) } catch { /* Ignore malformed summaries. */ }
+  return { effort, sure: sure === undefined ? undefined : Number(sure), why: (why ?? '').slice(0, 60), ...(task ? { summary: task } : {}) }
 }
 
 // The Jev wire format (also spoken by a Laya server): answers.effort.choice plus a confidence.

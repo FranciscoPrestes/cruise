@@ -59,6 +59,14 @@ test('haiku: a simple prompt goes out at the effort the judge picked, below the 
   expect(s.judged[0]).toContain('Highest level allowed: max')
 })
 
+test('the same Haiku verdict shows the task summary in the dashboard', { options: { effort: 'haiku' } }, async ($, on) => {
+  stubs(on, { reply: { isAnswered: true, text: '{"effort":"xhigh","sure":0.9,"why":"complex","summary":"Investigar latência"}', usage: { input_tokens: 10, output_tokens: 10 } } })
+  await $.prompt.submit({ text: 'Investigue a regressão de latência entre os serviços e valide a correção' })
+  await run($)
+  const ui = await $.ui.mount({ plugin: 'cruise', surface: 'terminal', component: 'Pane', requestId: 'cruise', props: { bodyColumns: 100 } as never })
+  expect(await ui.findAll({ text: /Task summary: Investigar latência/ })).not.toHaveLength(0)
+})
+
 test('through a router: a routed model the person opted in is steered', { options: { effort: 'haiku', judgeModel: 'claude-haiku-5-5' , routerModels: EX } }, async ($, on) => {
   const s = stubs(on)
   await $.prompt.submit({ text: ASK })
@@ -264,7 +272,7 @@ test('/cruise reports the judge, the pick and the counters', { options: { effort
   await run($)
   const text = JSON.stringify(await $.command.run({ command: 'cruise', args: '' } as never))
   expect(text).toContain('haiku judge')
-  expect(text).toContain('now ⚡ low')
+  expect(text).toContain('now » low')
   expect(text).toContain('1 judged')
 })
 

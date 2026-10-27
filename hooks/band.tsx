@@ -32,6 +32,7 @@ async function band($: EngineInterface, { Box, Text, Button }: Ui, options: Plug
   return (
     <Box flexDirection="row">
       <Text>{runs.map(r => <Text color={r.color} dimColor={r.dim} bold={r.bold}>{r.text}</Text>)}</Text>
+      {row.button && isWorking ? <Text dimColor>Handoff after this turn</Text> : null}
       {row.button && !isWorking ? <Button key="relay-go" label={RELAY_LABEL} hotkey={RELAY_HOTKEY} plain onPress={() => void startRelay($, 'button')} /> : null}
     </Box>
   )

@@ -37,15 +37,16 @@ export const register: Register = (on, options) => {
   registerPurser(on, options)
 
   on('prompt.submit', async ($, e, next) => {
-    await $.clock.now().then(observeActivity).catch(() => undefined)
+    await $.clock.now().then(at => observeActivity(at, 'request received')).catch(() => undefined)
     await noteAsk($, e, minAskChars)
     if (wantEffort) await notePrompt($, e)
     return next(e)
   })
 
   on('tool.call', async ($, e, next) => {
+    await $.clock.now().then(at => observeActivity(at, `using ${e.tool}`)).catch(() => undefined)
     const out = await next(e)
-    await $.clock.now().then(observeActivity).catch(() => undefined)
+    await $.clock.now().then(at => observeActivity(at, `finished ${e.tool}`)).catch(() => undefined)
     await trackShell($, out)
     if (wantContext) await checkContext($, limits)
     return out
@@ -67,7 +68,7 @@ export const register: Register = (on, options) => {
 
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
-    await $.clock.now().then(observeActivity).catch(() => undefined)
+    await $.clock.now().then(at => observeActivity(at, 'turn completed')).catch(() => undefined)
     if (wantContext) await checkContext($, limits)
     relayTurnDone(e)
     if (wantContext) await maybeAuto($, options, limits)

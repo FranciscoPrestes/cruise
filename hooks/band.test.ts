@@ -37,11 +37,12 @@ test('auto mode shows its point instead of a button', { options: { contextAction
   expect(await band.findAll({ text: /Handoff and continue/ })).toHaveLength(0)
 })
 
-test('the button waits for the turn to end: it is not drawn while the model works', async ($, on) => {
+test('the handoff is visible while the model works and offered when it is idle', async ($, on) => {
   on('session.usage', async () => usage(72))
   const band = await mountBand($, true)
   expect(await band.findAll({ text: /Context 72%/ })).not.toHaveLength(0)
   expect(await band.findAll({ text: /Handoff and continue/ })).toHaveLength(0)
+  expect(await band.findAll({ text: /Handoff after this turn/ })).not.toHaveLength(0)
 })
 
 test('pressing the button starts the handoff command, from a timer and not from inside the press', async ($, on) => {
