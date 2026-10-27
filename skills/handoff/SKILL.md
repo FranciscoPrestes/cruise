@@ -11,7 +11,7 @@ Only prepares and saves. To resume, the next session uses `/pickup`.
 
 Do not continue the task. Only record its state.
 
-1. Write the handoff in this format, with concrete facts (IDs, paths, values, commands), nothing generic:
+1. Identify only projects actually involved in the task from the session and verified workspace state. Distinguish the session working directory from each project and its actual checkout or worktree. For each relevant Git checkout, inspect branch, HEAD and uncommitted work without changing it; record unknown or unavailable facts as such. Never include secrets. Write the handoff in this format, with concrete facts (IDs, paths, values, commands), nothing generic:
 
 ```markdown
 ---
@@ -28,6 +28,9 @@ One sentence: what we are trying to deliver.
 
 ### Summary for whoever arrives
 Two or three sentences so an agent with no context can get oriented at once.
+
+### Projects involved
+- For each project: name, absolute project path, role in the task, actual checkout or worktree path, and, if Git applies, branch, HEAD and uncommitted work. State explicitly when a fact could not be verified.
 
 ### Intent of the next step
 Why the next step is the one it is: the hypothesis being tested, what we expect to see.
@@ -53,4 +56,4 @@ Why the next step is the one it is: the hypothesis being tested, what we expect 
 ```
 
 2. Save the file to `~/.local/state/handoffs/<folder-slug>/<YYYY-MM-DD-HHMM>.md`, where the slug is the working directory path with `/` replaced by `-`. Create the folder if it does not exist.
-3. Reply with: the file path and the instruction: clear the session (or open a new one in the same folder) and type `/pickup`.
+3. Reply with the session working directory, every involved project and its absolute path and role, the objective, what is done and the next step, and the absolute handoff file path. Include a ready-to-copy continuation prompt telling the next agent to read that exact file, verify the listed projects and continue the next step. Say that `/pickup` can take the explicit file path, or can be run without a path after clearing or opening a session in the same working directory. Do not include secrets.
