@@ -48,10 +48,10 @@ test('pressing the button starts the handoff command, from a timer and not from 
   const clock = mock.clock(on)
   const ran: string[] = []
   const toasts: string[] = []
-  const mem: Record<string, unknown> = {}
   on('session.usage', async () => usage(72))
-  on('store.get', async (_$: unknown, e: { key: string }) => ({ value: mem[e.key] }) as never)
-  on('store.set', async (_$: unknown, e: { key: string; value: unknown }) => { mem[e.key] = e.value; return { value: undefined } as never })
+  on('env.get', async () => ({ value: '/tmp' }) as never)
+  on('session.id', async () => ({ value: 'session-a' }) as never)
+  on('session.cwd', async () => ({ value: '/work/demo' }) as never)
   on('ui.toast', async (_$: unknown, e: { text: string }) => { toasts.push(e.text); return { value: undefined } as never })
   on('command.run', async (_$: unknown, e: { command: string }) => { ran.push(e.command); return { text: '' } as never })
   await mountBand($)
@@ -60,12 +60,8 @@ test('pressing the button starts the handoff command, from a timer and not from 
   await clock.advance(400)
   expect(ran[0]).toBe('cruise:handoff')
   expect(toasts.some(t => t.includes('handoff, then clear, then pickup'))).toBe(true)
-  expect((mem['cruise.relay'] as { running: boolean }).running).toBe(true)
   // No turn ever completes here, so the relay gives up after its time-out: nothing is cleared, and the record says why.
   await clock.advance(200_000)
   expect(ran).toEqual(['cruise:handoff'])
-  const record = mem['cruise.relay'] as { running: boolean; last: { ok: boolean; why: string } }
-  expect(record.running).toBe(false)
-  expect(record.last.ok).toBe(false)
-  expect(record.last.why).toContain('did not finish in time')
+  expect(toasts.some(t => t.includes('did not finish in time'))).toBe(true)
 })

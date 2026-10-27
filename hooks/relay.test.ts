@@ -2,7 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import { DEFAULTS } from './levels'
 import { effortToken } from './dash'
-import { autoThreshold, bandRow, contextAction, contextRow, decideAuto, freshHandoff, handoffDir, runRelay, windowLabel } from './relay'
+import { autoThreshold, bandRow, contextAction, contextRow, decideAuto, handoffDir, runRelay, windowLabel } from './relay'
 import type { RelayDeps, RelayState } from './relay'
 
 const idle: RelayState = { running: false, pickupPending: false, autoDone: false, mode: null, last: null }
@@ -28,18 +28,6 @@ test('the automatic point follows the urgent warning unless it is set', () => {
 
 test('the handoff folder is the working directory with / turned into -', () => {
   expect(handoffDir('/home/ana', '/work/demo-app')).toBe('/home/ana/.local/state/handoffs/-work-demo-app')
-})
-
-test('only a markdown file written since the start counts as the handoff', () => {
-  const entries = [
-    { name: '2026-10-22-1000.md', kind: 'file', mtimeMs: 1_000 },
-    { name: 'notes.txt', kind: 'file', mtimeMs: 9_000 },
-    { name: '2026-10-23-1200.md', kind: 'file', mtimeMs: 5_000 },
-    { name: 'sub', kind: 'directory', mtimeMs: 0 },
-  ]
-  expect(freshHandoff(entries, 4_000)).toBe('2026-10-23-1200.md')
-  expect(freshHandoff(entries, 6_000)).toBeUndefined()
-  expect(freshHandoff([], 0)).toBeUndefined()
 })
 
 test('the window is named the way people say it', () => {
@@ -106,13 +94,14 @@ function stubs(over: Partial<RelayDeps> = {}): { deps: RelayDeps; log: string[];
   const deps: RelayDeps = {
     now: async () => 10_000,
     toast: text => void log.push(`toast:${text.slice(0, 20)}`),
-    runHandoff: async () => {
-      log.push('handoff')
+    handoffPath: async () => '/tmp/relay-10000-session.md',
+    runHandoff: async path => {
+      log.push(`handoff:${path}`)
       return true
     },
     listHandoffs: async () => {
       log.push('list')
-      return [{ name: '2026-10-23-1200.md', kind: 'file', mtimeMs: 10_500 }]
+      return [{ name: 'relay-10000-session.md', kind: 'file', mtimeMs: 10_500 }]
     },
     clear: async () => void log.push('clear'),
     save: async patch => void state.push({ ...idle, ...patch }),
@@ -125,8 +114,18 @@ test('the relay does the handoff, checks the file, then clears', async () => {
   const { deps, log, state } = stubs()
   const done = await runRelay(deps, 'button')
   expect(done).toEqual({ ok: true, why: 'handoff saved, context cleared' })
-  expect(log.filter(l => !l.startsWith('toast'))).toEqual(['handoff', 'list', 'clear'])
-  expect(state.some(s => s.pickupPending)).toBe(true)
+  expect(log.filter(l => !l.startsWith('toast'))).toEqual(['handoff:/tmp/relay-10000-session.md', 'list', 'clear'])
+  expect(state.find(s => s.pickupPending)?.pickupPath).toBe('/tmp/relay-10000-session.md')
+})
+
+test('a newer concurrent handoff cannot replace the requested file', async () => {
+  const other = { name: 'relay-10000-other.md', kind: 'file', mtimeMs: 10_900 }
+  const missing = stubs({ listHandoffs: async () => [other] })
+  expect((await runRelay(missing.deps, 'button')).ok).toBe(false)
+  expect(missing.log).not.toContain('clear')
+  const both = stubs({ listHandoffs: async () => [other, { name: 'relay-10000-session.md', kind: 'file', mtimeMs: 10_500 }] })
+  expect((await runRelay(both.deps, 'button')).ok).toBe(true)
+  expect(both.state.find(s => s.pickupPending)?.pickupPath).toBe('/tmp/relay-10000-session.md')
 })
 
 test('without a fresh handoff file nothing is cleared', async () => {
@@ -138,6 +137,12 @@ test('without a fresh handoff file nothing is cleared', async () => {
   const missing = stubs({ listHandoffs: async () => [] })
   expect((await runRelay(missing.deps, 'auto')).ok).toBe(false)
   expect(missing.log).not.toContain('clear')
+})
+
+test('an aborted relay no longer claims it is saving', async () => {
+  const run = stubs({ runHandoff: async () => false })
+  await runRelay(run.deps, 'button')
+  expect(run.state.at(-1)?.stage).toBe('aborted')
 })
 
 test('a handoff turn that never finishes aborts before anything is cleared', async () => {

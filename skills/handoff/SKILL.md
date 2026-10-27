@@ -16,6 +16,7 @@ Do not continue the task. Only record its state.
 ```markdown
 ---
 agent: <claude-code | codex | cursor | gemini | opencode | ...>
+model: <exact model identifier if known, otherwise unknown>
 folder: <absolute working directory>
 branch: <current branch, if it is a git repository>
 date: <YYYY-MM-DDTHH:MM, local time>
@@ -55,5 +56,5 @@ Why the next step is the one it is: the hypothesis being tested, what we expect 
 - Subjects outside this task. The next session must NOT jump to them.
 ```
 
-2. Save the file to `~/.local/state/handoffs/<folder-slug>/<YYYY-MM-DD-HHMM>.md`, where the slug is the working directory path with `/` replaced by `-`. Create the folder if it does not exist.
-3. Reply with the session working directory, every involved project and its absolute path and role, the objective, what is done and the next step, and the absolute handoff file path. Include a ready-to-copy continuation prompt telling the next agent to read that exact file, verify the listed projects and continue the next step. Say that `/pickup` can take the explicit file path, or can be run without a path after clearing or opening a session in the same working directory. Do not include secrets.
+2. If the Cruise relay supplies an explicit handoff file path, save to that exact path. Otherwise save to `~/.local/state/handoffs/<folder-slug>/<YYYY-MM-DD-HHMM>.md`, where the slug is the working directory path with `/` replaced by `-`. If that name already exists, append a unique suffix; never overwrite an earlier handoff. Create the folder if it does not exist.
+3. Reply with the harness and model, session working directory, every involved project and its absolute path and role, the objective, what is done and the next step, and the absolute handoff file path. Include a short ready-to-copy continuation prompt containing those facts, pending decisions and the exact handoff path; tell the next agent to read that file, verify the projects and continue the next step. Use only verified model information; write `unknown` if unavailable. Say that `/pickup` can take the explicit file path, or can be run without a path after clearing or opening a session in the same working directory. Do not include secrets.

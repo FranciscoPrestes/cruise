@@ -8,7 +8,7 @@ import type { Thresholds } from './levels'
 
 export type ContextAction = 'button' | 'alert' | 'auto'
 export type RelayRecord = { at: number; ok: boolean; mode: 'button' | 'auto'; why: string }
-export type RelayState = { running: boolean; pickupPending: boolean; autoDone: boolean; mode: 'button' | 'auto' | null; last: RelayRecord | null }
+export type RelayState = { running: boolean; pickupPending: boolean; pickupPath?: string; stage?: string; autoDone: boolean; mode: 'button' | 'auto' | null; last: RelayRecord | null }
 type Entry = { name: string; kind: string; mtimeMs: number }
 
 export const contextAction = (options: PluginOptions): ContextAction => (options.contextAction === 'alert' || options.contextAction === 'auto' ? options.contextAction : 'button')
@@ -24,13 +24,6 @@ export function autoThreshold(options: PluginOptions, limits: Thresholds): numbe
 
 // The handoff skill saves under ~/.local/state/handoffs/<working directory with / turned into ->/.
 export const handoffDir = (home: string, cwd: string): string => `${home}/.local/state/handoffs/${cwd.replace(/\//g, '-')}`
-
-// The handoff this run wrote: a markdown file at least as new as the run's start. Anything older is a previous session's.
-export function freshHandoff(entries: readonly Entry[], startedAt: number): string | undefined {
-  return entries
-    .filter(e => e.kind === 'file' && e.name.endsWith('.md') && e.mtimeMs >= startedAt)
-    .sort((a, b) => b.mtimeMs - a.mtimeMs)[0]?.name
-}
 
 export function windowLabel(tokens: number | undefined): string | undefined {
   if (!tokens) return undefined
@@ -73,8 +66,9 @@ export function decideAuto(i: { percent: number; action: ContextAction; at: numb
 export type RelayDeps = {
   now: () => Promise<number>
   toast: (text: string) => void
+  handoffPath: (started: number) => Promise<string>
   // Runs the handoff as a turn and says whether that turn finished.
-  runHandoff: () => Promise<boolean>
+  runHandoff: (path: string) => Promise<boolean>
   listHandoffs: () => Promise<Entry[]>
   clear: () => Promise<void>
   save: (patch: Partial<RelayState>) => Promise<void>
@@ -86,27 +80,30 @@ const reason = (err: unknown): string => (err instanceof Error ? err.message : S
 // with an empty conversation and no handoff. The pickup is run by the session that starts after the clear (see registerRelay).
 export async function runRelay(d: RelayDeps, mode: 'button' | 'auto'): Promise<{ ok: boolean; why: string }> {
   const started = await d.now()
-  await d.save({ running: true, mode })
+  await d.save({ running: true, mode, stage: 'saving handoff' })
   const stop = async (why: string) => {
-    await d.save({ running: false, last: { at: await d.now(), ok: false, mode, why } })
+    await d.save({ running: false, stage: 'aborted', last: { at: await d.now(), ok: false, mode, why } })
     d.toast(`Cruise: ${why}.`)
     return { ok: false, why }
   }
   d.toast(mode === 'auto' ? 'Cruise: the context is full, so it is doing the handoff, clearing and picking up by itself. Do not type until it ends.' : 'Cruise: handoff, then clear, then pickup. Do not type until it ends.')
 
+  let path: string
   try {
-    if (!(await d.runHandoff())) return stop('the handoff did not finish in time, so nothing was cleared')
+    path = await d.handoffPath(started)
+    if (!(await d.runHandoff(path))) return stop('the handoff did not finish in time, so nothing was cleared')
   } catch (err) {
     return stop(`the handoff could not run: ${reason(err)}`)
   }
-  const fresh = freshHandoff(await d.listHandoffs().catch(() => []), started)
-  if (!fresh) return stop('no handoff file was written, so nothing was cleared')
+  const name = path.slice(path.lastIndexOf('/') + 1)
+  const entries = await d.listHandoffs().catch(() => [])
+  if (!entries.some(e => e.name === name && e.kind === 'file' && e.mtimeMs >= started)) return stop('no handoff file was written at the requested path, so nothing was cleared')
 
-  await d.save({ pickupPending: true })
+  await d.save({ pickupPending: true, pickupPath: path, stage: 'handoff saved' })
   try {
     await d.clear()
   } catch (err) {
-    await d.save({ pickupPending: false })
+    await d.save({ pickupPending: false, pickupPath: undefined })
     return stop(`the clear failed (the handoff is saved): ${reason(err)}`)
   }
   return { ok: true, why: 'handoff saved, context cleared' }
@@ -114,26 +111,23 @@ export async function runRelay(d: RelayDeps, mode: 'button' | 'auto'): Promise<{
 
 // ---- the part that talks to the engine ----
 
-const KEY = 'cruise.relay'
 const HANDOFF = 'cruise:handoff'
 const PICKUP = 'cruise:pickup'
 const HANDOFF_TIMEOUT_MS = 180_000
 const EMPTY: RelayState = { running: false, pickupPending: false, autoDone: false, mode: null, last: null }
 
-// The relay's own record lives in $.store, which outlives the clear (verified: the store and the module's variables both survive it).
-export async function loadRelay($: EngineInterface): Promise<RelayState> {
-  const saved = await $.store.get(KEY).catch(() => undefined)
-  return { ...EMPTY, ...((saved ?? {}) as Partial<RelayState>) }
-}
+// Module state survives clear and is isolated from other Claude processes.
+let relayState: RelayState = { ...EMPTY }
+export async function loadRelay(_$: EngineInterface): Promise<RelayState> { return { ...relayState } }
 
 async function saveRelay($: EngineInterface, patch: Partial<RelayState>): Promise<void> {
-  await $.store.set(KEY, { ...(await loadRelay($)), ...patch })
+  relayState = { ...relayState, ...patch }
   $.ui.invalidate('ui.render') // the band reads this record
 }
 
 // A new process never has a run in flight: whatever a crashed one left behind is cleared.
 export async function resetRelay($: EngineInterface): Promise<void> {
-  await saveRelay($, { running: false, pickupPending: false })
+  await saveRelay($, { running: false, pickupPending: false, pickupPath: undefined })
 }
 
 // The handoff is a turn of its own. It counts as finished at the first turn that completes after one of its steps began,
@@ -155,12 +149,19 @@ function realDeps($: EngineInterface): RelayDeps {
   return {
     now: () => $.clock.now(),
     toast: text => $.ui.toast(text),
-    runHandoff: async () => {
+    handoffPath: async started => {
+      const home = await $.env.get('HOME')
+      if (!home) throw new Error('HOME is unavailable')
+      const session = (await $.session.id()).replace(/[^a-zA-Z0-9_-]/g, '-')
+      if (!session) throw new Error('session id is unavailable')
+      return `${handoffDir(home, await $.session.cwd())}/relay-${started}-${session}.md`
+    },
+    runHandoff: async path => {
       const finished = new Promise<boolean>(resolve => {
         waiting = { sawStep: false, resolve: () => resolve(true) }
       })
       try {
-        await $.command.run({ command: HANDOFF })
+        await $.command.run({ command: HANDOFF, args: path })
       } catch (err) {
         waiting = undefined
         throw err
@@ -214,13 +215,13 @@ export function registerRelay(on: import('claude-code').On): void {
   on('classic.SessionStart', async ($, e, next) => {
     const state = await loadRelay($)
     if (e.source === 'clear' && state.pickupPending) {
-      await saveRelay($, { pickupPending: false })
+      await saveRelay($, { pickupPending: false, pickupPath: undefined, stage: 'context cleared' })
       $.clock.after(400, () => {
         void (async () => {
           const mode = state.mode ?? 'button'
           try {
-            await $.command.run({ command: PICKUP })
-            await saveRelay($, { running: false, last: { at: await $.clock.now(), ok: true, mode, why: 'handoff saved, context cleared, pickup started' } })
+            await $.command.run({ command: PICKUP, ...(state.pickupPath ? { args: state.pickupPath } : {}) })
+            await saveRelay($, { running: false, stage: 'pickup started', last: { at: await $.clock.now(), ok: true, mode, why: 'handoff saved, context cleared, pickup started' } })
           } catch (err) {
             await saveRelay($, { running: false, last: { at: await $.clock.now(), ok: false, mode, why: `cleared, but the pickup failed (${reason(err)}); type /pickup` } })
             $.ui.toast('Cruise: the context was cleared but the pickup did not start. Type /pickup.')

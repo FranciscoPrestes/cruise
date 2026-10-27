@@ -10,6 +10,7 @@ import { noteAsk, registerProgress, startProgress, trackShell } from './progress
 import { maybeAuto, registerRelay, relayStep, relayTurnDone, resetRelay } from './relay'
 import { checkForUpdate, updateMode } from './updates'
 import { welcome } from './welcome'
+import { observeActivity, resetActivity } from './session-info'
 
 // Each feature can be switched off in the plugin's settings. The engine allows one unfiltered hook per event,
 // so the events several features share are owned here, and each feature's function is called from them.
@@ -21,6 +22,7 @@ export const register: Register = (on, options) => {
   const minAskChars = typeof options.minAskChars === 'number' ? options.minAskChars : DEFAULT_MIN_ASK_CHARS
 
   on('session.start', async ($, e, next) => {
+    resetActivity(await $.clock.now().catch(() => undefined))
     startProgress($)
     void resetRelay($).catch(() => undefined)
     void welcome($, options)
@@ -35,6 +37,7 @@ export const register: Register = (on, options) => {
   registerPurser(on, options)
 
   on('prompt.submit', async ($, e, next) => {
+    await $.clock.now().then(observeActivity).catch(() => undefined)
     await noteAsk($, e, minAskChars)
     if (wantEffort) await notePrompt($, e)
     return next(e)
@@ -42,6 +45,7 @@ export const register: Register = (on, options) => {
 
   on('tool.call', async ($, e, next) => {
     const out = await next(e)
+    await $.clock.now().then(observeActivity).catch(() => undefined)
     await trackShell($, out)
     if (wantContext) await checkContext($, limits)
     return out
@@ -63,6 +67,7 @@ export const register: Register = (on, options) => {
 
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
+    await $.clock.now().then(observeActivity).catch(() => undefined)
     if (wantContext) await checkContext($, limits)
     relayTurnDone(e)
     if (wantContext) await maybeAuto($, options, limits)

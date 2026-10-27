@@ -29,12 +29,6 @@ async function untrack($: EngineInterface, id: string | undefined): Promise<void
   if (id) await quietly(update($, background, list => removeTask(list, id)))
 }
 
-// Subagents are read live from the engine; everything else comes from the last Stop snapshot.
-async function runningAgents($: EngineInterface): Promise<readonly string[]> {
-  const agents = await $.agent.list().catch(() => [])
-  return agents.filter(a => a.status === 'running').map(() => 'subagent')
-}
-
 // What the Progress section of the /cruise dashboard shows: the request, how long ago, the plan step, background work and whether the request is open.
 // The tracking runs all the time (a few small state writes per prompt and tool call); only the dashboard draws it.
 export type ProgressFacts = {
@@ -43,15 +37,19 @@ export type ProgressFacts = {
   expanded: boolean
   step: ReturnType<typeof planProgress>
   background: string | null
+  details?: readonly string[] | null
 }
 
 export async function progressFacts($: EngineInterface): Promise<ProgressFacts> {
+  const agents = await $.agent.list().catch(() => undefined)
+  const tasks = await read($, background)
   return {
     ask: await read($, ask),
     now: await $.clock.now().catch(() => 0),
     expanded: await read($, expanded),
     step: planProgress(await read($, plan)),
-    background: backgroundSummary([...(await runningAgents($)), ...(await read($, background)).map(t => t.type)]),
+    background: agents ? backgroundSummary([...agents.filter(a => a.status === 'running').map(() => 'subagent'), ...tasks.map(t => t.type)]) : [backgroundSummary(tasks.map(t => t.type)), 'agents unavailable'].filter(Boolean).join(' · '),
+    details: [...(agents ? agents.filter(a => a.status === 'running').map(a => `${a.description || a.id} · ${a.type} · ${a.status}`) : ['agents unavailable']), ...tasks.map(t => `${t.type} · ${t.id}`)],
   }
 }
 

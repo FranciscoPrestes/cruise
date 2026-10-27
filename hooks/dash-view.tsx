@@ -2,10 +2,10 @@
 import type { EngineInterface, PluginOptions, Register, Timer } from 'claude-code'
 
 import { AskBlock } from './ask-block'
-import { askView } from './ask'
+import { askView, wrapText } from './ask'
 import type { AskView } from './ask'
 import { contextLimits } from './context'
-import { fitRuns, meter, mix, ORANGE, tickRow, zone } from './dash'
+import { cells, fitRuns, meter, mix, ORANGE, tickRow, zone } from './dash'
 import type { Run } from './dash'
 import { effortFacts } from './effort'
 import type { Thresholds } from './levels'
@@ -18,6 +18,9 @@ import type { ProgressFacts } from './progress'
 import { updateLine, updateMode } from './updates'
 import { VERSION } from './version'
 import { age } from './helpers'
+import { workspace } from './workspace'
+import { handoffInfo } from './handoff-info'
+import { sessionInfo } from './session-info'
 
 const PANE = 'cruise'
 const REFRESH_MS = 5000
@@ -25,13 +28,16 @@ const LABEL = 11
 const METER_MAX = 36
 
 export type Snapshot = {
+  handoff?: Awaited<ReturnType<typeof handoffInfo>>
+  session?: Awaited<ReturnType<typeof sessionInfo>>
+  workspace: Awaited<ReturnType<typeof workspace>>
   limits: Thresholds
   context: { on: boolean; percent?: number }
   progress: { facts: ProgressFacts }
   effort: Awaited<ReturnType<typeof effortFacts>>
   update: { line: string; available: boolean }
   // The handoff relay: what the context warning offers, what it is doing now and how the last run ended.
-  relay: { action: ContextAction; autoAt: number; running: boolean; now: number; last: RelayRecord | null }
+  relay: { action: ContextAction; autoAt: number; running: boolean; now: number; last: RelayRecord | null; stage?: string }
 }
 
 export async function snapshot($: EngineInterface, options: PluginOptions): Promise<Snapshot> {
@@ -40,12 +46,15 @@ export async function snapshot($: EngineInterface, options: PluginOptions): Prom
   const update = await updateLine($, updateMode(options))
   const relay = await loadRelay($)
   return {
+    handoff: await handoffInfo($),
+    session: await sessionInfo($),
+    workspace: await workspace($),
     limits,
     context: { on: options.context !== false, percent },
     progress: { facts: await progressFacts($) },
     effort: await effortFacts($, options),
     update: { line: update, available: update.includes('available') },
-    relay: { action: contextAction(options), autoAt: autoThreshold(options, limits), running: relay.running, now: await $.clock.now().catch(() => 0), last: relay.last },
+    relay: { action: contextAction(options), autoAt: autoThreshold(options, limits), running: relay.running, now: await $.clock.now().catch(() => 0), last: relay.last, stage: relay.stage },
   }
 }
 
@@ -55,6 +64,29 @@ export type Row = { dot: string; color?: string; label: string; lines: Run[][]; 
 
 const dim = (text: string): Run[] => [{ text, dim: true }]
 const OFF = dim('off · turn on with /cruise:configure')
+
+export function detailPages(s: Snapshot, width: number): string[][] {
+  const files = s.workspace.files
+  const handoff = s.handoff
+  const lines = [
+    'Workspace:', s.workspace.cwd, `${s.workspace.branch} · ${s.workspace.worktree}`, 'Git files:', ...(files ? files.map(f => `staged=${f.staged === ' ' ? '-' : f.staged} unstaged=${f.unstaged === ' ' ? '-' : f.unstaged} ${f.path}`) : ['unavailable']),
+    'Latest handoff in folder:', ...(handoff?.status === 'found' ? [handoff.path, handoff.goal ?? 'goal unavailable'] : [handoff?.status ?? 'unavailable']),
+    'Active work:', ...(s.progress.facts.details ?? ['agents unavailable']),
+    'Model:', s.session?.model ?? 'unavailable', 'Request:', s.progress.facts.ask?.text ?? 'unavailable',
+  ].flatMap(line => pathLines(line, width).map(run => run.map(part => part.text).join('')))
+  const pages: string[][] = []
+  for (let i = 0; i < lines.length; i += 8) pages.push(lines.slice(i, i + 8))
+  return pages.length ? pages : [[]]
+}
+
+function pathLines(path: string, width: number): Run[][] {
+  const lines = ['']
+  for (const ch of path) {
+    if (cells(lines[lines.length - 1]! + ch) > width) lines.push('')
+    lines[lines.length - 1] += ch
+  }
+  return lines.map(dim)
+}
 
 // Every line is cut to `body` cells (what is left of the card after its border, padding and label column).
 export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
@@ -121,12 +153,20 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
   ]
 
   const ctxDot = percent === undefined ? undefined : zone(percent, s.limits)
+  const files = s.workspace.files
+  const git = files ? `${files.filter(f => f.unstaged !== ' ' && f.unstaged !== '?').length} modified · ${files.filter(f => f.staged === '?').length} new · ${files.filter(f => f.staged !== ' ' && f.staged !== '?').length} staged` : 'Git changes unavailable'
+  const latest = s.handoff?.status === 'found' ? `folder handoff · ${age(Math.max(0, r.now - s.handoff.at))}` : `folder handoff · ${s.handoff?.status ?? 'unavailable'}`
+  const session = s.session
+  const elapsed = session?.now !== undefined && session.started !== undefined ? age(Math.max(0, session.now - session.started)) : 'unavailable'
+  const activity = session?.now !== undefined && session.activity !== undefined ? age(Math.max(0, session.now - session.activity)) : 'unavailable'
   const on = (yes: boolean) => (yes ? 'green' : undefined)
   return [
+    { dot: '●', color: 'green', label: 'Workspace', lines: fit([...pathLines(s.workspace.cwd, body), ...wrapText([s.workspace.branch, s.workspace.worktree].filter(Boolean).join(' · '), body).map(dim), ...wrapText(git, body).map(dim)]) },
     { dot: yes(s.context.on), color: ctxDot ?? on(s.context.on), label: 'Context', lines: fit(context) },
-    { dot: r.action === 'alert' ? '○' : '●', color: r.action === 'alert' ? undefined : r.last && !r.last.ok ? 'yellow' : 'green', label: 'Handoff', lines: fit([how, last]) },
-    { dot: yes(e.on), color: e.paused ? 'yellow' : on(e.on), label: 'Effort', lines: fit(effort) },
+    { dot: r.action === 'alert' ? '○' : '●', color: r.action === 'alert' ? undefined : r.last && !r.last.ok ? 'yellow' : 'green', label: 'Handoff', lines: fit([how, last, dim(latest), ...(r.stage ? [dim(r.stage)] : [])]) },
+    { dot: yes(e.on), color: e.paused ? 'yellow' : on(e.on), label: 'Effort', lines: fit([dim(`model: ${session?.model ?? 'unavailable'}`), ...effort]) },
     { dot: '●', color: 'green', label: 'Progress', lines: fit(progress), ask: askShown },
+    { dot: '●', color: 'green', label: 'Time', lines: fit([dim(`observed start: ${elapsed}`), dim(`last activity: ${activity}`)]) },
     { dot: '●', color: s.update.available ? 'yellow' : 'green', label: 'Updates', lines: fit([dim(s.update.available ? s.update.line : 'up to date · checks daily')]) },
   ]
 }
@@ -145,17 +185,22 @@ export function chrome(inner: number) {
 type Ui = ReturnType<EngineInterface['ui']['resolve']>
 
 // `framed`: draw the rounded card. Above the prompt the engine already boxes the pane, so the card drops its own border there.
-function Dashboard(ui: Ui, s: Snapshot, columns: number, framed = true, onToggle: () => void = () => {}) {
-  const { Box, Text } = ui
+function Dashboard(ui: Ui, s: Snapshot, columns: number, framed = true, onToggle: () => void = () => {}, page = -1, onPage: (page: number) => void = () => {}, onScroll: (to: 'start' | 'end') => void = () => {}) {
+  const { Box, Text, Button } = ui
   const inner = Math.max(20, columns - (framed ? 4 : 2))
   const body = Math.max(8, inner - LABEL)
   const text = (runs: readonly Run[]) => <Text>{runs.map(r => <Text color={r.color} dimColor={r.dim} bold={r.bold}>{r.text}</Text>)}</Text>
   const top = chrome(inner)
+  const pages = detailPages(s, inner)
+  const currentPage = Math.min(page, pages.length - 1)
+  if (page >= 0) return <Box flexDirection="column" width={columns}><Text bold>{`Details ${currentPage + 1}/${pages.length}`}</Text>{pages[currentPage]!.map(line => <Text>{line}</Text>)}<Button key="details-previous" label="previous" hotkey="p" onPress={() => onPage((currentPage + pages.length - 1) % pages.length)} /><Button key="details-next" label="next" hotkey="n" onPress={() => onPage((currentPage + 1) % pages.length)} /><Button key="details-close" label="close" hotkey="d" onPress={() => onPage(-1)} /></Box>
+  const overview = rows(s, body, framed)
   return (
     <Box flexDirection="column" borderStyle={framed ? 'round' : undefined} borderColor={ORANGE} paddingX={1} width={columns}>
       {text(top.title)}
       <Text color={ORANGE}>{top.rule}</Text>
-      {rows(s, body, framed).map(r => (
+      <Box flexDirection="row"><Button key="details-open" label="details" hotkey="d" onPress={() => onPage(0)} /><Button key="overview-end" label="bottom" hotkey="b" onPress={() => onScroll('end')} /><Button key="overview-start" label="top" hotkey="t" onPress={() => onScroll('start')} /></Box>
+      {overview.map(r => (
         <Box flexDirection="row">
           <Box width={LABEL}>
             <Text color={r.color}>{r.dot}</Text>
@@ -176,14 +221,16 @@ function Dashboard(ui: Ui, s: Snapshot, columns: number, framed = true, onToggle
 // One shared tick keeps the context percent fresh while the pane is open: nothing else redraws it between prompts.
 export const registerDash: Register = (on, options) => {
   let refresh: Timer | undefined
+  let page = -1
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const columns = Math.min(e.props.bodyColumns ?? 80, 84)
-    return Dashboard($.ui.resolve(e), await snapshot($, options), columns, e.props.placement !== 'inline', () => void toggleAsk($))
+    return Dashboard($.ui.resolve(e), await snapshot($, options), columns, e.props.placement !== 'inline', () => void toggleAsk($), page, value => { page = value; $.ui.invalidate('ui.render') }, to => { void $.ui.scroll({ in: PANE, to }) })
   })
 
   // Where no pane can be drawn (a narrow terminal, a headless run) the same facts print as plain text.
   on('command.run', { command: 'cruise' }, async $ => {
+    page = -1
     const opened = await $.ui.open({ id: PANE, title: 'Cruise', focus: true, closeOnEscape: true, rows: 15 })
     if (!opened.isPlaced) return { text: await panel($, options) }
     refresh ??= $.clock.every(REFRESH_MS, () => $.ui.invalidate('ui.render'))

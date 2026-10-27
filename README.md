@@ -98,6 +98,8 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 
 `/cruise` opens the panel. `/handoff` saves the state of a session and `/pickup` resumes it in a fresh one (`/cruise:handoff` if you already have skills with those names). `/cruise:configure` changes settings, `/cruise:update` installs a new version, `/cruise:setup-laya` installs Laya. Remove with `/plugin uninstall cruise@prestes`.
 
+The panel shows the workspace, Git changes, latest handoff in the current folder, active work, current model and observed session activity. Open **details** to page through files, the handoff path and active work; a pickup started is not a completed pickup.
+
 ## Laya on your machine
 
 Laya is a small open-source model (Apache 2.0) that answers in about 25 ms, offline, speaking the same protocol as Jev. **Use it only if you want a private, offline judge and are willing to train it on your own sessions first.** Untrained, or trained on invented prompts, it is not a judge to trust (numbers in [Research](#research)).

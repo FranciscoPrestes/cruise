@@ -6,6 +6,12 @@ import { judgeMode, report } from './effort'
 import type { Thresholds } from './levels'
 import { updateLine, updateMode } from './updates'
 import { VERSION } from './version'
+import { workspace } from './workspace'
+import { handoffInfo } from './handoff-info'
+import { sessionInfo } from './session-info'
+import { progressFacts } from './progress'
+import { loadRelay } from './relay'
+import { age } from './helpers'
 
 const BAR_WIDTH = 10
 
@@ -40,9 +46,25 @@ export async function panel($: EngineInterface, options: PluginOptions): Promise
   const mode = judgeMode(options)
   const effort = row(mode === 'off' ? '⚪' : '🟢', 'Effort', await report($, options, LABEL_WIDTH + 1))
   const updates = await updateLine($, updateMode(options))
+  const location = await workspace($)
+  const handoff = await handoffInfo($)
+  const session = await sessionInfo($)
+  const progress = await progressFacts($)
+  const relay = await loadRelay($)
+  const elapsed = (at: number | undefined) => session.now !== undefined && at !== undefined ? age(Math.max(0, session.now - at)) : 'unavailable'
   return [
     `✈  Cruise ${VERSION}  ·  cruise control for Claude Code`,
     RULE,
+    row('🟢', 'Workspace', location.cwd),
+    row(' ', '', [location.branch, location.worktree].filter(Boolean).join(' · ')),
+    row(' ', '', location.files ? `Git: ${location.files.length} changed` : 'Git changes unavailable'),
+    ...(location.files ?? []).map(f => `    ${f.staged}${f.unstaged} ${f.path}`),
+    row(' ', 'Handoff', handoff.status === 'found' ? `folder: ${handoff.path} · ${elapsed(handoff.at)} · ${handoff.goal ?? 'goal unavailable'}` : `folder: ${handoff.status}`),
+    row(' ', '', `relay: ${relay.stage ?? 'not run'}`),
+    row(' ', 'Work', progress.background ?? 'none'),
+    ...(progress.details ?? ['agents unavailable']).map(d => `    ${d}`),
+    row(' ', 'Model', session.model ?? 'unavailable'),
+    row(' ', 'Time', `observed start: ${elapsed(session.started)} · last activity: ${elapsed(session.activity)}`),
     await contextRow($, options),
     effort,
     row(updates.includes('available') ? '🟡' : '🟢', 'Updates', updates),
