@@ -100,6 +100,8 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 
 The panel shows the workspace, Git changes, latest handoff in the current folder, active work, current model and observed session activity. Open **details** to page through files, the handoff path and active work; a pickup started is not a completed pickup.
 
+Handoffs record the session folder, the projects involved and their paths, the harness and model when known, and a ready-to-copy continuation prompt. Run `/pickup` in the same folder, or give it an exact handoff file path from another folder. If two or more handoffs in the current folder were modified in the last two hours, pickup offers up to three to choose from. The Cruise handoff button uses its own exact file, so it does not need that choice.
+
 ## Laya on your machine
 
 Laya is a small open-source model (Apache 2.0) that answers in about 25 ms, offline, speaking the same protocol as Jev. **Use it only if you want a private, offline judge and are willing to train it on your own sessions first.** Untrained, or trained on invented prompts, it is not a judge to trust (numbers in [Research](#research)).
