@@ -10,9 +10,9 @@ import { autoThreshold, bandRow, contextAction, loadRelay, startRelay } from './
 type Ui = ReturnType<EngineInterface['ui']['resolve']>
 
 const RELAY_HOTKEY = 'h'
-const RELAY_LABEL = '↗ Handoff and continue'
-// "h: Handoff and continue" and two cells of air: what the button takes from the row.
-const BUTTON_COLS = 29
+const RELAY_LABEL = '↗ Handoff'
+// Reserve space for the button and its terminal chrome.
+const BUTTON_COLS = 16
 
 async function band($: EngineInterface, { Box, Text, Button }: Ui, options: PluginOptions, columns: number, isWorking: boolean) {
   const limits = contextLimits(options)
