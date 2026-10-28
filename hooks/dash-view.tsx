@@ -131,7 +131,7 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
   const how: Run[] =
     r.action === 'alert' ? dim('alert only · warnings, no button')
     : r.action === 'auto' ? [{ text: `auto at ${r.autoAt}% · clears your conversation`, color: 'yellow' }]
-    : dim(`button · offered from ${s.limits.warnAt}%, above the prompt`)
+    : dim(`button above prompt · recommended at ${s.limits.warnAt}%`)
   const last: Run[] = r.running
     ? [{ text: 'running: handoff, clear, go-around…', color: 'yellow' }]
     : r.last
@@ -162,11 +162,11 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
   const activity = session?.now !== undefined && session.activity !== undefined ? `${session.action ?? 'observed'} · ${age(Math.max(0, session.now - session.activity))}` : 'waiting for observed activity'
   const on = (yes: boolean) => (yes ? 'green' : undefined)
   return [
-    { dot: '◇', color: 'green', label: 'Workspace', lines: fit([...pathLines(s.workspace.cwd, body), ...wrapText([s.workspace.branch, s.workspace.worktree].filter(Boolean).join(' · '), body).map(dim), ...wrapText(git, body).map(dim)]) },
+    { dot: '●', color: 'green', label: 'Progress', lines: fit(progress), ask: askShown },
     { dot: yes(s.context.on), color: ctxDot ?? on(s.context.on), label: 'Context', lines: fit(context) },
     { dot: '↗', color: r.action === 'alert' ? undefined : r.last && !r.last.ok ? 'yellow' : 'green', label: 'Handoff', lines: fit([how, [{ text: 'Relay: ', dim: true }, ...last], dim(latest), ...(r.stage ? [dim(r.stage)] : [])]) },
     { dot: yes(e.on), color: e.paused ? 'yellow' : on(e.on), label: 'Effort', lines: fit([dim(`model: ${session?.model ?? 'unavailable'}`), ...effort]) },
-    { dot: '●', color: 'green', label: 'Progress', lines: fit(progress), ask: askShown },
+    { dot: '◇', color: 'green', label: 'Workspace', lines: fit([...pathLines(s.workspace.cwd, body), ...wrapText([s.workspace.branch, s.workspace.worktree].filter(Boolean).join(' · '), body).map(dim), ...wrapText(git, body).map(dim)]) },
     { dot: '◷', color: 'green', label: 'Time', lines: fit([dim(`observed start: ${elapsed}`), ...wrapText(`last activity: ${activity}`, body).map(dim)]) },
     { dot: '◇', color: s.update.available ? 'yellow' : 'green', label: 'Updates', lines: fit(wrapText(s.update.line, body).map(dim)) },
   ]
@@ -177,7 +177,7 @@ const yes = (on: boolean) => (on ? '●' : '○')
 // The title, the rules and the footer, each cut to the card's inner width.
 export function chrome(inner: number) {
   return {
-    title: fitRuns([{ text: '◐ Cruise ', color: ORANGE, bold: true }, { text: VERSION, bold: true }, { text: '  ·  cruise control for Claude Code', dim: true }], inner),
+    title: fitRuns([{ text: '✈ CRUISE ', color: ORANGE, bold: true }, { text: VERSION, bold: true }, { text: '  ·  cruise control for Claude Code', dim: true }], inner),
     rule: '─'.repeat(inner),
     footer: fitRuns(dim('/cruise:configure · /handoff · /pickup'), inner),
   }
@@ -194,18 +194,18 @@ function Dashboard(ui: Ui, s: Snapshot, columns: number, framed = true, onToggle
   const top = chrome(inner)
   const pages = detailPages(s, inner)
   const currentPage = Math.min(page, pages.length - 1)
-  if (page >= 0) return <Box flexDirection="column" width={columns}><Text bold>{`Details ${currentPage + 1}/${pages.length}`}</Text>{pages[currentPage]!.map(line => <Text>{line}</Text>)}<Button key="details-previous" label="Previous page" hotkey="p" onPress={() => onPage((currentPage + pages.length - 1) % pages.length)} /><Button key="details-next" label="Next page" hotkey="n" onPress={() => onPage((currentPage + 1) % pages.length)} /><Button key="details-close" label="Back to overview" hotkey="d" onPress={() => onPage(-1)} /></Box>
+  if (page >= 0) return <Box flexDirection="column" width={columns}><Text bold>{`Details ${currentPage + 1}/${pages.length}`}</Text>{pages[currentPage]!.map(line => <Text>{line}</Text>)}<Button key="details-previous" label="Previous" hotkey="p" onPress={() => onPage((currentPage + pages.length - 1) % pages.length)} /><Button key="details-next" label="Next" hotkey="n" onPress={() => onPage((currentPage + 1) % pages.length)} /><Button key="details-close" label="Overview" hotkey="d" onPress={() => onPage(-1)} /></Box>
   const overview = rows(s, body, framed)
   return (
     <Box flexDirection="column" borderStyle={framed ? 'round' : undefined} borderColor={ORANGE} paddingX={1} width={columns}>
       {text(top.title)}
       <Text color={ORANGE}>{top.rule}</Text>
-      <Box flexDirection="row"><Button key="details-open" label="View details" hotkey="d" onPress={() => onPage(0)} /><Button key="overview-end" label="Scroll down" hotkey="b" onPress={() => onScroll('end')} /><Button key="overview-start" label="Scroll up" hotkey="t" onPress={() => onScroll('start')} /></Box>
+      <Box flexDirection="row"><Button key="details-open" label="Details" hotkey="d" onPress={() => onPage(0)} /><Button key="overview-end" label="Bottom" hotkey="b" onPress={() => onScroll('end')} /><Button key="overview-start" label="Top" hotkey="t" onPress={() => onScroll('start')} /></Box>
       {overview.map(r => (
         <Box flexDirection="row">
           <Box width={LABEL}>
             <Text color={r.color}>{r.dot}</Text>
-            <Text bold>{` ${r.label}`}</Text>
+            <Text bold color={r.label === 'Progress' || r.label === 'Context' ? ORANGE : undefined}>{` ${r.label}`}</Text>
           </Box>
           <Box flexDirection="column">
             {r.ask ? AskBlock(ui, r.ask, onToggle, 'ask-more-pane') : null}

@@ -78,13 +78,13 @@ for (const columns of [100, 40]) {
     await $.prompt.submit({ text: 'integrate billing into the planning app using the existing connection' })
     await $.tool.call({ tool: 'TodoWrite', todos: [{ content: 'Read', activeForm: 'Reading the backend', status: 'in_progress' }] } as never)
     const ui = await mountPane($, columns)
-    for (const word of [/Cruise/, /Workspace/, /Context/, /Effort/, /Progress/, /Updates/, /1\/1/]) expect(await ui.findAll({ text: word })).not.toHaveLength(0)
+    for (const word of [/CRUISE/, /Workspace/, /Context/, /Effort/, /Progress/, /Updates/, /1\/1/]) expect(await ui.findAll({ text: word })).not.toHaveLength(0)
   })
 }
 
 test('above the prompt the dashboard drops its own frame and still names every feature', async $ => {
   const ui = await $.ui.mount({ plugin: 'cruise', surface: 'terminal', component: 'Pane', requestId: 'cruise', props: { bodyColumns: 76, placement: 'inline' } as never })
-  for (const word of [/Cruise/, /Context/, /Effort/, /Progress/, /Updates/, /\/cruise:configure/]) expect(await ui.findAll({ text: word })).not.toHaveLength(0)
+  for (const word of [/CRUISE/, /Context/, /Effort/, /Progress/, /Updates/, /\/cruise:configure/]) expect(await ui.findAll({ text: word })).not.toHaveLength(0)
 })
 
 test('the dashboard reads and displays the current checkout', async ($, on) => {
@@ -155,4 +155,11 @@ test('the Effort row names the families steered, and the model that is left alon
   const idle = effort({ ...full, effort: { ...full.effort, idle: 'OpenRouter/~deepseek/deepseek-pro-latest', idleWhy: 'Cruise steers Anthropic, OpenAI, Google (via router)' } })
   expect(idle).toContain('resting · OpenRouter/~deepseek/deepseek-pro-latest is left alone')
   expect(idle).toContain('Cruise steers Anthropic, OpenAI, Google (via router)')
+})
+
+
+test('the dashboard puts the active task and context before workspace details', () => {
+  const labels = rows(full, 60, true).map(row => row.label)
+  expect(labels.slice(0, 2)).toEqual(['Progress', 'Context'])
+  expect(labels.indexOf('Workspace')).toBeGreaterThan(labels.indexOf('Handoff'))
 })
