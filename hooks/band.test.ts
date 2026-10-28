@@ -78,3 +78,11 @@ test('the handoff button remains present if context usage fails', async ($, on) 
   expect(await band.findAll({ text: /✈ Handoff/ })).not.toHaveLength(0)
   expect(await band.findAll({ text: /Context unknown/ })).not.toHaveLength(0)
 })
+
+
+test('a narrow band keeps the handoff button without a clipped context message', async ($, on) => {
+  on('session.usage', async () => { throw new Error('unavailable') })
+  const band = await $.ui.mount({ plugin: 'cruise', surface: 'terminal', component: 'AbovePrompt', props: { bodyColumns: 25, isWorking: false, hasSurvey: false, maxRows: 10 } as never })
+  expect(await band.findAll({ text: /✈ Handoff/ })).not.toHaveLength(0)
+  expect(await band.findAll({ text: /Context unkn/ })).toHaveLength(0)
+})

@@ -3,7 +3,7 @@
 import type { EngineInterface, PluginOptions, Register } from 'claude-code'
 
 import { contextLimits } from './context'
-import { effortToken, fitRuns, ORANGE } from './dash'
+import { cells, effortToken, fitRuns, ORANGE } from './dash'
 import { effortParts, judgeMode } from './effort'
 import { autoThreshold, bandRow, contextAction, loadRelay, startRelay } from './relay'
 
@@ -28,13 +28,16 @@ async function band($: EngineInterface, { Box, Text, Button }: Ui, options: Plug
     effort: parts && 'pick' in parts ? effortToken(parts.pick, parts.app) : [],
   })
   if (!row) return null
-  const runs = fitRuns(row.runs, Math.max(12, columns - 2 - (row.button ? BUTTON_COLS : 0)))
+  const room = Math.max(0, columns - 2 - (row.button ? BUTTON_COLS : 0))
+  const compact = row.severity === 'unknown' ? 'Context unavailable' : row.severity === 'critical' ? `${usage?.context.percent}% · critical` : row.severity === 'recommended' ? `${usage?.context.percent}% · recommended` : ''
+  const detail = row.runs.reduce((n, run) => n + cells(run.text), 0) <= room ? row.runs : compact && cells(compact) <= room ? [{ text: compact }] : []
+  const runs = row.button ? detail : fitRuns(row.runs, Math.max(0, columns - 2))
   const color = row.severity === 'critical' ? 'red' : row.severity === 'recommended' ? ORANGE : 'blue'
   return (
     <Box flexDirection="row">
-      <Text>{runs.map(r => <Text color={r.color} dimColor={r.dim} bold={r.bold}>{r.text}</Text>)}</Text>
       {row.button && isWorking ? <Text color={color}>Handoff after this turn</Text> : null}
       {row.button && !isWorking ? <Button key="relay-go" hotkey={RELAY_HOTKEY} variant="primary" onPress={() => void startRelay($, 'button')}><Text color={color}>{RELAY_LABEL}</Text></Button> : null}
+      {runs.length ? <Text>{row.button ? '  ' : ''}{runs.map(r => <Text color={r.color} dimColor={r.dim} bold={r.bold}>{r.text}</Text>)}</Text> : null}
     </Box>
   )
 }
