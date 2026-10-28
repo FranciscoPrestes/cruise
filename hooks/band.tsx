@@ -10,9 +10,9 @@ import { autoThreshold, bandRow, contextAction, loadRelay, startRelay } from './
 type Ui = ReturnType<EngineInterface['ui']['resolve']>
 
 const RELAY_HOTKEY = 'h'
-const RELAY_LABEL = 'Handoff and continue'
+const RELAY_LABEL = '↗ Handoff and continue'
 // "h: Handoff and continue" and two cells of air: what the button takes from the row.
-const BUTTON_COLS = 26
+const BUTTON_COLS = 29
 
 async function band($: EngineInterface, { Box, Text, Button }: Ui, options: PluginOptions, columns: number, isWorking: boolean) {
   const limits = contextLimits(options)
@@ -34,7 +34,7 @@ async function band($: EngineInterface, { Box, Text, Button }: Ui, options: Plug
     <Box flexDirection="row">
       <Text>{runs.map(r => <Text color={r.color} dimColor={r.dim} bold={r.bold}>{r.text}</Text>)}</Text>
       {row.button && isWorking ? <Text color={color}>Handoff after this turn</Text> : null}
-      {row.button && !isWorking ? <Button key="relay-go" hotkey={RELAY_HOTKEY} plain onPress={() => void startRelay($, 'button')}><Text color={color}>{RELAY_LABEL}</Text></Button> : null}
+      {row.button && !isWorking ? <Button key="relay-go" hotkey={RELAY_HOTKEY} variant="primary" onPress={() => void startRelay($, 'button')}><Text color={color}>{RELAY_LABEL}</Text></Button> : null}
     </Box>
   )
 }
