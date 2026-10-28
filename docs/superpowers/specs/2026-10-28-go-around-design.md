@@ -1,7 +1,7 @@
 # Cruise: arremetida e retomada conferida
 
 Data: 2026-10-28
-Estado: desenho conversacional aprovado; especificação aguardando revisão do usuário.
+Estado: especificação aprovada pelo usuário em 2026-10-28, incluindo botão azul/laranja/vermelho; plano de implementação em revisão.
 
 ## Objetivo e escopo
 
