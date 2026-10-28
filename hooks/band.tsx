@@ -10,7 +10,7 @@ import { autoThreshold, bandRow, contextAction, loadRelay, startRelay } from './
 type Ui = ReturnType<EngineInterface['ui']['resolve']>
 
 const RELAY_HOTKEY = 'h'
-const RELAY_LABEL = '↗ Handoff'
+const RELAY_LABEL = '✈ Handoff'
 // Reserve space for the button and its terminal chrome.
 const BUTTON_COLS = 16
 
