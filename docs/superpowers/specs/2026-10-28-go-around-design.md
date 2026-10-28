@@ -41,7 +41,7 @@ O registro de sucesso significa “arremetida iniciada”, não “trabalho conc
 
 ## Botão junto ao prompt
 
-Usar a superfície existente `AbovePrompt`, que fica junto à entrada de texto. No modo `contextAction: button`, com contexto habilitado, mostrar “Handoff and continue” mesmo abaixo de `warnAt` ou quando o percentual estiver indisponível. Abaixo do limiar: apresentação discreta. A partir de `warnAt`: destaque e indicação textual de recomendação; a partir de `urgentAt`: urgência também expressa por texto, sem depender só de cor.
+Usar a superfície existente `AbovePrompt`, que fica junto à entrada de texto. No modo `contextAction: button`, com contexto habilitado, mostrar “Handoff and continue” mesmo abaixo de `warnAt` ou quando o percentual estiver indisponível. O próprio botão deve ser colorido: azul abaixo de `warnAt`, laranja de `warnAt` até antes de `urgentAt` e vermelho a partir de `urgentAt`. Azul mantém apresentação discreta; laranja e vermelho destacam a recomendação e a urgência, também expressas por texto, sem depender só de cor. Usar os limiares configurados, não percentuais fixos. Com percentual indisponível, manter azul como ação manual disponível e indicar que o nível de contexto é desconhecido, sem afirmar que está seguro.
 
 Enquanto o agente trabalha, manter o controle reconhecível, indisponível para ativação, com indicação curta de disponibilidade ao fim do turno. Usar estado desabilitado do SDK se suportado; caso contrário, texto não interativo equivalente, nunca um botão aparentemente ativo que ignora o clique. Durante o relay, impedir duplicação e mostrar a etapa atual.
 
@@ -60,7 +60,7 @@ Verificar layout estreito e navegação por teclado. O estado discreto deve perm
 
 1. O relay inicia `cruise:go-around` com o arquivo exato, tanto pelo botão quanto pelo modo automático; não inicia `cruise:pickup` nessa sequência.
 2. Testes cobrem gravação ausente, arquivo concorrente, timeout, falha de clear, falha de continuação e prevenção de acionamento duplicado.
-3. Botão discreto abaixo do limiar, destacado nos limiares configurados, disponível com percentual desconhecido e indisponível durante trabalho/relay. Modos alert/auto, contexto desligado e formulário do host preservam seus contratos.
+3. O próprio botão fica azul abaixo de `warnAt`, laranja a partir de `warnAt` e vermelho a partir de `urgentAt`, com testes nos limites exatos e com limiares personalizados. Fica disponível em azul com percentual desconhecido, explicitando a ausência da medida, e indisponível durante trabalho/relay. Modos alert/auto, contexto desligado e formulário do host preservam seus contratos.
 4. Testes de layout e interação em larguras representativas, incluindo 40 colunas, e verificação real em sessão descartável. Não limpar ou interferir em sessões de trabalho do usuário.
 5. Cenários de skills: arquivo explícito válido, argumento ausente, arquivo ausente, caminho com espaços, handoff antigo, restrição pendente e diferença relevante no pickup. Go-around não inicia conferência geral; pickup a mantém proporcional.
 6. `claude plugin test .`, `claude plugin validate .`, `node scripts/check-version.mjs` e `git diff --check` passam. Registrar avisos não impeditivos e separar testes simulados da evidência real.
