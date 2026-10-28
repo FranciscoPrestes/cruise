@@ -1,4 +1,4 @@
-// The relay: handoff, clear, pickup. A button offers it from the first context warning; in automatic mode it runs by itself.
+// The relay: handoff, clear, go-around; automatic mode runs it at the configured threshold.
 // The pure decisions are at the top; the part that talks to the engine is at the bottom.
 import type { EngineInterface, PluginOptions } from 'claude-code'
 
@@ -32,28 +32,32 @@ export function windowLabel(tokens: number | undefined): string | undefined {
 
 type RowInput = { percent: number | undefined; window: number | undefined; action: ContextAction; limits: Thresholds; autoAt: number; running: boolean }
 
-// The extra row of the band: absent below the first warning and in alert mode; with the button in button mode; without it in auto mode and while running.
-export function contextRow(i: RowInput): { runs: Run[]; button: boolean } | null {
-  if (i.action === 'alert' || i.percent === undefined || i.percent < i.limits.warnAt) return null
+// The button is always available in button mode; alert and auto retain their own behavior.
+export function contextRow(i: RowInput): { runs: Run[]; button: boolean; severity?: 'normal' | 'recommended' | 'critical' | 'unknown' } | null {
+  if (i.action === 'alert') return null
+  if (i.running) return { runs: [{ text: 'Handoff in progress…', color: 'yellow' }], button: false }
+  if (i.action === 'button') {
+    const severity = i.percent === undefined ? 'unknown' : i.percent >= i.limits.urgentAt ? 'critical' : i.percent >= i.limits.warnAt ? 'recommended' : 'normal'
+    const label = i.percent === undefined ? 'Context unknown' : i.percent >= i.limits.warnAt ? `Context ${i.percent}%${windowLabel(i.window) ? ` of ${windowLabel(i.window)}` : ''} ${severity === 'critical' ? 'critical' : 'handoff recommended'}` : ''
+    return { runs: [{ text: label }, ...(label ? [{ text: ' · ' }] : [])], button: true, severity }
+  }
+  if (i.percent === undefined || i.percent < i.limits.warnAt) return null
   const size = windowLabel(i.window)
   const head: Run = { text: `Context ${i.percent}%${size ? ` of ${size}` : ''}`, color: zone(i.percent, i.limits), bold: true }
-  if (i.running) return { runs: [head, { text: ' · handing off, clearing and picking up…', color: 'yellow' }], button: false }
   if (i.action === 'auto') return { runs: [head, { text: ` · automatic at ${i.autoAt}%`, dim: true }], button: false }
   return { runs: [head, { text: ' · ', dim: true }], button: true }
 }
 
 type BandInput = RowInput & { effort: Run[] }
 
-// The whole band, one row at most. Above the first warning in button mode: context, the effort pick and the button. In auto mode and while a
-// relay runs: the context row as it is. Otherwise (below the warning, alert mode, context off): the effort pick alone, if the judge has picked.
-// Nothing when there is nothing to say.
-export function bandRow(i: BandInput): { runs: Run[]; button: boolean } | null {
+// The band fits context, the effort pick and the handoff control into one row.
+export function bandRow(i: BandInput): { runs: Run[]; button: boolean; severity?: 'normal' | 'recommended' | 'critical' | 'unknown' } | null {
   const context = contextRow(i)
   if (!context) return i.effort.length > 0 ? { runs: i.effort, button: false } : null
   if (i.running || i.action === 'auto' || i.effort.length === 0) return context
   const [head] = context.runs
   const dot: Run = { text: ' · ', dim: true }
-  return { runs: [...(head ? [head] : []), dot, ...i.effort, dot], button: true }
+  return { runs: [...(head?.text ? [head, dot] : []), ...i.effort, dot], button: true, severity: context.severity }
 }
 
 // Auto runs once per context band, never during a run or while a pickup waits; the band is over when the context falls below `resetBelow`.
@@ -112,7 +116,7 @@ export async function runRelay(d: RelayDeps, mode: 'button' | 'auto'): Promise<{
 // ---- the part that talks to the engine ----
 
 const HANDOFF = 'cruise:handoff'
-const PICKUP = 'cruise:pickup'
+const PICKUP = 'cruise:go-around'
 const HANDOFF_TIMEOUT_MS = 180_000
 const EMPTY: RelayState = { running: false, pickupPending: false, autoDone: false, mode: null, last: null }
 
@@ -186,7 +190,8 @@ function realDeps($: EngineInterface): RelayDeps {
 // Starts the relay from a button or from automatic mode. `$.command.run` refuses to run inside a hook the turn waits on, so the
 // work is handed to a timer that fires after the hook has answered; the engine then queues each command until the session is idle.
 export async function startRelay($: EngineInterface, mode: 'button' | 'auto'): Promise<void> {
-  if ((await loadRelay($)).running) return
+  if (relayState.running) return
+  relayState = { ...relayState, running: true, mode }
   await saveRelay($, { running: true, mode })
   $.clock.after(300, () => {
     void runRelay(realDeps($), mode).catch(async err => {
@@ -220,11 +225,12 @@ export function registerRelay(on: import('claude-code').On): void {
         void (async () => {
           const mode = state.mode ?? 'button'
           try {
-            await $.command.run({ command: PICKUP, ...(state.pickupPath ? { args: state.pickupPath } : {}) })
-            await saveRelay($, { running: false, stage: 'pickup started', last: { at: await $.clock.now(), ok: true, mode, why: 'handoff saved, context cleared, pickup started' } })
+            if (!state.pickupPath) throw new Error('handoff path unavailable')
+            await $.command.run({ command: PICKUP, args: state.pickupPath })
+            await saveRelay($, { running: false, stage: 'go-around started', last: { at: await $.clock.now(), ok: true, mode, why: 'handoff saved, context cleared, go-around started' } })
           } catch (err) {
-            await saveRelay($, { running: false, last: { at: await $.clock.now(), ok: false, mode, why: `cleared, but the pickup failed (${reason(err)}); type /pickup` } })
-            $.ui.toast('Cruise: the context was cleared but the pickup did not start. Type /pickup.')
+            await saveRelay($, { running: false, last: { at: await $.clock.now(), ok: false, mode, why: `cleared, but go-around failed (${reason(err)}); use /cruise:go-around ${state.pickupPath ?? '<handoff path>'}` } })
+            $.ui.toast(`Cruise: context cleared, but go-around failed. Use /cruise:go-around ${state.pickupPath ?? '<handoff path>'}`)
           }
         })()
       })

@@ -35,7 +35,7 @@
     "contextAction": {
       "type": "string",
       "title": "When the context fills",
-      "description": "button: from the first warning a row above the prompt offers a button that does the handoff, clears the conversation and picks up (the default). alert: only the warnings. auto: at the automatic point it does all three by itself between turns; it CLEARS your conversation, so turn it on only if you want that.",
+      "description": "button: a row above the prompt offers a button that does the handoff, clears the conversation and continues (the default). alert: only the warnings. auto: at the automatic point it does all three by itself between turns; it CLEARS your conversation, so turn it on only if you want that.",
       "default": "button",
       "options": [
         "button",

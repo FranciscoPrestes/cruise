@@ -2,7 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import { DEFAULTS } from './levels'
 import { effortToken } from './dash'
-import { autoThreshold, bandRow, contextAction, contextRow, decideAuto, handoffDir, runRelay, windowLabel } from './relay'
+import { autoThreshold, bandRow, contextAction, contextRow, decideAuto, handoffDir, runRelay, windowLabel, registerRelay, startRelay, relayStep, relayTurnDone, resetRelay } from './relay'
 import type { RelayDeps, RelayState } from './relay'
 
 const idle: RelayState = { running: false, pickupPending: false, autoDone: false, mode: null, last: null }
@@ -38,8 +38,8 @@ test('the window is named the way people say it', () => {
 
 test('the context row appears only from the first warning, and only when the action wants one', () => {
   const row = (percent: number | undefined, action: 'button' | 'alert' | 'auto', running = false) => contextRow({ percent, window: 200_000, action, limits: DEFAULTS, autoAt: 80, running })
-  expect(row(40, 'button')).toBeNull()
-  expect(row(undefined, 'button')).toBeNull()
+  expect(row(40, 'button')?.button).toBe(true)
+  expect(row(undefined, 'button')?.button).toBe(true)
   expect(row(72, 'alert')).toBeNull()
   const button = row(72, 'button')
   expect(button?.button).toBe(true)
@@ -49,7 +49,7 @@ test('the context row appears only from the first warning, and only when the act
   expect(auto?.runs.map(r => r.text).join('')).toContain('automatic at 80%')
   const busy = row(90, 'button', true)
   expect(busy?.button).toBe(false)
-  expect(busy?.runs.map(r => r.text).join('')).toContain('handing off')
+  expect(busy?.runs.map(r => r.text).join('')).toContain('Handoff in progress')
 })
 
 const PICK = effortToken('high', 'medium')
@@ -58,13 +58,13 @@ test('the band is one row: the effort pick alone below the warning, context then
   const row = (percent: number | undefined, action: 'button' | 'alert' | 'auto', over: { effort?: typeof PICK; running?: boolean } = {}) =>
     bandRow({ percent, window: 200_000, action, limits: DEFAULTS, autoAt: 80, running: over.running ?? false, effort: over.effort ?? [] })
   const text = (r: ReturnType<typeof row>) => r?.runs.map(x => x.text).join('')
-  expect(row(40, 'button')).toBeNull()
-  expect(row(undefined, 'button')).toBeNull()
-  expect(text(row(40, 'button', { effort: PICK }))).toBe('» high (app medium)')
-  expect(row(40, 'button', { effort: PICK })?.button).toBe(false)
-  expect(text(row(72, 'button', { effort: PICK }))).toBe('Context 72% of 200K · » high (app medium) · ')
+  expect(row(40, 'button')?.button).toBe(true)
+  expect(row(undefined, 'button')?.button).toBe(true)
+  expect(text(row(40, 'button', { effort: PICK }))).toContain('» high')
+  expect(row(40, 'button', { effort: PICK })?.button).toBe(true)
+  expect(text(row(72, 'button', { effort: PICK }))).toBe('Context 72% of 200K handoff recommended · » high (app medium) · ')
   expect(row(72, 'button', { effort: PICK })?.button).toBe(true)
-  expect(text(row(72, 'button'))).toBe('Context 72% of 200K · ')
+  expect(text(row(72, 'button'))).toBe('Context 72% of 200K handoff recommended · ')
   // Alert mode adds no context row, but the pick is still worth a token.
   expect(text(row(95, 'alert', { effort: PICK }))).toBe('» high (app medium)')
   expect(row(95, 'alert')).toBeNull()
@@ -73,7 +73,7 @@ test('the band is one row: the effort pick alone below the warning, context then
 test('the automatic and running texts do not carry the pick', () => {
   const base = { percent: 72, window: 200_000, limits: DEFAULTS, autoAt: 80, effort: PICK }
   expect(bandRow({ ...base, action: 'auto', running: false })?.runs.map(r => r.text).join('')).toBe('Context 72% of 200K · automatic at 80%')
-  expect(bandRow({ ...base, action: 'button', running: true })?.runs.map(r => r.text).join('')).toContain('handing off')
+  expect(bandRow({ ...base, action: 'button', running: true })?.runs.map(r => r.text).join('')).toContain('Handoff in progress')
 })
 
 test('auto runs once at its point, between turns, and again only after the context fell', () => {
@@ -174,4 +174,46 @@ test('a clear that fails leaves the handoff saved and no pickup waiting', async 
   expect(result.ok).toBe(false)
   expect(result.why).toContain('handoff is saved')
   expect(state.at(-1)?.pickupPending).toBe(false)
+})
+
+test('button severity follows configured thresholds even without usage', () => {
+  const row = (percent: number | undefined) => contextRow({ percent, window: 200_000, action: 'button', limits: DEFAULTS, autoAt: 80, running: false })
+  expect(row(59)?.severity).toBe('normal')
+  expect(row(60)?.severity).toBe('recommended')
+  expect(row(80)?.severity).toBe('critical')
+  expect(row(undefined)?.severity).toBe('unknown')
+})
+
+ test('custom thresholds determine severity at exact boundaries', () => {
+  const limits = { ...DEFAULTS, warnAt: 50, urgentAt: 75 }
+  const row = (percent: number) => contextRow({ percent, window: 200000, action: 'button', limits, autoAt: 80, running: false })
+  expect(row(49)?.severity).toBe('normal')
+  expect(row(50)?.severity).toBe('recommended')
+  expect(row(74)?.severity).toBe('recommended')
+  expect(row(75)?.severity).toBe('critical')
+})
+
+test('relay resumes the exact handoff once after clear', async () => {
+  const scheduled: (() => void)[] = []
+  const commands: { command: string; args?: string }[] = []
+  let handler: any
+  registerRelay(((name: string, fn: any) => { if (name === 'classic.SessionStart') handler = fn }) as never)
+  const $: any = {
+    ui: { invalidate: () => {}, toast: () => {} },
+    clock: { now: async () => 1000, after: (_: number, fn: () => void) => scheduled.push(fn), sleep: () => new Promise(() => {}) },
+    env: { get: async () => '/tmp' }, session: { cwd: async () => '/work with spaces', id: async () => 'abc' },
+    fs: { list: async () => [{ name: 'relay-1000-abc.md', kind: 'file', mtimeMs: 1000 }] },
+    command: { run: async (e: any) => { commands.push(e); if (e.command === 'cruise:handoff') { relayStep(); relayTurnDone({}) } } },
+  }
+  await resetRelay($)
+  await Promise.all([startRelay($, 'button'), startRelay($, 'button')])
+  scheduled.shift()!()
+  await new Promise(resolve => setTimeout(resolve, 10))
+  expect(commands.filter(e => e.command === 'clear')).toHaveLength(1)
+  await handler($, { source: 'clear' }, async () => ({}))
+  await handler($, { source: 'clear' }, async () => ({}))
+  scheduled.shift()!()
+  await new Promise(resolve => setTimeout(resolve, 10))
+  expect(commands.filter(e => e.command === 'cruise:go-around')).toEqual([{ command: 'cruise:go-around', args: '/tmp/.local/state/handoffs/-work with spaces/relay-1000-abc.md' }])
+  expect(commands.filter(e => e.command === 'cruise:pickup')).toHaveLength(0)
 })

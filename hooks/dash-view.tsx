@@ -133,7 +133,7 @@ export function rows(s: Snapshot, body: number, framed: boolean): Row[] {
     : r.action === 'auto' ? [{ text: `auto at ${r.autoAt}% · clears your conversation`, color: 'yellow' }]
     : dim(`button · offered from ${s.limits.warnAt}%, above the prompt`)
   const last: Run[] = r.running
-    ? [{ text: 'running: handoff, clear, pickup…', color: 'yellow' }]
+    ? [{ text: 'running: handoff, clear, go-around…', color: 'yellow' }]
     : r.last
       ? [{ text: `${age(r.now - r.last.at)} · `, dim: true }, { text: r.last.ok ? 'ok' : 'aborted', color: r.last.ok ? 'green' : 'yellow', bold: true }, { text: ` · ${r.last.why}`, dim: true }]
       : dim('not run yet')

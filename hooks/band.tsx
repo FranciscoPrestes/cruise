@@ -3,7 +3,7 @@
 import type { EngineInterface, PluginOptions, Register } from 'claude-code'
 
 import { contextLimits } from './context'
-import { effortToken, fitRuns } from './dash'
+import { effortToken, fitRuns, ORANGE } from './dash'
 import { effortParts, judgeMode } from './effort'
 import { autoThreshold, bandRow, contextAction, loadRelay, startRelay } from './relay'
 
@@ -29,11 +29,12 @@ async function band($: EngineInterface, { Box, Text, Button }: Ui, options: Plug
   })
   if (!row) return null
   const runs = fitRuns(row.runs, Math.max(12, columns - 2 - (row.button ? BUTTON_COLS : 0)))
+  const color = row.severity === 'critical' ? 'red' : row.severity === 'recommended' ? ORANGE : 'blue'
   return (
     <Box flexDirection="row">
       <Text>{runs.map(r => <Text color={r.color} dimColor={r.dim} bold={r.bold}>{r.text}</Text>)}</Text>
-      {row.button && isWorking ? <Text dimColor>Handoff after this turn</Text> : null}
-      {row.button && !isWorking ? <Button key="relay-go" label={RELAY_LABEL} hotkey={RELAY_HOTKEY} plain onPress={() => void startRelay($, 'button')} /> : null}
+      {row.button && isWorking ? <Text color={color}>Handoff after this turn</Text> : null}
+      {row.button && !isWorking ? <Button key="relay-go" hotkey={RELAY_HOTKEY} plain onPress={() => void startRelay($, 'button')}><Text color={color}>{RELAY_LABEL}</Text></Button> : null}
     </Box>
   )
 }

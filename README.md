@@ -26,7 +26,7 @@ Cruise is a mod for Claude Code (its commands call mods "plugins") with four job
 | | What it does | Default |
 | --- | --- | --- |
 | **Context** | Warns at 60% and 80% of the context window and points to `/handoff`, before quality drops | on |
-| **Handoff** | From the first warning, one row above the prompt with a button that saves the handoff, clears the conversation and picks up (or does it by itself, if you choose `auto`) | button |
+| **Handoff** | A button above the prompt saves the handoff, clears the conversation and continues with go-around (or does it by itself, if you choose `auto`) | button |
 | **Purser** | A short standing instruction that makes replies easy to follow and cheap to read: the result or next action first, numbered steps, one status line on multi-step work (`Now · Done · Next`), and a real choice offered as a short pick list with the recommended option first, like a purser's cabin announcement | on |
 | **Effort** | A small judge reads each prompt and picks the lowest reasoning effort that still does the job, among `low`, `medium`, `high`, `xhigh`, `max` | on, judged by Haiku on your own login |
 
@@ -34,7 +34,7 @@ Cruise is a mod for Claude Code (its commands call mods "plugins") with four job
 Context 72% of 200K · » high (app medium) · h: Handoff and continue
 ```
 
-The band above the prompt is one row, and only when there is something to say: the effort the judge picked, and from the first context warning the context and the button. `/cruise` opens the dashboard with everything else (context meter, handoff, effort, your latest request, plan step and background work, updates).
+The band above the prompt is one row, and only when there is something to say: the effort the judge picked, and the handoff button, with context warnings when needed. `/cruise` opens the dashboard with everything else (context meter, handoff, effort, your latest request, plan step and background work, updates).
 
 ## Install
 
@@ -63,7 +63,7 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 | --- | --- | --- |
 | `context` | on | Context warnings |
 | `warnAt` / `urgentAt` / `resetBelow` | 60 / 80 / 40 | First warning, urgent warning, and where warnings start over (%) |
-| `contextAction` | `button` | When the context fills: `button` (a row above the prompt with a button that does handoff, clear and pickup), `alert` (warnings only) or `auto` (does all three by itself) |
+| `contextAction` | `button` | When the context fills: `button` (a row above the prompt with a button that does handoff, clear and go-around), `alert` (warnings only) or `auto` (does all three by itself) |
 | `autoAt` | 80 | Only with `auto`: the % of context at which it hands off by itself, kept between the first warning and 95 |
 | `purser` | on | Purser mode: the short reply style above (about 500 tokens in the cached system prompt) |
 | `minAskChars` | 25 | Shorter messages ("go ahead") do not replace the request shown |
@@ -90,19 +90,19 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 - **Your setting wins.** The effort you set in the app is the starting point, and changing it overrides the judge. A judge that fails, is slow or is unsure leaves your setting alone. Short follow-ups ("yes", "go") keep the current pick.
 - **What is steered.** In plain Claude Code, only Anthropic's Opus, Sonnet and Fable 5 models. Haiku, subagents and everything else are left alone, and the panel says so. Ultracode (under `/effort`) cannot be switched by a mod.
 - **Cache guard.** If the prompt cache is ever rewritten after an effort change, steering stops for the session and says so.
-- **Handoff button.** Press it (or `h`, after `ctrl+x` then `tab` to focus the band) and Cruise runs `/handoff`, checks that the file was really written, clears the conversation and runs `/pickup` in the fresh one. If the file is missing, nothing is cleared. `contextAction: auto` does the same by itself at `autoAt`. It clears your conversation, so it is opt-in.
+- **Handoff button.** Press it (or `h`, after `ctrl+x` then `tab` to focus the band) and Cruise runs `/handoff`, checks that the file was really written, clears the conversation and runs `/go-around` with that exact file in the fresh one. The button is blue below the warning, orange at the warning, and red at the urgent threshold. If the file is missing, nothing is cleared. `contextAction: auto` does the same by itself at `autoAt`. It clears your conversation, so it is opt-in.
 - **Switching model.** `/model` keeps the conversation. The percentage is over the window of the model you are on, so Cruise names the window (`72% of 200K`) and warns again after a switch. The first request on a new model rewrites the prompt cache once.
 - **Through a router.** Nothing is steered and the Haiku judge is not used until you opt in with `routerModels` and `judgeModel`. Context warnings, the handoff button, purser mode and `/cruise` work with any model. The reasons and measurements are in [`docs/router.md`](docs/router.md).
 
 ### Commands
 
-`/cruise` opens the panel. `/handoff` saves the state of a session and `/pickup` resumes it in a fresh one (`/cruise:handoff` if you already have skills with those names). `/cruise:configure` changes settings, `/cruise:update` installs a new version, `/cruise:setup-laya` installs Laya. Remove with `/plugin uninstall cruise@prestes`.
+`/cruise` opens the panel. `/handoff` saves the state of a session and `/pickup` checks and resumes it later; `/go-around <path>` resumes it immediately without the general check (`/cruise:handoff` if you already have skills with those names). `/cruise:configure` changes settings, `/cruise:update` installs a new version, `/cruise:setup-laya` installs Laya. Remove with `/plugin uninstall cruise@prestes`.
 
 The panel shows the workspace, Git changes, latest handoff in the current folder, active work, current model and observed session activity. Open **details** to page through files, the handoff path and active work; a pickup started is not a completed pickup.
 
 The Haiku judge can also return a short summary of the request in the same call used to choose effort. The summary describes the request, not proof of completed work; the plan and observed activity are shown separately. The last activity time is based on events Cruise observes after loading, not a stall detector.
 
-With context warnings enabled, Cruise requests a system notification at each warning threshold. Whether the desktop displays it depends on the host's notification settings. In button mode, the handoff control is offered from the first warning when the turn is idle; while the model works the band says it will be available after the turn.
+With context warnings enabled, Cruise requests a system notification at each warning threshold. Whether the desktop displays it depends on the host's notification settings. In button mode, the handoff control is always offered when the turn is idle; while the model works the band says it will be available after the turn.
 
 Handoffs record the session folder, the projects involved and their paths, the harness and model when known, and a ready-to-copy continuation prompt. Run `/pickup` in the same folder, or give it an exact handoff file path from another folder. If two or more handoffs in the current folder were modified in the last two hours, pickup offers up to three to choose from. The Cruise handoff button uses its own exact file, so it does not need that choice.
 

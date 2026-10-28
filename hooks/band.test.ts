@@ -66,3 +66,15 @@ test('pressing the button starts the handoff command, from a timer and not from 
   expect(ran).toEqual(['cruise:handoff'])
   expect(toasts.some(t => t.includes('did not finish in time'))).toBe(true)
 })
+
+test('the handoff button is present below the warning', async ($, on) => {
+  on('session.usage', async () => usage(30))
+  expect(await (await mountBand($)).findAll({ text: /Handoff and continue/ })).not.toHaveLength(0)
+})
+
+test('the handoff button remains present if context usage fails', async ($, on) => {
+  on('session.usage', async () => { throw new Error('unavailable') })
+  const band = await mountBand($)
+  expect(await band.findAll({ text: /Handoff and continue/ })).not.toHaveLength(0)
+  expect(await band.findAll({ text: /Context unknown/ })).not.toHaveLength(0)
+})

@@ -19,7 +19,7 @@ Run `claude plugin configure cruise@prestes --json` to see every option, its typ
 | --- | --- | --- |
 | `context` | true | warn when the conversation fills up |
 | `warnAt` / `urgentAt` | 60 / 80 | the two warning points, in % of the context |
-| `contextAction` / `autoAt` | button / 80 | what the context warning offers: `button` (a row above the prompt with a button that does handoff, clear and pickup), `alert` (warnings only) or `auto` (does all three by itself at `autoAt`, kept between the first warning and 95) |
+| `contextAction` / `autoAt` | button / 80 | what the context warning offers: `button` (a row above the prompt with a button that does handoff, clear and go-around), `alert` (warnings only) or `auto` (does all three by itself at `autoAt`, kept between the first warning and 95) |
 | `purser` | true | purser mode: a short standing instruction for clear, concise replies (result first, numbered steps, a Now · Done · Next line on multi-step work); turn off to keep Claude's default style |
 | `effort` | haiku | who judges the effort: `off`, `haiku`, `jev`, `laya` |
 | `steer` | both | `both` = up or down from the app's effort, `down` = only lower |
