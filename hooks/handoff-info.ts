@@ -17,3 +17,6 @@ export async function handoffInfo($: EngineInterface): Promise<HandoffInfo> {
     return { status: 'found', path, at: latest.mtimeMs, ...(goal ? { goal } : {}) }
   } catch { return { status: 'unavailable' } }
 }
+
+// The path a pickup button resumes: only in a fresh session (no messages yet) with a saved handoff for this folder.
+export const pickupTarget = (messages: number, info: HandoffInfo): string | null => (messages === 0 && info.status === 'found' ? info.path : null)

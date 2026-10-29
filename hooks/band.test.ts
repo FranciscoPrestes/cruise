@@ -1,4 +1,10 @@
 import { expect, mock, test } from 'claude-code/testing'
+import { relayWord } from './band'
+
+test('the handoff button is the airplane alone on narrow terminals and carries the full name on wide ones', () => {
+  expect(relayWord(60)).toBe('')
+  expect(relayWord(120)).toBe('Handoff → Go-around')
+})
 
 const usage = (percent: number) => ({ value: { startedAt: 0, context: { window: 200000, tokens: 0, percent } } }) as never
 const mountBand = ($: Parameters<Parameters<typeof test>[1]>[0], isWorking = false) =>

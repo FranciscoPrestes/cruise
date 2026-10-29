@@ -189,6 +189,13 @@ function realDeps($: EngineInterface): RelayDeps {
 
 // Starts the relay from a button or from automatic mode. `$.command.run` refuses to run inside a hook the turn waits on, so the
 // work is handed to a timer that fires after the hook has answered; the engine then queues each command until the session is idle.
+// Resumes the last handoff in a new session: the same work the pickup after a clear does, started from the band's button.
+export function startPickup($: EngineInterface, path: string): void {
+  $.clock.after(300, () => {
+    void $.command.run({ command: PICKUP, args: path }).catch(err => $.ui.toast(`Cruise: pickup failed: ${reason(err)}. Use /cruise:go-around ${path}`))
+  })
+}
+
 export async function startRelay($: EngineInterface, mode: 'button' | 'auto'): Promise<void> {
   if (relayState.running) return
   relayState = { ...relayState, running: true, mode }
