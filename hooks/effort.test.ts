@@ -59,6 +59,20 @@ test('haiku: a simple prompt goes out at the effort the judge picked, below the 
   expect(s.judged[0]).toContain('Highest level allowed: max')
 })
 
+test('quality (the default): an unsure "low" goes out at medium', { options: { effort: 'haiku' } }, async ($, on) => {
+  const s = stubs(on, { reply: verdict('low', 0.6) })
+  await $.prompt.submit({ text: ASK })
+  await run($)
+  expect(s.sent).toEqual(['medium'])
+})
+
+test('economy: the same unsure "low" goes out at low', { options: { effort: 'haiku', posture: 'economy' } }, async ($, on) => {
+  const s = stubs(on, { reply: verdict('low', 0.6) })
+  await $.prompt.submit({ text: ASK })
+  await run($)
+  expect(s.sent).toEqual(['low'])
+})
+
 test('the same Haiku verdict shows the task summary in the dashboard', { options: { effort: 'haiku' } }, async ($, on) => {
   stubs(on, { reply: { isAnswered: true, text: '{"effort":"xhigh","sure":0.9,"why":"complex","summary":"Investigar latência"}', usage: { input_tokens: 10, output_tokens: 10 } } })
   await $.prompt.submit({ text: 'Investigue a regressão de latência entre os serviços e valide a correção' })

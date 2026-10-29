@@ -68,6 +68,7 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 | `purser` | on | Purser mode: the short reply style above (about 500 tokens in the cached system prompt) |
 | `minAskChars` | 25 | Shorter messages ("go ahead") do not replace the request shown |
 | `effort` | `haiku` | The judge: `off`, `haiku`, `jev` or `laya` |
+| `posture` | `quality` | What the judge leans to when in doubt: `quality` = the higher level (low only for plainly trivial messages), `economy` = the lower level |
 | `steer` | `both` | `both`: the judge may raise or lower your app's effort. `down`: only lower it |
 | `topLevel` | `max` | Highest effort the judge may pick: `high`, `xhigh` or `max` |
 | `routerModels` | empty (off) | Only behind a router such as claude-code-router: patterns of models whose effort Cruise may steer, for example `OpenAI (Login)/gpt-*`. See [`docs/router.md`](docs/router.md) first |

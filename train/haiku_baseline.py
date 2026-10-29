@@ -24,15 +24,16 @@ from pathlib import Path
 from levels import LEVELS, cost, line, summarize
 
 HERE = Path(__file__).resolve().parent
+LOW_NEEDS_SURE = 0.8  # keep in step with LOW_NEEDS_SURE in hooks/effort-rules.ts
 
 
-def judge_texts(rows, top, app, script=HERE / "judge_text.ts"):
+def judge_texts(rows, top, app, script=HERE / "judge_text.ts", posture="quality"):
     """The system prompt and one question per row, built by the same code Cruise runs."""
     parsed = []
     for row in rows:
         match = re.match(r"last reply asked a question: (yes|no)\nmessage: ([\s\S]*)", row["text"])
         parsed.append({"afterQuestion": match.group(1) == "yes", "text": match.group(2)})
-    out = subprocess.run(["bun", str(Path(script).resolve())], input=json.dumps({"top": top, "app": app, "rows": parsed}),
+    out = subprocess.run(["bun", str(Path(script).resolve())], input=json.dumps({"top": top, "app": app, "posture": posture, "rows": parsed}),
                          capture_output=True, text=True, check=True, cwd=HERE.parent)
     data = json.loads(out.stdout)
     return data["system"], data["prompts"]
@@ -86,6 +87,7 @@ def main():
     parser.add_argument("--judge-effort", default="low", choices=LEVELS, help="the judge's own effort (Cruise sends low)")
     parser.add_argument("--app", default="medium", choices=LEVELS, help="the effort the app is on")
     parser.add_argument("--top", default="max", choices=LEVELS, help="the highest level the judge may pick (Cruise's topLevel)")
+    parser.add_argument("--posture", default="quality", choices=("quality", "economy"), help="Cruise's posture setting")
     parser.add_argument("--max-tokens", type=int, default=160, help="the reply cap (Cruise's JUDGE_MAX_TOKENS)")
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument("--limit", type=int, default=0)
@@ -96,16 +98,18 @@ def main():
     args = parser.parse_args()
     rows = list(csv.DictReader(open(Path(os.path.expanduser(args.dir)) / args.eval_file, encoding="utf-8")))
     rows = rows[args.offset : args.offset + args.limit] if args.limit else rows[args.offset :]
-    system, prompts = judge_texts(rows, args.top, args.app, args.judge_text)
+    system, prompts = judge_texts(rows, args.top, args.app, args.judge_text, args.posture)
     if "/" in args.model:
         answers = run_openrouter(args.model, args.max_tokens, args.workers, system, prompts)
         served = Counter(a[5] for a in answers if a[5])
         print(f"OpenRouter: US$ {sum(a[4] for a in answers):.4f} in all; served by {dict(served.most_common(6))}")
     else:
         answers = run_judge(args.model, args.judge_effort, args.max_tokens, args.workers, system, prompts)
+    if args.posture == "quality":  # settle() in hooks/effort-rules.ts with no current level: low needs a sure judge
+        answers = [("medium" if a[0] == "low" and (a[1] or 0) < LOW_NEEDS_SURE else a[0],) + tuple(a[1:]) for a in answers]
     answered = [(r, a[0]) for r, a in zip(rows, answers) if a[0]]
     out_tokens = sorted(a[2] for a in answers if a[0])
-    print(f"{args.model} at {args.judge_effort}, app {args.app}, top {args.top}, on {len(rows)} prompts ({len(rows) - len(answered)} without an answer), output tokens median {out_tokens[len(out_tokens) // 2] if out_tokens else 0} max {out_tokens[-1] if out_tokens else 0}")
+    print(f"{args.model} at {args.judge_effort}, {args.posture}, app {args.app}, top {args.top}, on {len(rows)} prompts ({len(rows) - len(answered)} without an answer), output tokens median {out_tokens[len(out_tokens) // 2] if out_tokens else 0} max {out_tokens[-1] if out_tokens else 0}")
     ms = sorted(a[3] for a in answers)
     print(f"  latency ms: median {ms[len(ms) // 2]}, p90 {ms[int(len(ms) * 0.9)]}, max {ms[-1]}, over Cruise's 6 s timeout: {sum(m > 6000 for m in ms)}")
     picked = [p for _, p in answered]

@@ -15,6 +15,7 @@ import {
   levelsUpTo,
   parseHaiku,
   parseJev,
+  postureFrom,
   quantilePick,
   settle,
 } from './effort-rules'
@@ -188,6 +189,26 @@ test('Laya\'s probability is used, not its concentration score', () => {
   const levels = levelsUpTo('high')
   const body = JSON.stringify({ answers: { effort: { choice: 'low', confidence: 0.23, answer_confidence: 0.51, probabilities: { low: 0.51, medium: 0.45, high: 0.04 } } } })
   expect(parseJev(body, levels)?.sure).toBe(0.51)
+})
+
+test('quality is the default posture; economy only when asked', () => {
+  expect(postureFrom(undefined)).toBe('quality')
+  expect(postureFrom('economy')).toBe('economy')
+  expect(postureFrom('anything')).toBe('quality')
+})
+
+test('quality: low needs a sure judge, and an unsure judge never lowers the current level', () => {
+  expect(settle({ effort: 'low', sure: 0.9, why: '' }, null, 'quality')).toBe('low')
+  expect(settle({ effort: 'low', sure: 0.7, why: '' }, null, 'quality')).toBe('medium')
+  expect(settle({ effort: 'low', why: '' }, null, 'quality')).toBe('medium')
+  expect(settle({ effort: 'medium', sure: 0.3, why: '' }, 'high', 'quality')).toBe('high')
+  expect(settle({ effort: 'xhigh', sure: 0.3, why: '' }, 'medium', 'quality')).toBe('xhigh')
+  expect(settle({ effort: 'medium', sure: 0.9, why: '' }, 'high', 'quality')).toBe('medium')
+})
+
+test('the two postures tell the Haiku judge which way to lean when in doubt', () => {
+  expect(judgeSystem(levelsUpTo('max'), 'quality')).toContain('pick the higher one')
+  expect(judgeSystem(levelsUpTo('max'), 'economy')).toContain('pick the lower one')
 })
 
 test('an unsure judge leaves the current effort alone', () => {
