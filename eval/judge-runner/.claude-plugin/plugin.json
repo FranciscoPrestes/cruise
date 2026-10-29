@@ -1,0 +1,1 @@
+{ "name": "judge-runner", "version": "0.0.1", "description": "Asks the effort judge through $.model.complete, exactly as Cruise does, for train/haiku_baseline.py" }

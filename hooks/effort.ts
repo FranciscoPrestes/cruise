@@ -24,12 +24,14 @@ import {
   levelsUpTo,
   parseHaiku,
   parseJev,
+  postureFrom,
+  QUANTILE_BY_POSTURE,
   quantilePick,
   reachFrom,
   settle,
   steerFrom,
 } from './effort-rules'
-import type { Steer, Usage, Verdict } from './effort-rules'
+import type { Posture, Steer, Usage, Verdict } from './effort-rules'
 import { cleanAsk } from './helpers'
 
 export type JudgeMode = 'off' | 'haiku' | 'jev' | 'laya'
@@ -66,13 +68,13 @@ export function judgeMode(options: PluginOptions): JudgeMode {
   return mode === 'off' || mode === 'jev' || mode === 'laya' ? mode : 'haiku'
 }
 
-export type Judge = { mode: JudgeMode; url: string; key: string; model: string; steer: Steer; reach: Effort; routers: readonly RegExp[] }
+export type Judge = { mode: JudgeMode; url: string; key: string; model: string; steer: Steer; reach: Effort; posture: Posture; routers: readonly RegExp[] }
 
 export function judgeFrom(options: PluginOptions): Judge {
   const mode = judgeMode(options)
   const url = typeof options.judgeUrl === 'string' && options.judgeUrl.trim() ? options.judgeUrl.trim() : mode === 'laya' ? LAYA_URL : JEV_URL
   const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
-  return { mode, url, key: text(options.judgeKey), model: text(options.judgeModel), steer: steerFrom(options.steer), reach: reachFrom(options.topLevel), routers: routerPatterns(options.routerModels) }
+  return { mode, url, key: text(options.judgeKey), model: text(options.judgeModel), steer: steerFrom(options.steer), reach: reachFrom(options.topLevel), posture: postureFrom(options.posture), routers: routerPatterns(options.routerModels) }
 }
 
 // A prompt the person typed is judged on the next main-loop request. Commands and system notes are not prompts.
@@ -95,7 +97,7 @@ async function askHaiku($: EngineInterface, judge: Judge, text: string, top: Eff
   const levels = levelsUpTo(top)
   const r = await $.model.complete({
     model: judge.model || HAIKU_MODEL,
-    system: judgeSystem(levels),
+    system: judgeSystem(levels, judge.posture),
     prompt: judgeQuestion(text, top, current, afterQuestion, app),
     maxTokens: JUDGE_MAX_TOKENS,
     effort: 'low',
@@ -116,7 +118,7 @@ async function askHttp($: EngineInterface, judge: Judge, text: string, top: Effo
       judge.mode === 'laya'
         ? layaState(text, afterQuestion)
         : {
-            task: 'Choose the lowest reasoning effort an agentic assistant needs for the next user message. Judge scope and amount of work. A short follow-up keeps the current effort.',
+            task: 'Choose the lowest reasoning effort an agentic assistant needs for the next user message. Judge scope and amount of work; a vague or open-ended ask needs more than a precise one. A short follow-up keeps the current effort.',
             current_effort: current,
             last_reply_ended_with_question: afterQuestion,
             next_message: text.slice(0, 2000),
@@ -140,7 +142,7 @@ async function askHttp($: EngineInterface, judge: Judge, text: string, top: Effo
   const parsed = parseJev(res.text, levels)
   if (!parsed) return { tokens }
   // With the full distribution, decide cautiously (and the pick is final: no separate "unsure" gate). Without it, the answer's own choice.
-  const effort = parsed.probs ? quantilePick(parsed.probs, levels) : parsed.effort
+  const effort = parsed.probs ? quantilePick(parsed.probs, levels, QUANTILE_BY_POSTURE[judge.posture]) : parsed.effort
   return { verdict: { effort, why: parsed.why, sure: parsed.probs ? undefined : parsed.sure }, tokens }
 }
 
@@ -170,7 +172,7 @@ async function decide($: EngineInterface, judge: Judge, top: Effort, app: Effort
     return
   }
   const verdict = got.verdict
-  const effort = settle(verdict, state.pick)
+  const effort = settle(verdict, state.pick, judge.posture)
   await update($, effortState, s => ({
     ...s,
     pick: effort,

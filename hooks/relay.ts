@@ -2,7 +2,7 @@
 // The pure decisions are at the top; the part that talks to the engine is at the bottom.
 import type { EngineInterface, PluginOptions } from 'claude-code'
 
-import { zone } from './dash'
+import { ORANGE, zone } from './dash'
 import type { Run } from './dash'
 import type { Thresholds } from './levels'
 
@@ -39,7 +39,9 @@ export function contextRow(i: RowInput): { runs: Run[]; button: boolean; severit
   if (i.action === 'button') {
     const severity = i.percent === undefined ? 'unknown' : i.percent >= i.limits.urgentAt ? 'critical' : i.percent >= i.limits.warnAt ? 'recommended' : 'normal'
     const label = i.percent === undefined ? 'Context unknown' : i.percent >= i.limits.warnAt ? `Context ${i.percent}%${windowLabel(i.window) ? ` of ${windowLabel(i.window)}` : ''} ${severity === 'critical' ? 'critical' : 'handoff recommended'}` : ''
-    return { runs: [{ text: label }, ...(label ? [{ text: ' · ' }] : [])], button: true, severity }
+    // The label wears the button's colour: orange at the warning, red when urgent (blue is all well, and says nothing).
+    const color = severity === 'critical' ? 'red' : severity === 'recommended' ? ORANGE : undefined
+    return { runs: [{ text: label, ...(color ? { color, bold: severity === 'critical' } : {}) }, ...(label ? [{ text: ' · ' }] : [])], button: true, severity }
   }
   if (i.percent === undefined || i.percent < i.limits.warnAt) return null
   const size = windowLabel(i.window)
@@ -189,6 +191,13 @@ function realDeps($: EngineInterface): RelayDeps {
 
 // Starts the relay from a button or from automatic mode. `$.command.run` refuses to run inside a hook the turn waits on, so the
 // work is handed to a timer that fires after the hook has answered; the engine then queues each command until the session is idle.
+// Resumes the last handoff in a new session: the same work the pickup after a clear does, started from the band's button.
+export function startPickup($: EngineInterface, path: string): void {
+  $.clock.after(300, () => {
+    void $.command.run({ command: PICKUP, args: path }).catch(err => $.ui.toast(`Cruise: pickup failed: ${reason(err)}. Use /cruise:go-around ${path}`))
+  })
+}
+
 export async function startRelay($: EngineInterface, mode: 'button' | 'auto'): Promise<void> {
   if (relayState.running) return
   relayState = { ...relayState, running: true, mode }

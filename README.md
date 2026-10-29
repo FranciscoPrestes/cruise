@@ -31,10 +31,17 @@ Cruise is a mod for Claude Code (its commands call mods "plugins") with four job
 | **Effort** | A small judge reads each prompt and picks the lowest reasoning effort that still does the job, among `low`, `medium`, `high`, `xhigh`, `max` | on, judged by Haiku on your own login |
 
 ```text
-[ ✈ Handoff ]  Context 72% of 200K handoff recommended · » high
+✈ Handoff → Go-around  Context 72% of 200K handoff recommended · » high
 ```
 
 The band above the prompt is one row, and only when there is something to say: the effort the judge picked, and the handoff button, with context warnings when needed. `/cruise` opens the dashboard with everything else (context meter, handoff, effort, your latest request, plan step and background work, updates).
+
+## What's new in 1.8.0
+
+- **Handoff button.** One button in the status colour: the ✈ alone below 80 columns, `✈ Handoff → Go-around` from 80. In a fresh session with a saved handoff it becomes `↺ Go-around`.
+- **Posture.** `posture` (`quality` by default, or `economy`) sets which way the effort judge leans when in doubt. In 619 held-out prompts it picked too low 17% of the time on `quality` against 31% on `economy`.
+- **Judge calibrated to Anthropic's effort guidance.** The judge prompt and level criteria follow Anthropic's effort semantics, and the judge scores in `haiku_baseline` now include OpenRouter judges (Jev, GPT).
+- **`max` stays reachable.** `topLevel` is `max` again: the judge picks it for problems that need the deepest reasoning or when you ask for it (it picked `max` on 4 of 4 explicit asks and on none of the 619 other prompts).
 
 ## Install
 
@@ -68,6 +75,7 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 | `purser` | on | Purser mode: the short reply style above (about 500 tokens in the cached system prompt) |
 | `minAskChars` | 25 | Shorter messages ("go ahead") do not replace the request shown |
 | `effort` | `haiku` | The judge: `off`, `haiku`, `jev` or `laya` |
+| `posture` | `quality` | What the judge leans to when in doubt: `quality` = the higher level (low only for plainly trivial messages), `economy` = the lower level |
 | `steer` | `both` | `both`: the judge may raise or lower your app's effort. `down`: only lower it |
 | `topLevel` | `max` | Highest effort the judge may pick: `high`, `xhigh` or `max` |
 | `routerModels` | empty (off) | Only behind a router such as claude-code-router: patterns of models whose effort Cruise may steer, for example `OpenAI (Login)/gpt-*`. See [`docs/router.md`](docs/router.md) first |
@@ -90,7 +98,7 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 - **Your setting wins.** The effort you set in the app is the starting point, and changing it overrides the judge. A judge that fails, is slow or is unsure leaves your setting alone. Short follow-ups ("yes", "go") keep the current pick.
 - **What is steered.** In plain Claude Code, only Anthropic's Opus, Sonnet and Fable 5 models. Haiku, subagents and everything else are left alone, and the panel says so. Ultracode (under `/effort`) cannot be switched by a mod.
 - **Cache guard.** If the prompt cache is ever rewritten after an effort change, steering stops for the session and says so.
-- **Handoff button.** Press it (or `h`, after `ctrl+x` then `tab` to focus the band) and Cruise runs `/handoff`, checks that the file was really written, clears the conversation and runs `/go-around` with that exact file in the fresh one. The handoff label uses blue below the warning, orange at the warning, and red at the urgent threshold; the host and terminal theme can affect how button colors appear. On narrow terminals the button stays visible and the context text is shortened or omitted. If the file is missing, nothing is cleared. `contextAction: auto` does the same by itself at `autoAt`. It clears your conversation, so it is opt-in.
+- **Handoff button.** Click the ✈ and Cruise runs `/handoff`, checks that the file was really written, clears the conversation and runs `/go-around` with that exact file in the fresh one. The handoff label uses blue below the warning, orange at the warning, and red at the urgent threshold; the host and terminal theme can affect how button colors appear. From 80 columns the button reads `✈ Handoff → Go-around`; below that it is the ✈ alone, and the context text is shortened or omitted. The icon and the word are black at rest and white under the pointer, on a block that keeps its status colour, and a click on either presses the button. In a fresh session with a saved handoff the same button becomes `↺ Go-around` and resumes it. If the file is missing, nothing is cleared. `contextAction: auto` does the same by itself at `autoAt`. It clears your conversation, so it is opt-in.
 - **Switching model.** `/model` keeps the conversation. The percentage is over the window of the model you are on, so Cruise names the window (`72% of 200K`) and warns again after a switch. The first request on a new model rewrites the prompt cache once.
 - **Through a router.** Nothing is steered and the Haiku judge is not used until you opt in with `routerModels` and `judgeModel`. Context warnings, the handoff button, purser mode and `/cruise` work with any model. The reasons and measurements are in [`docs/router.md`](docs/router.md).
 

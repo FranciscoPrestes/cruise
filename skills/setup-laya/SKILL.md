@@ -83,7 +83,7 @@ Untrained Laya is weak. Trained on the person's own sessions, with all five leve
 
 There is also an invented set in `train/data/` (made by `train/make_synthetic.py`) that carries none of the person's text. Be clear that trained on it alone Laya is worse than doing nothing on real prompts (30% exact against 37%, and `high` or more asked for on 58% of prompts that did not need it): offer it only to try the pipeline, never as the judge.
 
-Steps: `extract_prompts.py`, `label_prompts.py` (five levels), `build_dataset.py`, `haiku_baseline.py --examples` (the bar to reach); repeat the rare `xhigh` and `max` rows three times in the training CSV; then:
+Steps: `extract_prompts.py`, `label_prompts.py` (five levels), `build_dataset.py`, `haiku_baseline.py` (the bar to reach; needs bun); repeat the rare `xhigh` and `max` rows three times in the training CSV; then:
 
 ```bash
 nice -n 15 "$BASE/venv/bin/laya-train" --data ~/.local/share/cruise/laya-training/train.csv --eval ~/.local/share/cruise/laya-training/eval.csv \

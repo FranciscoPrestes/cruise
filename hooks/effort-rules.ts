@@ -5,11 +5,11 @@ import type { Effort, EffortState } from '../types'
 export const EFFORTS: readonly Effort[] = ['low', 'medium', 'high', 'xhigh', 'max']
 
 const CRITERIA: Readonly<Record<Effort, string>> = {
-  low: 'quick answer, no tools, no planning',
-  medium: 'normal work: a few tool calls or edits',
-  high: 'hard or large multi-step job: many tool calls, costly mistakes',
-  xhigh: 'very hard: a long investigation',
-  max: 'the hardest research-level work',
+  low: 'a simple, well-bounded request: a quick answer, a lookup, a one-line or single-file edit; nothing to verify',
+  medium: 'well-specified work with clear steps: read a few files, change a function and its tests, explain a module',
+  high: 'complex reasoning or hard coding: an unknown cause to debug, a design choice, a large refactor or review, a vague ask to explore, costly mistakes',
+  xhigh: 'long-horizon agentic work: an investigation or build of 30 minutes or more across many files or systems',
+  max: 'the deepest reasoning: a novel or research-level problem where depth of thought, not length, is the bottleneck; rare',
 }
 
 // Models measured to keep the prompt cache when the effort changes between requests (see the README).
@@ -56,6 +56,11 @@ export type Steer = 'both' | 'down'
 export const DEFAULT_REACH: Effort = 'max'
 
 export const steerFrom = (value: unknown): Steer => (value === 'down' ? 'down' : 'both')
+
+// What the judge leans to when it is in doubt. `quality`: the higher level, because a level too low makes the assistant stop early,
+// skip a check or ask instead of acting, and the person pays in turns, time and attention. `economy`: the lower level, to save tokens.
+export type Posture = 'quality' | 'economy'
+export const postureFrom = (value: unknown): Posture => (value === 'economy' ? 'economy' : 'quality')
 export const reachFrom = (value: unknown): Effort => (isEffort(value) ? value : DEFAULT_REACH)
 
 // The highest level the judge may pick. Going down only: the app's own effort. Going both ways: the higher of the app's
@@ -106,18 +111,25 @@ const EXAMPLES: readonly (readonly [Effort, string])[] = [
   ['max', 'port the entire compiler backend to a new intermediate representation while every existing test keeps passing'],
 ]
 
-export function judgeSystem(levels: readonly Effort[]): string {
+const POSTURE_RULE: Readonly<Record<Posture, string>> = {
+  quality:
+    'Quality comes first. A level too low makes the assistant stop early, skip a check or ask instead of acting, which costs the person more turns, time and attention than the tokens it saves. Pick the effort that does the job well; when you are torn between two levels, pick the higher one. Pick low only for a message that is plainly trivial.',
+  economy:
+    'Tokens matter. Pick the lowest effort that will still do the job well, and a higher one only when the job is clearly hard or a mistake would be costly; when you are torn between two levels, pick the lower one.',
+}
+
+export function judgeSystem(levels: readonly Effort[], posture: Posture = 'quality'): string {
   const list = levels.map(l => `- ${l}: ${CRITERIA[l]}`).join('\n')
   const examples = EXAMPLES.filter(([level]) => levels.includes(level)).map(([level, text]) => `- "${text}" -> ${level}`).join('\n')
-  return `You choose the reasoning effort an agentic assistant (it reads files, runs tools and edits things, not only code) should use for the user's next message. Pick the effort the job needs: the lowest that will still do it well, and a higher one when the job is hard or a mistake would be costly. A wrong answer costs more than the saving.
+  return `You choose the reasoning effort an agentic assistant (it reads files, runs tools and edits things, not only code) should use for the user's next message. Effort sets how much the assistant thinks and how many tool calls it makes. At a lower effort it acts with fewer, terser steps and may skip a search or a verification; at a higher one it explores, plans and checks more, and spends more tokens. ${POSTURE_RULE[posture]}
 
 Levels you may choose:
 ${list}
 
-Judge the SCOPE and the amount of work, not whether it is code. A short message can ask for a lot: "review the whole repo" or "migrate everything" are big, tool-heavy jobs.
+Judge the SCOPE and the amount of work, not whether it is code. A short message can ask for a lot: "review the whole repo" or "migrate everything" are big, tool-heavy jobs. A vague or open-ended ask needs more effort than a precise one of the same size.
 A short follow-up ("yes", "go", "ok", or the same in any language) continues the current work: keep the current level.
 If the message answers a question the assistant just asked, judge the work that answer starts. If it corrects or adds to ongoing work, keep at least the current level.
-If the person asks for deep thought ("think hard", "be thorough"), pick the highest level you may choose; if they ask for a quick answer, pick low.
+If the person asks for deep thought ("think hard", "be thorough"), pick at least high (more if the job is bigger); if they ask for the most thought possible ("ultrathink", "think as hard as you can", "pense ao máximo"), pick the highest level you may choose; if they ask for a quick answer, pick low.
 
 Examples of the right level (the real messages are different, judge their scope the same way):
 ${examples}
@@ -183,6 +195,8 @@ export function parseJev(text: string, levels: readonly Effort[]): Verdict | und
 // 0.5 is where a Laya trained on our own sessions picked as many levels as the labels held; every step up made it ask for
 // more effort than the work needed (see the README and train/compare.py).
 export const QUANTILE = 0.5
+// With `quality` the pick must cover more of the judge's belief: the lowest level whose cumulative probability reaches 0.7.
+export const QUANTILE_BY_POSTURE: Readonly<Record<Posture, number>> = { quality: 0.7, economy: QUANTILE }
 
 export function quantilePick(probs: Readonly<Record<string, number>>, levels: readonly Effort[], tau: number = QUANTILE): Effort {
   const known = levels.reduce((sum, level) => sum + (probs[level] ?? 0), 0)
@@ -197,7 +211,15 @@ export function quantilePick(probs: Readonly<Record<string, number>>, levels: re
 }
 
 // A judge that is unsure of its own answer leaves the current level alone.
-export const settle = (verdict: Verdict, current: Effort | null): Effort => (current && verdict.sure !== undefined && verdict.sure < UNSURE_BELOW ? current : verdict.effort)
+// With `quality` an unsure judge never lowers the current level (it may still raise it), and `low` needs a sure judge: otherwise medium.
+const LOW_NEEDS_SURE = 0.8
+export function settle(verdict: Verdict, current: Effort | null, posture: Posture = 'economy'): Effort {
+  const unsure = verdict.sure !== undefined && verdict.sure < UNSURE_BELOW
+  if (posture === 'economy') return current && unsure ? current : verdict.effort
+  const higher = current && EFFORTS.indexOf(current) > EFFORTS.indexOf(verdict.effort) ? current : verdict.effort
+  const pick = unsure ? higher : verdict.effort
+  return pick === 'low' && (verdict.sure ?? 0) < LOW_NEEDS_SURE ? 'medium' : pick
+}
 
 export type Sent = { effort: string; at: number; model?: string; cacheRead?: number }
 export type Usage = { input_tokens?: number | null; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null }

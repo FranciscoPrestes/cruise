@@ -10,7 +10,7 @@ Laya without training is not a reliable judge (see the top-level README). This f
 python3 train/extract_prompts.py   # every prompt you typed, plus how much work it set off (tool calls, tokens, time)
 python3 train/label_prompts.py     # a Claude model labels each one with one of the five levels (low, medium, high, xhigh, max), seeing the work it caused
 python3 train/build_dataset.py     # train.csv and eval.csv, split by session so nothing leaks
-python3 train/haiku_baseline.py --examples --save haiku-picks.json   # the Haiku judge on the same held-out prompts: the bar a trained Laya has to reach
+python3 train/haiku_baseline.py --save haiku-picks.json   # Cruise's exact Haiku judge (through eval/judge-runner, needs bun) on the same held-out prompts: the bar a trained Laya has to reach
 ```
 
 Then train with `laya-train` (the five levels are in the `label` column; repeat the rare `xhigh` and `max` rows three times in the training file, since there are few) (installed by the `/cruise:setup-laya` skill) and score the result on the held-out prompts and on `eval/judge-cases.json` / `eval/judge-cases-pt.json` with `eval/judge_eval.py`. The recipe and the exact command are in `skills/setup-laya/SKILL.md`.

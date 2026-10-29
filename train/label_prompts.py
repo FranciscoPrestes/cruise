@@ -24,12 +24,15 @@ ALL_LEVELS = ["low", "medium", "high", "xhigh", "max"]
 BATCH = 20
 MESSAGE_CHARS = 900
 
+# The levels as Anthropic describes them (platform.claude.com/docs/build-with-claude/effort): low for simple, fast work;
+# medium for well-specified agentic work; high for complex reasoning and hard coding; xhigh for long-horizon work of
+# 30 minutes or more; max for the deepest reasoning, not for size.
 DEFINITIONS = {
-    "low": "a quick answer or lookup, a rename, a typo, a one-line or single-file edit, chit-chat, a thank-you, a plain yes/no/\"go\" that continues work already planned and easy.",
-    "medium": "normal work: read a few files and edit across them, write a function or its tests, explain a module, draft text, a bug with an obvious area, an ordinary question that needs a little digging.",
-    "high": "hard or large multi-step work: debugging an unknown cause, a large refactor or migration, architecture or design, a security or full-repo review, a long investigation, research across many sources, anything where a mistake is costly.",
-    "xhigh": "very hard work: a long investigation or a big change across many files and systems where the cause or the design is genuinely unclear, many dozens of steps, and a wrong turn wastes hours.",
-    "max": "the hardest work there is: research-level or whole-system problems with no known approach, sustained effort over hundreds of steps, where the best possible reasoning is worth any cost.",
+    "low": "a simple, well-bounded request: a quick answer or lookup, a rename, a typo, a one-line or single-file edit, chit-chat, a thank-you, a plain yes/no/\"go\" that continues work already planned and easy. Nothing to verify.",
+    "medium": "well-specified work with clear steps: read a few files and edit across them, write a function or its tests, explain a module, draft text, a bug with an obvious area, an ordinary question that needs a little digging.",
+    "high": "complex reasoning or hard coding: debugging an unknown cause, a large refactor or migration, architecture or design, a security or full-repo review, a vague or open-ended ask that needs exploring, research across many sources, anything where a mistake is costly.",
+    "xhigh": "long-horizon work: an investigation or a change across many files and systems that takes 30 minutes or more of real work, where the cause or the design is unclear and a wrong turn wastes hours.",
+    "max": "the deepest reasoning: a novel or research-level problem with no known approach, where depth of thought, not length, is the bottleneck. Rare. Never for size alone: a long run of known steps is xhigh at most.",
 }
 HINTS = {
     3: [
@@ -40,9 +43,9 @@ HINTS = {
     5: [
         "- 0 to 2 tool calls and a short reply usually means low, unless the prompt itself plainly asked for something deep that was answered from memory.",
         "- Several tool calls (about 3 to 15) usually means medium.",
-        "- About 15 to 40 tool calls, or a long run or heavy output, usually means high.",
-        "- About 40 to 100 tool calls usually means xhigh, if the work really was hard and not just repetitive.",
-        "- More than about 100 tool calls, or a very long run, usually means max, again only if the work was hard in itself. Repetitive, mechanical steps (renaming across files, bulk edits) count one level lower than their size suggests.",
+        "- About 15 to 40 tool calls, or a run of several minutes with real reasoning, usually means high.",
+        "- About 40 or more tool calls over 30 minutes or more usually means xhigh, if the work really was hard and not just repetitive.",
+        "- max is never earned by size or time: only when the problem itself needed the deepest reasoning (novel, research-level, no known approach). Repetitive, mechanical steps (renaming across files, bulk edits) count one level lower than their size suggests.",
     ],
 }
 

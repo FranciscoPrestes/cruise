@@ -1,6 +1,6 @@
 {
   "name": "cruise",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "description": "Cruise control for Claude Code: watches the context, shows where you are and (optionally) picks the reasoning effort for each prompt",
   "author": {
     "name": "Francisco Prestes"
@@ -85,10 +85,20 @@
         "down"
       ]
     },
+    "posture": {
+      "type": "string",
+      "title": "Quality or economy",
+      "description": "What the judge leans to when in doubt. quality (default): the higher level, and low only for a plainly trivial message, because too low an effort makes Claude stop early, skip checks and ask more, which costs you turns, time and attention. economy: the lower level, to save tokens.",
+      "default": "quality",
+      "options": [
+        "quality",
+        "economy"
+      ]
+    },
     "topLevel": {
       "type": "string",
       "title": "Highest effort the judge may pick",
-      "description": "The highest effort the judge may pick when a job is hard: high, xhigh or max (every level your model offers; max is the default). Lower it if you want a cheaper ceiling.",
+      "description": "The highest effort the judge may pick when a job is hard: high, xhigh or max (every level your model offers; max is the default; the judge keeps max for the rare problem that needs the deepest reasoning, or when you ask for it). Lower it if you want a cheaper ceiling.",
       "default": "max",
       "options": [
         "high",

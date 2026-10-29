@@ -1,4 +1,10 @@
 import { expect, mock, test } from 'claude-code/testing'
+import { relayWord } from './band'
+
+test('the handoff button is the airplane alone on narrow terminals and carries the full name on wide ones', () => {
+  expect(relayWord(60)).toBe('')
+  expect(relayWord(120)).toBe('Handoff → Go-around')
+})
 
 const usage = (percent: number) => ({ value: { startedAt: 0, context: { window: 200000, tokens: 0, percent } } }) as never
 const mountBand = ($: Parameters<Parameters<typeof test>[1]>[0], isWorking = false) =>
@@ -8,7 +14,7 @@ test('from the first warning the band offers the handoff button', async ($, on) 
   on('session.usage', async () => usage(72))
   const band = await mountBand($)
   expect(await band.findAll({ text: /Context 72% of 200K/ })).not.toHaveLength(0)
-  expect(await band.findAll({ text: /✈ Handoff/ })).not.toHaveLength(0)
+  expect(await band.findAll({ text: /✈/ })).not.toHaveLength(0)
 })
 
 // With nothing to show the band hands the site to the engine, which in a test has nothing beneath: the mount is refused.
@@ -34,14 +40,14 @@ test('auto mode shows its point instead of a button', { options: { contextAction
   on('session.usage', async () => usage(72))
   const band = await mountBand($)
   expect(await band.findAll({ text: /automatic at 85%/ })).not.toHaveLength(0)
-  expect(await band.findAll({ text: /✈ Handoff/ })).toHaveLength(0)
+  expect(await band.findAll({ text: /✈/ })).toHaveLength(0)
 })
 
 test('the handoff is visible while the model works and offered when it is idle', async ($, on) => {
   on('session.usage', async () => usage(72))
   const band = await mountBand($, true)
   expect(await band.findAll({ text: /Context 72%/ })).not.toHaveLength(0)
-  expect(await band.findAll({ text: /✈ Handoff/ })).toHaveLength(0)
+  expect(await band.findAll({ text: /✈/ })).toHaveLength(0)
   expect(await band.findAll({ text: /Handoff after this turn/ })).not.toHaveLength(0)
 })
 
@@ -69,20 +75,20 @@ test('pressing the button starts the handoff command, from a timer and not from 
 
 test('the handoff button is present below the warning', async ($, on) => {
   on('session.usage', async () => usage(30))
-  expect(await (await mountBand($)).findAll({ text: /✈ Handoff/ })).not.toHaveLength(0)
+  expect(await (await mountBand($)).findAll({ text: /✈/ })).not.toHaveLength(0)
 })
 
 test('the handoff button remains present if context usage fails', async ($, on) => {
   on('session.usage', async () => { throw new Error('unavailable') })
   const band = await mountBand($)
-  expect(await band.findAll({ text: /✈ Handoff/ })).not.toHaveLength(0)
+  expect(await band.findAll({ text: /✈/ })).not.toHaveLength(0)
   expect(await band.findAll({ text: /Context unknown/ })).not.toHaveLength(0)
 })
 
 
 test('a narrow band keeps the handoff button without a clipped context message', async ($, on) => {
   on('session.usage', async () => { throw new Error('unavailable') })
-  const band = await $.ui.mount({ plugin: 'cruise', surface: 'terminal', component: 'AbovePrompt', props: { bodyColumns: 25, isWorking: false, hasSurvey: false, maxRows: 10 } as never })
-  expect(await band.findAll({ text: /✈ Handoff/ })).not.toHaveLength(0)
+  const band = await $.ui.mount({ plugin: 'cruise', surface: 'terminal', component: 'AbovePrompt', props: { bodyColumns: 16, isWorking: false, hasSurvey: false, maxRows: 10 } as never })
+  expect(await band.findAll({ text: /✈/ })).not.toHaveLength(0)
   expect(await band.findAll({ text: /Context unkn/ })).toHaveLength(0)
 })

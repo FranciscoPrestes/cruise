@@ -65,6 +65,10 @@ test('the band is one row: the effort pick alone below the warning, context then
   expect(text(row(72, 'button', { effort: PICK }))).toBe('Context 72% of 200K handoff recommended · » high (app medium) · ')
   expect(row(72, 'button', { effort: PICK })?.button).toBe(true)
   expect(text(row(72, 'button'))).toBe('Context 72% of 200K handoff recommended · ')
+  // The label follows the button colour: orange at the warning, bold red when urgent, plain below it.
+  expect(row(72, 'button')?.runs[0]).toMatchObject({ color: '#D97757' })
+  expect(row(90, 'button')?.runs[0]).toMatchObject({ color: 'red', bold: true })
+  expect(row(40, 'button')?.runs[0]?.color).toBeUndefined()
   // Alert mode adds no context row, but the pick is still worth a token.
   expect(text(row(95, 'alert', { effort: PICK }))).toBe('» high (app medium)')
   expect(row(95, 'alert')).toBeNull()
