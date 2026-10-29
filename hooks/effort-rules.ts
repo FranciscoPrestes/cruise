@@ -53,7 +53,7 @@ export const isSteerable = (model: string, appEffort: unknown, routers: readonly
 
 // How far the judge may move the effort: `both` up and down from the app's effort, `down` only lower.
 export type Steer = 'both' | 'down'
-export const DEFAULT_REACH: Effort = 'xhigh'
+export const DEFAULT_REACH: Effort = 'max'
 
 export const steerFrom = (value: unknown): Steer => (value === 'down' ? 'down' : 'both')
 export const reachFrom = (value: unknown): Effort => (isEffort(value) ? value : DEFAULT_REACH)
@@ -117,7 +117,7 @@ ${list}
 Judge the SCOPE and the amount of work, not whether it is code. A short message can ask for a lot: "review the whole repo" or "migrate everything" are big, tool-heavy jobs. A vague or open-ended ask needs more effort than a precise one of the same size.
 A short follow-up ("yes", "go", "ok", or the same in any language) continues the current work: keep the current level.
 If the message answers a question the assistant just asked, judge the work that answer starts. If it corrects or adds to ongoing work, keep at least the current level.
-If the person asks for deep thought ("think hard", "be thorough"), pick at least high (more if the job is bigger); if they ask for a quick answer, pick low.
+If the person asks for deep thought ("think hard", "be thorough"), pick at least high (more if the job is bigger); if they ask for the most thought possible ("ultrathink", "think as hard as you can", "pense ao máximo"), pick the highest level you may choose; if they ask for a quick answer, pick low.
 
 Examples of the right level (the real messages are different, judge their scope the same way):
 ${examples}

@@ -56,7 +56,7 @@ test('haiku: a simple prompt goes out at the effort the judge picked, below the 
   await run($)
   expect(s.sent).toEqual(['low'])
   expect(s.judged).toHaveLength(1)
-  expect(s.judged[0]).toContain('Highest level allowed: xhigh')
+  expect(s.judged[0]).toContain('Highest level allowed: max')
 })
 
 test('the same Haiku verdict shows the task summary in the dashboard', { options: { effort: 'haiku' } }, async ($, on) => {
@@ -303,7 +303,7 @@ test('jev: it is offered every level up to the top level, whatever the app is on
   await $.prompt.submit({ text: 'investigate why the nightly export job corrupts rows when two workers overlap' })
   await run($, { effort: 'xhigh' })
   expect(s.sent).toEqual(['high'])
-  expect(Object.keys(JSON.parse(s.calls[0]?.body ?? '{}').questions.effort.criteria)).toEqual(['low', 'medium', 'high', 'xhigh'])
+  expect(Object.keys(JSON.parse(s.calls[0]?.body ?? '{}').questions.effort.criteria)).toEqual(['low', 'medium', 'high', 'xhigh', 'max'])
 })
 
 test('jev: a lower label still lowers an xhigh app effort', { options: { effort: 'jev' } }, async ($, on) => {

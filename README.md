@@ -69,7 +69,7 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 | `minAskChars` | 25 | Shorter messages ("go ahead") do not replace the request shown |
 | `effort` | `haiku` | The judge: `off`, `haiku`, `jev` or `laya` |
 | `steer` | `both` | `both`: the judge may raise or lower your app's effort. `down`: only lower it |
-| `topLevel` | `xhigh` | Highest effort the judge may pick: `high`, `xhigh` or `max` |
+| `topLevel` | `max` | Highest effort the judge may pick: `high`, `xhigh` or `max` |
 | `routerModels` | empty (off) | Only behind a router such as claude-code-router: patterns of models whose effort Cruise may steer, for example `OpenAI (Login)/gpt-*`. See [`docs/router.md`](docs/router.md) first |
 | `judgeUrl` / `judgeKey` / `judgeModel` | empty | Where a `jev` or `laya` judge listens, its key (kept in secure storage), and its model |
 | `updates` | `check` | `check`: look on GitHub once a day and tell you; never install automatically. `off`: never look |

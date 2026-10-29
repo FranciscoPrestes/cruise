@@ -59,7 +59,7 @@ def main():
     parser.add_argument("--model", default="claude-haiku-5-5")
     parser.add_argument("--judge-effort", default="low", choices=LEVELS, help="the judge's own effort (Cruise sends low)")
     parser.add_argument("--app", default="medium", choices=LEVELS, help="the effort the app is on")
-    parser.add_argument("--top", default="xhigh", choices=LEVELS, help="the highest level the judge may pick (Cruise's topLevel)")
+    parser.add_argument("--top", default="max", choices=LEVELS, help="the highest level the judge may pick (Cruise's topLevel)")
     parser.add_argument("--max-tokens", type=int, default=160, help="the reply cap (Cruise's JUDGE_MAX_TOKENS)")
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument("--limit", type=int, default=0)

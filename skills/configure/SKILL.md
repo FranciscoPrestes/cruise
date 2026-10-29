@@ -24,7 +24,7 @@ Run `claude plugin configure cruise@prestes --json` to see every option, its typ
 | `effort` | haiku | who judges the effort: `off`, `haiku`, `jev`, `laya` |
 | `steer` | both | `both` = up or down from the app's effort, `down` = only lower |
 | `routerModels` | empty (off) | opt-in extra for people who use a router such as claude-code-router: patterns of the routed models steered too; plain Claude Code is unaffected |
-| `topLevel` | xhigh | the highest effort the judge may pick: `high`, `xhigh`, `max` |
+| `topLevel` | max | the highest effort the judge may pick: `high`, `xhigh`, `max` |
 | `judgeModel` | empty | the judge's model; empty = Haiku 5.5 (or the server's choice for jev/laya) |
 | `updates` | check | `check` (notify only), `off` |
 
@@ -41,7 +41,7 @@ Run `claude plugin configure cruise@prestes --json` to see every option, its typ
    - **off**: no steering. Their app's effort goes out untouched.
 4. If effort is on: **direction** (`steer`, both). "Should it be allowed to raise the effort for a hard job, or only lower it? Raising is what makes it useful for hard problems, and it costs more tokens on those; lowering only saves." Recommend `both`.
    - **Only if the user says they use a router** (such as claude-code-router): ask once. "Behind a router Cruise steers nothing routed by default (`routerModels` is empty): in my measurements changing the effort cost the prompt cache on GPT, on Gemini and even on the same Anthropic model, which plain Claude Code does not suffer. If you still want it for some models, name them (for example `OpenAI (Login)/gpt-*`); Cruise stops steering for the session after the first cache loss it sees. Also, the Haiku judge is not used behind a router until `judgeModel` names a model your router serves (in my test `Google (Login)/gemini-3.5-flash-lite` judged 50% exact and 93% within one level; `Google (Login)/gemini-3.8-flash-high` 60% and 97%, slower). Leave it off, or name the models and the judge?" Never ask this of someone who did not mention a router.
-5. If `steer` is both: **top level** (`topLevel`, xhigh). "The judge picks among all five levels Claude Code offers: low, medium, high, xhigh and max. How high may it go on a hard job? `max` uses every level; `high` or `xhigh` cap the cost of the hardest jobs." Recommend leaving `xhigh` (Anthropic suggests max only where your own tests show a gain), and say they can change it later. Mention that Ultracode (the toggle under `/effort`) is not something Cruise can switch on.
+5. If `steer` is both: **top level** (`topLevel`, max). "The judge picks among all five levels Claude Code offers: low, medium, high, xhigh and max. How high may it go on a hard job? `max` uses every level; `high` or `xhigh` cap the cost of the hardest jobs." Recommend leaving `max`, and say they can lower it later. Mention that Ultracode (the toggle under `/effort`) is not something Cruise can switch on.
 6. **Updates** (`updates`, check). "Cruise looks on GitHub once a day for a new version and tells you; it never installs automatically. You decide when to install it with `/cruise:update`. Keep these notices on (`check`), or never look (`off`)?" Recommend `check`.
 7. Only for **jev**: tell the user to run `/plugin configure cruise@prestes` themselves to paste the key, because that command keeps it in secure storage. Do not ask them to type the key into the chat.
 
