@@ -2,7 +2,7 @@
 // The pure decisions are at the top; the part that talks to the engine is at the bottom.
 import type { EngineInterface, PluginOptions } from 'claude-code'
 
-import { zone } from './dash'
+import { ORANGE, zone } from './dash'
 import type { Run } from './dash'
 import type { Thresholds } from './levels'
 
@@ -39,7 +39,9 @@ export function contextRow(i: RowInput): { runs: Run[]; button: boolean; severit
   if (i.action === 'button') {
     const severity = i.percent === undefined ? 'unknown' : i.percent >= i.limits.urgentAt ? 'critical' : i.percent >= i.limits.warnAt ? 'recommended' : 'normal'
     const label = i.percent === undefined ? 'Context unknown' : i.percent >= i.limits.warnAt ? `Context ${i.percent}%${windowLabel(i.window) ? ` of ${windowLabel(i.window)}` : ''} ${severity === 'critical' ? 'critical' : 'handoff recommended'}` : ''
-    return { runs: [{ text: label }, ...(label ? [{ text: ' · ' }] : [])], button: true, severity }
+    // The label wears the button's colour: orange at the warning, red when urgent (blue is all well, and says nothing).
+    const color = severity === 'critical' ? 'red' : severity === 'recommended' ? ORANGE : undefined
+    return { runs: [{ text: label, ...(color ? { color, bold: severity === 'critical' } : {}) }, ...(label ? [{ text: ' · ' }] : [])], button: true, severity }
   }
   if (i.percent === undefined || i.percent < i.limits.warnAt) return null
   const size = windowLabel(i.window)

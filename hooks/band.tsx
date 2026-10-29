@@ -71,7 +71,7 @@ async function band($: EngineInterface, ui: Ui, options: PluginOptions, columns:
   if (!row) return pickup ? pickupRow($, ui, pickup) : null
   const room = Math.max(0, columns - 2 - (row.button ? cells(pillText(RELAY_ICON, relayWord(columns))) : 0))
   const compact = row.severity === 'unknown' ? 'Context unavailable' : row.severity === 'critical' ? `${usage?.context.percent}% · critical` : row.severity === 'recommended' ? `${usage?.context.percent}% · recommended` : ''
-  const detail = row.runs.reduce((n, run) => n + cells(run.text), 0) <= room ? row.runs : compact && cells(compact) <= room ? [{ text: compact }] : []
+  const detail = row.runs.reduce((n, run) => n + cells(run.text), 0) <= room ? row.runs : compact && cells(compact) <= room ? [{ text: compact, color: row.severity === 'critical' ? 'red' : row.severity === 'recommended' ? ORANGE : undefined, bold: row.severity === 'critical' }] : []
   const runs = row.button ? detail : fitRuns(row.runs, Math.max(0, columns - 2))
   const color = row.severity === 'critical' ? 'red' : row.severity === 'recommended' ? ORANGE : 'blue'
   const go = () => void startRelay($, 'button')
