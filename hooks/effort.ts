@@ -116,7 +116,7 @@ async function askHttp($: EngineInterface, judge: Judge, text: string, top: Effo
       judge.mode === 'laya'
         ? layaState(text, afterQuestion)
         : {
-            task: 'Choose the lowest reasoning effort an agentic assistant needs for the next user message. Judge scope and amount of work. A short follow-up keeps the current effort.',
+            task: 'Choose the lowest reasoning effort an agentic assistant needs for the next user message. Judge scope and amount of work; a vague or open-ended ask needs more than a precise one. A short follow-up keeps the current effort.',
             current_effort: current,
             last_reply_ended_with_question: afterQuestion,
             next_message: text.slice(0, 2000),

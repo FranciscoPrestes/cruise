@@ -88,8 +88,8 @@
     "topLevel": {
       "type": "string",
       "title": "Highest effort the judge may pick",
-      "description": "The highest effort the judge may pick when a job is hard: high, xhigh or max (every level your model offers; max is the default). Lower it if you want a cheaper ceiling.",
-      "default": "max",
+      "description": "The highest effort the judge may pick when a job is hard: high, xhigh or max (every level your model offers; xhigh is the default; Anthropic suggests max only where it shows a gain). Lower it if you want a cheaper ceiling.",
+      "default": "xhigh",
       "options": [
         "high",
         "xhigh",

@@ -20,15 +20,15 @@ from pathlib import Path
 
 EFFORTS = ["low", "medium", "high", "xhigh", "max"]
 CRITERIA = {
-    "low": "quick answer, no tools, no planning",
-    "medium": "normal work: a few tool calls or edits",
-    "high": "hard or large multi-step job: many tool calls, costly mistakes",
-    "xhigh": "very hard: a long investigation",
-    "max": "the hardest research-level work",
+    "low": "a simple, well-bounded request: a quick answer, a lookup, a one-line or single-file edit; nothing to verify",
+    "medium": "well-specified work with clear steps: read a few files, change a function and its tests, explain a module",
+    "high": "complex reasoning or hard coding: an unknown cause to debug, a design choice, a large refactor or review, a vague ask to explore, costly mistakes",
+    "xhigh": "long-horizon agentic work: an investigation or build of 30 minutes or more across many files or systems",
+    "max": "the deepest reasoning: a novel or research-level problem where depth of thought, not length, is the bottleneck; rare",
 }
 TASK = (
     "Choose the lowest reasoning effort an agentic assistant needs for the next user message. "
-    "Judge scope and amount of work. A short follow-up keeps the current effort."
+    "Judge scope and amount of work; a vague or open-ended ask needs more than a precise one. A short follow-up keeps the current effort."
 )
 UNSURE_BELOW = 0.5
 TOP_PLAUSIBLE = 0.25  # keep in step with TOP_PLAUSIBLE / LOW_NEEDS in hooks/effort-rules.ts

@@ -5,11 +5,11 @@ import type { Effort, EffortState } from '../types'
 export const EFFORTS: readonly Effort[] = ['low', 'medium', 'high', 'xhigh', 'max']
 
 const CRITERIA: Readonly<Record<Effort, string>> = {
-  low: 'quick answer, no tools, no planning',
-  medium: 'normal work: a few tool calls or edits',
-  high: 'hard or large multi-step job: many tool calls, costly mistakes',
-  xhigh: 'very hard: a long investigation',
-  max: 'the hardest research-level work',
+  low: 'a simple, well-bounded request: a quick answer, a lookup, a one-line or single-file edit; nothing to verify',
+  medium: 'well-specified work with clear steps: read a few files, change a function and its tests, explain a module',
+  high: 'complex reasoning or hard coding: an unknown cause to debug, a design choice, a large refactor or review, a vague ask to explore, costly mistakes',
+  xhigh: 'long-horizon agentic work: an investigation or build of 30 minutes or more across many files or systems',
+  max: 'the deepest reasoning: a novel or research-level problem where depth of thought, not length, is the bottleneck; rare',
 }
 
 // Models measured to keep the prompt cache when the effort changes between requests (see the README).
@@ -53,7 +53,7 @@ export const isSteerable = (model: string, appEffort: unknown, routers: readonly
 
 // How far the judge may move the effort: `both` up and down from the app's effort, `down` only lower.
 export type Steer = 'both' | 'down'
-export const DEFAULT_REACH: Effort = 'max'
+export const DEFAULT_REACH: Effort = 'xhigh'
 
 export const steerFrom = (value: unknown): Steer => (value === 'down' ? 'down' : 'both')
 export const reachFrom = (value: unknown): Effort => (isEffort(value) ? value : DEFAULT_REACH)
@@ -109,15 +109,15 @@ const EXAMPLES: readonly (readonly [Effort, string])[] = [
 export function judgeSystem(levels: readonly Effort[]): string {
   const list = levels.map(l => `- ${l}: ${CRITERIA[l]}`).join('\n')
   const examples = EXAMPLES.filter(([level]) => levels.includes(level)).map(([level, text]) => `- "${text}" -> ${level}`).join('\n')
-  return `You choose the reasoning effort an agentic assistant (it reads files, runs tools and edits things, not only code) should use for the user's next message. Pick the effort the job needs: the lowest that will still do it well, and a higher one when the job is hard or a mistake would be costly. A wrong answer costs more than the saving.
+  return `You choose the reasoning effort an agentic assistant (it reads files, runs tools and edits things, not only code) should use for the user's next message. Effort sets how much the assistant thinks and how many tool calls it makes. At a lower effort it acts with fewer, terser steps and may skip a search or a verification; at a higher one it explores, plans and checks more, and spends more tokens. Pick the lowest effort that will still do the job well, and a higher one when the job is hard or a mistake would be costly. A level too low costs more than the saving.
 
 Levels you may choose:
 ${list}
 
-Judge the SCOPE and the amount of work, not whether it is code. A short message can ask for a lot: "review the whole repo" or "migrate everything" are big, tool-heavy jobs.
+Judge the SCOPE and the amount of work, not whether it is code. A short message can ask for a lot: "review the whole repo" or "migrate everything" are big, tool-heavy jobs. A vague or open-ended ask needs more effort than a precise one of the same size.
 A short follow-up ("yes", "go", "ok", or the same in any language) continues the current work: keep the current level.
 If the message answers a question the assistant just asked, judge the work that answer starts. If it corrects or adds to ongoing work, keep at least the current level.
-If the person asks for deep thought ("think hard", "be thorough"), pick the highest level you may choose; if they ask for a quick answer, pick low.
+If the person asks for deep thought ("think hard", "be thorough"), pick at least high (more if the job is bigger); if they ask for a quick answer, pick low.
 
 Examples of the right level (the real messages are different, judge their scope the same way):
 ${examples}
