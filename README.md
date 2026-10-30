@@ -106,6 +106,8 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 
 `/cruise` opens the panel. `/handoff` saves the state of a session and `/pickup` checks and resumes it later; `/go-around <path>` resumes it immediately without the general check (`/cruise:handoff` if you already have skills with those names). `/cruise:configure` changes settings, `/cruise:update` installs a new version, `/cruise:setup-laya` installs Laya. Remove with `/plugin uninstall cruise@prestes`.
 
+`/flight-check` gives a read-only status of related session work: done, in progress, next, risks, decisions needed and any supported forecast. Add a topic to focus it, for example `/flight-check LightRAG`. It distinguishes confirmed work from plans and reports unknowns rather than guessing.
+
 The panel puts progress and context first, followed by handoff, effort, workspace, observed session activity and updates. Open **details** to page through files, the handoff path and active work; a pickup started is not a completed pickup.
 
 The Haiku judge can also return a short summary of the request in the same call used to choose effort. The summary describes the request, not proof of completed work; the plan and observed activity are shown separately. The last activity time is based on events Cruise observes after loading, not a stall detector.
