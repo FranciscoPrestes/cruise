@@ -224,25 +224,33 @@ export async function maybeAuto($: EngineInterface, options: PluginOptions, limi
   }
 }
 
-// After the clear the session is a new one (the engine fires session.end `clear`, then the classic SessionStart `clear`): the pickup runs here.
+// Use the native session.end: Claude's built-in guard can skip classic.SessionStart.
 export function registerRelay(on: import('claude-code').On): void {
-  on('classic.SessionStart', async ($, e, next) => {
+  on('session.end', async ($, e, next) => {
     const state = await loadRelay($)
-    if (e.source === 'clear' && state.pickupPending) {
-      await saveRelay($, { pickupPending: false, pickupPath: undefined, stage: 'context cleared' })
-      $.clock.after(400, () => {
+    if (e.reason === 'clear' && state.pickupPending && state.stage !== 'waiting for new session') {
+      await saveRelay($, { stage: 'waiting for new session' })
+      const mode = state.mode ?? 'button'
+      let attempts = 0
+      const check = () => $.clock.after(500, () => {
         void (async () => {
-          const mode = state.mode ?? 'button'
+          if (!(await loadRelay($)).pickupPending) return
           try {
             if (!state.pickupPath) throw new Error('handoff path unavailable')
+            if (await $.session.id() === e.sessionId) {
+              if (++attempts < 60) { check(); return }
+              throw new Error('new session did not start in time')
+            }
+            await saveRelay($, { pickupPending: false, pickupPath: undefined, stage: 'context cleared' })
             await $.command.run({ command: PICKUP, args: state.pickupPath })
             await saveRelay($, { running: false, stage: 'go-around started', last: { at: await $.clock.now(), ok: true, mode, why: 'handoff saved, context cleared, go-around started' } })
           } catch (err) {
-            await saveRelay($, { running: false, last: { at: await $.clock.now(), ok: false, mode, why: `cleared, but go-around failed (${reason(err)}); use /cruise:go-around ${state.pickupPath ?? '<handoff path>'}` } })
-            $.ui.toast(`Cruise: context cleared, but go-around failed. Use /cruise:go-around ${state.pickupPath ?? '<handoff path>'}`)
+            await saveRelay($, { running: false, pickupPending: false, pickupPath: undefined, stage: 'aborted', last: { at: await $.clock.now(), ok: false, mode, why: `go-around failed (${reason(err)}); use /cruise:go-around ${state.pickupPath ?? '<handoff path>'}` } })
+            $.ui.toast(`Cruise: go-around failed. Use /cruise:go-around ${state.pickupPath ?? '<handoff path>'}`)
           }
         })()
       })
+      check()
     }
     return next(e)
   })

@@ -36,7 +36,11 @@ Cruise is a mod for Claude Code (its commands call mods "plugins") with four job
 
 The band above the prompt is one row, and only when there is something to say: the effort the judge picked, and the handoff button, with context warnings when needed. `/cruise` opens the dashboard with everything else (context meter, handoff, effort, your latest request, plan step and background work, updates).
 
-## What's new in 1.8.0
+## What's new in 2.0.0
+
+- **Go-around compatibility.** The handoff button uses a native session event and waits for the new session, including when Claude's built-in guard skips classic hooks. If the new session does not arrive, Cruise preserves the handoff and reports how to resume.
+- **Flight check on return.** Go-around and pickup report what is done, in progress and next before continuing.
+- **Optional AI Memory.** Pickup can supplement a handoff with available session evidence; file-only pickup still works without it.
 
 - **Handoff button.** One button in the status colour: the ✈ alone below 80 columns, `✈ Handoff → Go-around` from 80. In a fresh session with a saved handoff it becomes `↺ Go-around`.
 - **Posture.** `posture` (`quality` by default, or `economy`) sets which way the effort judge leans when in doubt. In 619 held-out prompts it picked too low 17% of the time on `quality` against 31% on `economy`.
@@ -106,7 +110,7 @@ Run `/cruise:configure` (a short conversation) or `/plugin configure cruise@pres
 
 `/cruise` opens the panel. `/handoff` saves the state of a session and `/pickup` checks and resumes it later; `/go-around <path>` resumes it immediately without the general check (`/cruise:handoff` if you already have skills with those names). `/cruise:configure` changes settings, `/cruise:update` installs a new version, `/cruise:setup-laya` installs Laya. Remove with `/plugin uninstall cruise@prestes`.
 
-`/flight-check` gives a read-only status of related session work: done, in progress, next, risks, decisions needed and any supported forecast. Add a topic to focus it, for example `/flight-check LightRAG`. It distinguishes confirmed work from plans and reports unknowns rather than guessing.
+`/flight-check` gives a read-only status of related session work: done, in progress, next, risks, decisions needed and any supported forecast. Add a topic to focus it, for example `/flight-check LightRAG`. It distinguishes confirmed work from plans and reports unknowns rather than guessing. Both `/go-around` and `/pickup` report a flight check before continuing; a standalone `/flight-check` does not resume the work.
 
 The panel puts progress and context first, followed by handoff, effort, workspace, observed session activity and updates. Open **details** to page through files, the handoff path and active work; a pickup started is not a completed pickup.
 

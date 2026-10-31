@@ -197,15 +197,17 @@ test('button severity follows configured thresholds even without usage', () => {
   expect(row(75)?.severity).toBe('critical')
 })
 
-test('relay resumes the exact handoff once after clear', async () => {
+test('relay resumes after native session.end even when classic hooks are blocked', async () => {
   const scheduled: (() => void)[] = []
   const commands: { command: string; args?: string }[] = []
   let handler: any
-  registerRelay(((name: string, fn: any) => { if (name === 'classic.SessionStart') handler = fn }) as never)
+  registerRelay(((name: string, fn: any) => { if (name === 'session.end') handler = fn }) as never)
+  expect(handler).toBeDefined()
+  let session = 'abc'
   const $: any = {
     ui: { invalidate: () => {}, toast: () => {} },
     clock: { now: async () => 1000, after: (_: number, fn: () => void) => scheduled.push(fn), sleep: () => new Promise(() => {}) },
-    env: { get: async () => '/tmp' }, session: { cwd: async () => '/work with spaces', id: async () => 'abc' },
+    env: { get: async () => '/tmp' }, session: { cwd: async () => '/work with spaces', id: async () => session },
     fs: { list: async () => [{ name: 'relay-1000-abc.md', kind: 'file', mtimeMs: 1000 }] },
     command: { run: async (e: any) => { commands.push(e); if (e.command === 'cruise:handoff') { relayStep(); relayTurnDone({}) } } },
   }
@@ -214,10 +216,40 @@ test('relay resumes the exact handoff once after clear', async () => {
   scheduled.shift()!()
   await new Promise(resolve => setTimeout(resolve, 10))
   expect(commands.filter(e => e.command === 'clear')).toHaveLength(1)
-  await handler($, { source: 'clear' }, async () => ({}))
-  await handler($, { source: 'clear' }, async () => ({}))
+  await handler($, { reason: 'clear', sessionId: 'abc' }, async () => ({}))
+  await handler($, { reason: 'clear', sessionId: 'abc' }, async () => ({}))
+  scheduled.shift()!()
+  await new Promise(resolve => setTimeout(resolve, 10))
+  expect(commands.filter(e => e.command === 'cruise:go-around')).toHaveLength(0)
+  session = 'new-session'
   scheduled.shift()!()
   await new Promise(resolve => setTimeout(resolve, 10))
   expect(commands.filter(e => e.command === 'cruise:go-around')).toEqual([{ command: 'cruise:go-around', args: '/tmp/.local/state/handoffs/-work with spaces/relay-1000-abc.md' }])
   expect(commands.filter(e => e.command === 'cruise:pickup')).toHaveLength(0)
+})
+
+test('a clear that never reaches a new session stops without running go-around', async () => {
+  const scheduled: (() => void)[] = []
+  const commands: string[] = []
+  const toasts: string[] = []
+  let handler: any
+  registerRelay(((name: string, fn: any) => { if (name === 'session.end') handler = fn }) as never)
+  const $: any = {
+    ui: { invalidate: () => {}, toast: (text: string) => toasts.push(text) },
+    clock: { now: async () => 1000, after: (_: number, fn: () => void) => scheduled.push(fn), sleep: () => new Promise(() => {}) },
+    env: { get: async () => '/tmp' }, session: { cwd: async () => '/work', id: async () => 'abc' },
+    fs: { list: async () => [{ name: 'relay-1000-abc.md', kind: 'file', mtimeMs: 1000 }] },
+    command: { run: async (e: any) => { commands.push(e.command); if (e.command === 'cruise:handoff') { relayStep(); relayTurnDone({}) } } },
+  }
+  await resetRelay($)
+  await startRelay($, 'button')
+  scheduled.shift()!()
+  await new Promise(resolve => setTimeout(resolve, 10))
+  await handler($, { reason: 'clear', sessionId: 'abc' }, async () => ({}))
+  for (let i = 0; i < 60; i++) {
+    scheduled.shift()!()
+    await new Promise(resolve => setTimeout(resolve, 0))
+  }
+  expect(commands).toEqual(['cruise:handoff', 'clear'])
+  expect(toasts.some(t => t.includes('go-around failed'))).toBe(true)
 })
